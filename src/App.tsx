@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { getReferenceString } from '@medplum/core';
 import { useDoseSpotNotifications } from '@medplum/dosespot-react';
-import { AppShell, Loading, Logo, useMedplum, useMedplumProfile } from '@medplum/react';
+import { AppShell, Loading, useMedplum, useMedplumProfile } from '@medplum/react';
 import {
   IconApps,
   IconBook2,
@@ -81,7 +81,7 @@ export function App(): JSX.Element | null {
 
   return (
     <AppShell
-      logo={<Logo size={24} />}
+      logo={<span>Provider</span>}
       pathname={location.pathname}
       searchParams={searchParams}
       layoutVersion="v2"
