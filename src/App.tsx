@@ -25,6 +25,7 @@ import './index.css';
 
 const SETUP_DISMISSED_KEY = 'medplum-provider-setup-completed';
 
+import HiiveHealthLogo from './img/hiive-health-logo.svg';
 import { EncounterChartPage } from './pages/encounter/EncounterChartPage';
 import { EncounterModal } from './pages/encounter/EncounterModal';
 import { FaxPage } from './pages/fax/FaxPage';
@@ -34,6 +35,8 @@ import { DoseSpotNotificationsPage } from './pages/integrations/DoseSpotNotifica
 import { IntegrationsPage } from './pages/integrations/IntegrationsPage';
 import { ScriptSurePage } from './pages/integrations/ScriptSurePage';
 import { MessagesPage } from './pages/messages/MessagesPage';
+import { ExposureDashboardPage } from './pages/occupational/ExposureDashboardPage';
+import { SupervisorSummaryPage } from './pages/occupational/SupervisorSummaryPage';
 import { CommunicationTab } from './pages/patient/CommunicationTab';
 import { CoveragePage } from './pages/patient/CoveragePage';
 import { DoseSpotTab } from './pages/patient/DoseSpotTab';
@@ -42,6 +45,7 @@ import { ExportTab } from './pages/patient/ExportTab';
 import { IntakeFormPage } from './pages/patient/IntakeFormPage';
 import { LabsPage } from './pages/patient/LabsPage';
 import { MedicationsPage } from './pages/patient/MedicationsPage';
+import { OccupationalSummaryTab } from './pages/patient/OccupationalSummaryTab';
 import { PatientPage } from './pages/patient/PatientPage';
 import { PatientSearchPage } from './pages/patient/PatientSearchPage';
 import { ScriptSureTab } from './pages/patient/ScriptSureTab';
@@ -81,7 +85,7 @@ export function App(): JSX.Element | null {
 
   return (
     <AppShell
-      logo={<span>Provider</span>}
+      logo={<img src={HiiveHealthLogo} alt="Hiive Health" style={{ display: 'block', width: 172, height: 'auto' }} />}
       pathname={location.pathname}
       searchParams={searchParams}
       layoutVersion="v2"
@@ -120,6 +124,7 @@ export function App(): JSX.Element | null {
                     },
                   },
                   { icon: <IconPrinter />, label: 'Faxes', href: '/Fax/Communication' },
+                  { icon: <IconClipboardCheck />, label: 'Occupational', href: '/Occupational/Exposure' },
                 ],
               },
               {
@@ -194,6 +199,7 @@ export function App(): JSX.Element | null {
                   <Route path="Task/:taskId" element={<TaskDetailsModal />} />
                 </Route>
                 <Route path="edit" element={<EditTab />} />
+                <Route path="occupational" element={<OccupationalSummaryTab />} />
                 <Route path="Communication" element={<CommunicationTab />} />
                 <Route path="Communication/:messageId" element={<CommunicationTab />} />
                 <Route path="Task" element={<TasksTab />} />
@@ -225,6 +231,8 @@ export function App(): JSX.Element | null {
               <Route path="/Task/:taskId" element={<TasksPage />} />
               <Route path="/Fax/Communication" element={<FaxPage />} />
               <Route path="/Fax/Communication/:faxId" element={<FaxPage />} />
+              <Route path="/Occupational/Exposure" element={<ExposureDashboardPage />} />
+              <Route path="/Occupational/Supervisor" element={<SupervisorSummaryPage />} />
               <Route path="/onboarding" element={<IntakeFormPage />} />
               <Route path="/Calendar/Schedule" element={<SchedulePage />} />
               <Route path="/Calendar/Schedule/:id" element={<SchedulePage />} />
