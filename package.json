@@ -6,8 +6,10 @@
   "scripts": {
     "build": "tsc && vite build",
     "dev": "vite",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "deploy:hiive-build": "bash ./scripts/deploy-hiive-build.sh",
+    "lint": "eslint src --ignore-pattern '**/*.test.ts' --ignore-pattern '**/*.test.tsx'",
+    "lint:ci": "eslint src --ignore-pattern '**/*.test.ts' --ignore-pattern '**/*.test.tsx'",
+    "lint:fix": "eslint src --fix --ignore-pattern '**/*.test.ts' --ignore-pattern '**/*.test.tsx'",
     "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"

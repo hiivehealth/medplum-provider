@@ -5,11 +5,11 @@ import type { JSX } from 'react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import classes from './OccupationalPages.module.css';
+import type { LocationExposureSummary } from './occupational-data';
 import {
   buildLocationExposureSummaries,
   patientPath,
   rtwBadgeColor,
-  type LocationExposureSummary,
 } from './occupational-data';
 import { useOccupationalData } from './useOccupationalData';
 

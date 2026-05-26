@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import type { Encounter, EpisodeOfCare, Location, Observation, Patient, Task } from '@medplum/fhirtypes';
+import type { CodeableConcept, Encounter, EpisodeOfCare, Location, Observation, Patient, Task } from '@medplum/fhirtypes';
 import { DEMO_CODE_SYSTEM } from './occupational-data';
 
 export const occupationalPatient: Patient = {
@@ -69,7 +69,7 @@ export const occupationalTask: Task = {
   focus: { reference: 'EpisodeOfCare/episode-1' },
 };
 
-export function codeableConcept(code: string, display: string) {
+export function codeableConcept(code: string, display: string): CodeableConcept {
   return {
     coding: [{ system: DEMO_CODE_SYSTEM, code, display }],
     text: display,

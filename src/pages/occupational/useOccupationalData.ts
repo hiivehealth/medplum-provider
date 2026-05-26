@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useMedplum } from '@medplum/react';
 import { useEffect, useState } from 'react';
-import { fetchOccupationalData, type OccupationalData } from './occupational-data';
+import type { OccupationalData } from './occupational-data';
+import { fetchOccupationalData } from './occupational-data';
 
 export type OccupationalDataState = {
   data?: OccupationalData;
