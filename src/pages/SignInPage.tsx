@@ -15,7 +15,6 @@ export function SignInPage(): JSX.Element {
       onSuccess={() => navigate('/')?.catch(console.error)}
       projectId={searchParams.get('project') || MEDPLUM_PROJECT_ID}
       clientId={searchParams.get('client') || MEDPLUM_CLIENT_ID}
-      resourceType="Practitioner"
       scope={MEDPLUM_LOGIN_SCOPE}
       login={searchParams.get('login') || undefined}
     >
