@@ -55,7 +55,7 @@ export function SupervisorSummaryPage(): JSX.Element {
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Employee</Table.Th>
-                  <Table.Th>Component</Table.Th>
+                  <Table.Th>Work unit</Table.Th>
                   <Table.Th>Duty location</Table.Th>
                   <Table.Th>RTW</Table.Th>
                   <Table.Th>Restriction</Table.Th>

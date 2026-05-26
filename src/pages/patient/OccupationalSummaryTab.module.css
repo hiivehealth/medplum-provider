@@ -8,6 +8,20 @@
   background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
 }
 
+.actionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.actionTitle {
+  color: light-dark(var(--mantine-color-gray-9), var(--mantine-color-white));
+  font-size: 20px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -147,6 +161,11 @@
 @media (max-width: 640px) {
   .container {
     padding: 12px;
+  }
+
+  .actionBar {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .detailGrid,

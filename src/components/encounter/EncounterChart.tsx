@@ -16,6 +16,7 @@ import { showErrorNotification } from '../../utils/notifications';
 import { TaskPanel } from '../tasks/encounter/TaskPanel';
 import { BillingTab } from './BillingTab';
 import { EncounterHeader } from './EncounterHeader';
+import { OccupationalReturnToWorkPanel } from './OccupationalReturnToWorkPanel';
 import { SignAddendum } from './SignAddendum';
 
 const FHIR_ACT_REASON_SYSTEM = 'http://terminology.hl7.org/CodeSystem/v3-ActReason';
@@ -250,6 +251,13 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
                   />
                 </Card>
               )}
+              <OccupationalReturnToWorkPanel
+                patient={patientResource}
+                encounter={encounter}
+                tasks={tasks}
+                onUpdateTask={updateTaskList}
+                enabled={chartNoteStatus !== ChartNoteStatus.SignedAndLocked}
+              />
               {tasks.map((task) => (
                 <TaskPanel
                   key={task.id}

@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Alert, Anchor, Badge, Group, Loader, Stack, Text } from '@mantine/core';
+import { Alert, Anchor, Badge, Button, Group, Loader, Stack, Text } from '@mantine/core';
 import { getReferenceString } from '@medplum/core';
 import type {
   CodeableConcept,
@@ -12,6 +12,7 @@ import type {
   Task,
 } from '@medplum/fhirtypes';
 import { useMedplum } from '@medplum/react';
+import { IconClipboardPlus } from '@tabler/icons-react';
 import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
@@ -145,6 +146,21 @@ export function OccupationalSummaryTab(): JSX.Element {
 
   return (
     <div className={classes.container}>
+      <div className={classes.actionBar}>
+        <div>
+          <div className={classes.actionTitle}>Occupational Summary</div>
+          <Text c="dimmed" size="sm">
+            Exposure case, restrictions, and return-to-work follow-up
+          </Text>
+        </div>
+        <Button
+          component={Link}
+          leftSection={<IconClipboardPlus size={16} />}
+          to={`/Patient/${patient.id}/occupational/incident/new`}
+        >
+          Report Incident
+        </Button>
+      </div>
       <div className={classes.summaryGrid}>
         <Metric label="RTW status" value={<ReturnToWorkBadge status={summary.rtwObservation?.valueString} />} />
         <Metric label="Restrictions" value={restriction.summary} detail={restriction.limit} />
@@ -161,7 +177,7 @@ export function OccupationalSummaryTab(): JSX.Element {
             <div className={classes.detailGrid}>
               <Detail label="RTW status" value={rtwStatus} />
               <Detail label="Case" value={exposureContext || UNKNOWN} />
-              <Detail label="DHS component" value={component || UNKNOWN} />
+              <Detail label="Work unit" value={component || UNKNOWN} />
               <Detail label="Duty location" value={dutyLocation || UNKNOWN} />
               <Detail label="Restriction type" value={restriction.type} />
               <Detail label="Effective" value={restriction.effectiveDate} />
