@@ -49,4 +49,8 @@ for (const filename of SEARCH_PARAMETER_BUNDLE_FILES) {
   indexSearchParameterBundle(readJson(filename) as Bundle<SearchParameter>);
 }
 
+const localStoragePolyfill = new MemoryStorage();
+Object.defineProperty(globalThis, 'localStorage', { value: localStoragePolyfill });
+Object.defineProperty(globalThis.window, 'localStorage', { value: localStoragePolyfill });
+
 Object.defineProperty(globalThis.window, 'sessionStorage', { value: new MemoryStorage() });

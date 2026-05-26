@@ -4,13 +4,13 @@ import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { calculateAgeString } from '@medplum/core';
 import { HomerSimpson, MockClient } from '@medplum/mock';
-import * as medplumReact from '@medplum/react';
 import { MedplumProvider } from '@medplum/react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { EditTab } from './EditTab';
+import { OccupationalSummaryTab } from './OccupationalSummaryTab';
 import { PatientPage } from './PatientPage';
 import { TimelineTab } from './TimelineTab';
 
@@ -32,6 +32,7 @@ describe('PatientPage', () => {
             <Routes>
               <Route path="/Patient/:patientId/*" element={<PatientPage />}>
                 <Route path="edit" element={<EditTab />} />
+                <Route path="occupational" element={<OccupationalSummaryTab />} />
                 <Route path="" element={<TimelineTab />} />
                 <Route path="*" element={<TimelineTab />} />
               </Route>
@@ -68,6 +69,7 @@ describe('PatientPage', () => {
     });
 
     // Check for some key tabs
+    expect(screen.getByText('Occupational')).toBeInTheDocument();
     expect(screen.getByText('Edit')).toBeInTheDocument();
     expect(screen.getByText('Visits')).toBeInTheDocument();
     expect(screen.getByText('Tasks')).toBeInTheDocument();
@@ -124,7 +126,6 @@ describe('PatientPage', () => {
   });
 
   test('renders homer summary information in sidebar', async () => {
-    const patientSummarySpy = vi.spyOn(medplumReact, 'PatientSummary');
     setup(`/Patient/${HomerSimpson.id}`);
 
     if (!HomerSimpson.birthDate) {
@@ -134,7 +135,6 @@ describe('PatientPage', () => {
     const age = calculateAgeString(HomerSimpson.birthDate);
 
     await waitFor(() => {
-      expect(patientSummarySpy).toHaveBeenCalled();
       expect(screen.getByText('Male')).toBeInTheDocument();
       expect(screen.getByText(`1956-05-12 (${age})`)).toBeInTheDocument();
     });

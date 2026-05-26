@@ -23,16 +23,38 @@ const alias: NonNullable<UserConfig['resolve']>['alias'] = Object.fromEntries(
   }).filter(([, relPath]) => existsSync(relPath))
 );
 
+const medplumProxy = {
+  target: 'https://api.ehr.hiivehealth.net',
+  changeOrigin: true,
+  secure: true,
+  ws: true,
+};
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: 'localhost',
-    port: 3000,
+    host: '127.0.0.1',
+    port: 5172,
+    strictPort: true,
+    proxy: {
+      '/.well-known': medplumProxy,
+      '/admin': medplumProxy,
+      '/auth': medplumProxy,
+      '/cds-services': medplumProxy,
+      '/email': medplumProxy,
+      '/fhir': medplumProxy,
+      '/fhircast': medplumProxy,
+      '/keyvalue': medplumProxy,
+      '/oauth2': medplumProxy,
+      '/storage': medplumProxy,
+      '/ws': medplumProxy,
+    },
   },
   preview: {
-    host: 'localhost',
-    port: 3000,
+    host: '127.0.0.1',
+    port: 5172,
+    strictPort: true,
   },
   resolve: {
     alias,
