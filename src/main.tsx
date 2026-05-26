@@ -12,10 +12,12 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider, createBrowserRouter } from 'react-router';
 import { App } from './App';
+import { MEDPLUM_BASE_URL, MEDPLUM_CLIENT_ID } from './config/constants';
 
 const medplum = new MedplumClient({
   onUnauthenticated: () => (window.location.href = '/'),
-  baseUrl: sessionStorage.getItem('medplum_base_url') || import.meta.env.VITE_MEDPLUM_BASE_URL || undefined,
+  baseUrl: sessionStorage.getItem('medplum_base_url') || MEDPLUM_BASE_URL,
+  clientId: MEDPLUM_CLIENT_ID,
   cacheTime: 60000,
   autoBatchTime: 100,
 });

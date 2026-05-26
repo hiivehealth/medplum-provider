@@ -2,11 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 import { Button, Flex, Stack, Text, Title } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
+import { getDisplayString, getReferenceString } from '@medplum/core';
 import type { Coding, Patient, PlanDefinition, Practitioner, Reference, Schedule } from '@medplum/fhirtypes';
-import { CodingInput, DateTimeInput, Form, ResourceInput, useMedplum } from '@medplum/react';
+import type { AsyncAutocompleteOption } from '@medplum/react';
+import {
+  AsyncAutocomplete,
+  CodingInput,
+  DateTimeInput,
+  Form,
+  ResourceAvatar,
+  ResourceInput,
+  useMedplum,
+} from '@medplum/react';
 import { IconAlertSquareRounded, IconCircleCheck, IconCirclePlus } from '@tabler/icons-react';
 import type { JSX } from 'react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { Range } from '../../types/scheduling';
 import { createAppointment, createEncounter } from '../../utils/encounter';
@@ -19,6 +29,10 @@ interface CreateVisitProps {
   schedule?: Schedule;
 }
 
+const PATIENT_SEARCH_RESULT_COUNT = '50';
+const BIRTH_YEAR_PATTERN = /\b(?:19|20)\d{2}\b/;
+const EMPLOYEE_ID_PATTERN = /\bEMP-[A-Z0-9-]+\b/i;
+
 export function CreateVisit(props: CreateVisitProps): JSX.Element {
   const { appointmentSlot, schedule } = props;
   const [patient, setPatient] = useState<Patient | undefined>();
@@ -29,6 +43,25 @@ export function CreateVisit(props: CreateVisitProps): JSX.Element {
   const [isLoading, setIsLoading] = useState(false);
   const medplum = useMedplum();
   const navigate = useNavigate();
+
+  const loadPatients = useCallback(
+    async (input: string, signal: AbortSignal): Promise<Patient[]> => {
+      const search = parsePatientSearch(input);
+      const searchParams = new URLSearchParams({ _count: PATIENT_SEARCH_RESULT_COUNT });
+
+      if (search.employeeId) {
+        searchParams.set('identifier', search.employeeId);
+      } else if (search.birthYear && !search.nameQuery) {
+        searchParams.set('birthdate', search.birthYear);
+      } else {
+        searchParams.set('name', search.nameQuery);
+      }
+
+      const patients = await medplum.searchResources('Patient', searchParams, { signal });
+      return rankPatients(patients, search);
+    },
+    [medplum]
+  );
 
   const [formattedDate, formattedSlotTime] = useMemo(() => {
     if (!appointmentSlot) {
@@ -104,12 +137,17 @@ export function CreateVisit(props: CreateVisitProps): JSX.Element {
             disabled={true}
           />
 
-          <ResourceInput
+          <AsyncAutocomplete<Patient>
             label="Patient"
-            resourceType="Patient"
             name="Patient-id"
+            placeholder="Search patients by name, birth year, or employee ID"
             required={true}
-            onChange={(value) => setPatient(value as Patient)}
+            maxValues={1}
+            clearable={true}
+            loadOptions={loadPatients}
+            toOption={patientToOption}
+            itemComponent={PatientSearchOption}
+            onChange={(values) => setPatient(values[0])}
           />
 
           <DateTimeInput
@@ -145,6 +183,7 @@ export function CreateVisit(props: CreateVisitProps): JSX.Element {
             name="plandefinition"
             resourceType="PlanDefinition"
             label="Care template"
+            placeholder="Search care templates"
             onChange={(value) => {
               setPlanDefinitionData(value as PlanDefinition);
             }}
@@ -160,4 +199,67 @@ export function CreateVisit(props: CreateVisitProps): JSX.Element {
       </Flex>
     </Form>
   );
+}
+
+interface PatientSearchCriteria {
+  nameQuery: string;
+  birthYear?: string;
+  employeeId?: string;
+}
+
+function parsePatientSearch(input: string): PatientSearchCriteria {
+  const trimmedInput = input.trim();
+  const birthYear = trimmedInput.match(BIRTH_YEAR_PATTERN)?.[0];
+  const employeeId = trimmedInput.match(EMPLOYEE_ID_PATTERN)?.[0];
+  const nameQuery = employeeId ? '' : trimmedInput.replace(BIRTH_YEAR_PATTERN, '').trim();
+  return { nameQuery, birthYear, employeeId };
+}
+
+function rankPatients(patients: Patient[], search: PatientSearchCriteria): Patient[] {
+  if (!search.birthYear) {
+    return patients;
+  }
+
+  const birthYear = search.birthYear;
+  return [...patients].sort((left, right) => getBirthYearRank(left, birthYear) - getBirthYearRank(right, birthYear));
+}
+
+function getBirthYearRank(patient: Patient, birthYear: string): number {
+  if (patient.birthDate?.startsWith(birthYear)) {
+    return 0;
+  }
+  return 1;
+}
+
+function patientToOption(patient: Patient): AsyncAutocompleteOption<Patient> {
+  const label = getDisplayString(patient);
+  return {
+    value: getReferenceString(patient) ?? label,
+    label,
+    resource: patient,
+  };
+}
+
+function PatientSearchOption(props: AsyncAutocompleteOption<Patient>): JSX.Element {
+  const patient = props.resource;
+  const employeeId = getEmployeeIdentifier(patient);
+  const details = [patient.birthDate, employeeId].filter(Boolean).join(' | ');
+
+  return (
+    <Flex align="center" gap="sm" wrap="nowrap">
+      <ResourceAvatar value={patient} />
+      <Stack gap={0}>
+        <Text>{props.label}</Text>
+        {details && (
+          <Text size="xs" c="dimmed">
+            {details}
+          </Text>
+        )}
+      </Stack>
+    </Flex>
+  );
+}
+
+function getEmployeeIdentifier(patient: Patient): string | undefined {
+  return patient.identifier?.find((identifier) => identifier.value?.toUpperCase().startsWith('EMP-'))?.value;
 }
