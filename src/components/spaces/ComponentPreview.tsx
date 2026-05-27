@@ -3,9 +3,8 @@
 import * as Mantine from '@mantine/core';
 import { Alert, Box, Code, ScrollArea, Stack, Tabs } from '@mantine/core';
 import type { JSX, ReactNode } from 'react';
-import { Component, useState } from 'react';
+import { Component, useEffect, useMemo, useState } from 'react';
 import { LiveError, LivePreview, LiveProvider } from 'react-live';
-import * as Recharts from 'recharts';
 import { ResourceBox } from './ResourceBox';
 
 interface ErrorBoundaryState {
@@ -33,11 +32,7 @@ interface ComponentPreviewProps {
   onResourceClick?: (ref: string) => void;
 }
 
-const scope = {
-  ...Recharts,
-  ...Mantine,
-  ChartTooltip: Recharts.Tooltip,
-};
+type LiveScope = Record<string, unknown>;
 
 function transformCode(code: string): string {
   // Remove import statements
@@ -68,6 +63,41 @@ function transformCode(code: string): string {
 
 export function ComponentPreview({ code, resources, onResourceClick }: ComponentPreviewProps): JSX.Element {
   const [activeTab, setActiveTab] = useState<string | null>('preview');
+  const [chartScope, setChartScope] = useState<LiveScope>();
+  const [chartScopeError, setChartScopeError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    import('recharts')
+      .then((rechartsModule) => {
+        if (!active) {
+          return;
+        }
+
+        setChartScope({
+          ...rechartsModule,
+          ChartTooltip: rechartsModule.Tooltip,
+        });
+      })
+      .catch(() => {
+        if (active) {
+          setChartScopeError(true);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const scope = useMemo(
+    () => ({
+      ...Mantine,
+      ...(chartScope ?? {}),
+    }),
+    [chartScope]
+  );
 
   const transformedCode = transformCode(code);
 
@@ -82,6 +112,11 @@ export function ComponentPreview({ code, resources, onResourceClick }: Component
       <Tabs.Panel value="preview" pt="md">
         <LiveProvider code={transformedCode} scope={scope} noInline>
           <Box p="md">
+            {chartScopeError && (
+              <Alert color="yellow" mb="md">
+                Chart preview components are temporarily unavailable.
+              </Alert>
+            )}
             <LiveError />
             <ComponentErrorBoundary>
               <LivePreview />

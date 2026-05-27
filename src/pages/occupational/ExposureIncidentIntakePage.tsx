@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Alert, Badge, Button, Group, Loader, Text } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
 import { createReference, isResource, normalizeErrorString } from '@medplum/core';

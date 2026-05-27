@@ -15,7 +15,7 @@ import {
   IconUserPlus,
   IconUsers,
 } from '@tabler/icons-react';
-import type { JSX } from 'react';
+import type { ComponentProps, JSX } from 'react';
 import { Suspense, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router';
 import { TaskDetailsModal } from './components/tasks/TaskDetailsModal';
@@ -75,6 +75,8 @@ export function App(): JSX.Element | null {
   const membership = medplum.getProjectMembership();
   const hasScriptSure = hasScriptSureIdentifier(membership);
   const isSupervisorReviewer = profile?.resourceType === 'RelatedPerson';
+  const patientSearchPath = '/Patient?_count=20&_fields=name,email,gender&_sort=-_lastUpdated';
+  const landingPath = setupDismissed ? patientSearchPath : '/getstarted';
 
   const handleDismissSetup = (): void => {
     localStorage.setItem(SETUP_DISMISSED_KEY, 'true');
@@ -84,6 +86,184 @@ export function App(): JSX.Element | null {
   if (medplum.isLoading()) {
     return null;
   }
+
+  const getMenus = (): ComponentProps<typeof AppShell>['menus'] => {
+    if (!profile) {
+      return undefined;
+    }
+
+    if (isSupervisorReviewer) {
+      return [
+        {
+          links: [
+            {
+              icon: <IconClipboardCheck />,
+              label: 'Supervisor Summary',
+              href: '/Occupational/Supervisor',
+            },
+          ],
+        },
+      ];
+    }
+
+    return [
+      {
+        links: [
+          { icon: <IconBook2 />, label: 'Spaces', href: '/Spaces/Communication' },
+          {
+            icon: <IconUsers />,
+            label: 'Patients',
+            href: patientSearchPath,
+          },
+          { icon: <IconCalendarEvent />, label: 'Schedule', href: '/Calendar/Schedule' },
+          {
+            icon: <IconMail />,
+            label: 'Messages',
+            href: '/Communication?status=in-progress',
+            notificationCount: {
+              resourceType: 'Communication',
+              countCriteria:
+                'status=in-progress&_has:Communication:part-of:_id:not=null&identifier:not=ai-message-topic&_summary=count',
+              subscriptionCriteria:
+                'Communication?status=in-progress&_has:Communication:part-of:_id:not=null&identifier:not=ai-message-topic',
+            },
+          },
+          {
+            icon: <IconClipboardCheck />,
+            label: 'Tasks',
+            href: `/Task?owner=${getReferenceString(profile)}&_sort=-_lastUpdated&status=requested,ready,received,accepted,in-progress,draft`,
+            notificationCount: {
+              resourceType: 'Task',
+              countCriteria: `owner=${getReferenceString(profile)}&status=requested,ready,received,accepted,in-progress,draft&_summary=count`,
+              subscriptionCriteria: `Task?owner=${getReferenceString(profile)}&status=requested,ready,received,accepted,in-progress,draft`,
+            },
+          },
+          { icon: <IconPrinter />, label: 'Faxes', href: '/Fax/Communication' },
+          { icon: <IconClipboardCheck />, label: 'Occupational', href: '/Occupational/Exposure' },
+        ],
+      },
+      {
+        title: 'Quick Links',
+        links: [
+          ...(!setupDismissed
+            ? [
+                {
+                  icon: <IconSettingsAutomation />,
+                  label: 'Get Started',
+                  href: '/getstarted',
+                  onDismiss: handleDismissSetup,
+                },
+              ]
+            : []),
+          { icon: <IconUserPlus />, label: 'New Patient', href: '/onboarding' },
+          { icon: <IconApps />, label: 'Integrations', href: '/integrations' },
+          ...(hasDoseSpot
+            ? [
+                {
+                  icon: <IconPill />,
+                  label: 'DoseSpot',
+                  href: '/dosespot',
+                  alert: true,
+                  count: doseSpotCount ?? 0,
+                },
+              ]
+            : []),
+          ...(hasScriptSure
+            ? [
+                {
+                  icon: <IconPill />,
+                  label: 'ScriptSure',
+                  href: '/scriptsure',
+                },
+              ]
+            : []),
+        ],
+      },
+    ];
+  };
+
+  const renderAuthenticatedRoutes = (): JSX.Element => {
+    if (isSupervisorReviewer) {
+      return (
+        <>
+          <Route path="/" element={<Navigate to="/Occupational/Supervisor" replace />} />
+          <Route path="/Occupational/Supervisor" element={<SupervisorSummaryPage />} />
+          <Route path="/signin" element={<SignInPage />} />
+          <Route path="*" element={<Navigate to="/Occupational/Supervisor" replace />} />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Route path="/getstarted" element={<GetStartedPage />} />
+        <Route path="/Spaces/Communication" element={<SpacesPage />}>
+          <Route index element={<SpacesPage />} />
+          <Route path=":topicId" element={<SpacesPage />} />
+        </Route>
+        <Route path="/" element={<Navigate to={landingPath} replace />} />
+        <Route path="/Patient/new" element={<ResourceCreatePage />} />
+        <Route path="/Patient/:patientId" element={<PatientPage />}>
+          <Route path="Encounter/new" element={<EncounterModal />} />
+          <Route path="Encounter/:encounterId" element={<EncounterChartPage />}>
+            <Route path="Task/:taskId" element={<TaskDetailsModal />} />
+          </Route>
+          <Route path="edit" element={<EditTab />} />
+          <Route path="occupational/incident/new" element={<ExposureIncidentIntakePage />} />
+          <Route path="occupational" element={<OccupationalSummaryTab />} />
+          <Route path="Communication" element={<CommunicationTab />} />
+          <Route path="Communication/:messageId" element={<CommunicationTab />} />
+          <Route path="Task" element={<TasksTab />} />
+          <Route path="Task/:taskId" element={<TasksTab />} />
+          {hasDoseSpot && <Route path="dosespot" element={<DoseSpotTab />} />}
+          {hasScriptSure && <Route path="scriptsure" element={<ScriptSureTab />} />}
+          <Route path="timeline" element={<TimelineTab />} />
+          <Route path="export" element={<ExportTab />} />
+          <Route path="ServiceRequest" element={<LabsPage />} />
+          <Route path="ServiceRequest/:serviceRequestId" element={<LabsPage />} />
+          <Route path="MedicationRequest" element={<MedicationsPage />} />
+          <Route path=":resourceType" element={<PatientSearchPage />} />
+          <Route path="Coverage" element={<CoveragePage />} />
+          <Route path="Coverage/:coverageId" element={<CoveragePage />} />
+          <Route path="Coverage/:coverageId/CoverageEligibilityRequest/:requestId" element={<CoveragePage />} />
+          <Route path=":resourceType/new" element={<ResourceCreatePage />} />
+          <Route path=":resourceType/:id" element={<ResourcePage />}>
+            <Route path="" element={<ResourceDetailPage />} />
+            <Route path="edit" element={<ResourceEditPage />} />
+            <Route path="history" element={<ResourceHistoryPage />} />
+          </Route>
+          <Route path="" element={<TimelineTab />} />
+        </Route>
+        <Route path="/Communication" element={<MessagesPage />}>
+          <Route index element={<MessagesPage />} />
+          <Route path=":messageId" element={<MessagesPage />} />
+        </Route>
+        <Route path="/Task" element={<TasksPage />} />
+        <Route path="/Task/:taskId" element={<TasksPage />} />
+        <Route path="/Fax/Communication" element={<FaxPage />} />
+        <Route path="/Fax/Communication/:faxId" element={<FaxPage />} />
+        <Route path="/Occupational/Exposure" element={<ExposureDashboardPage />} />
+        <Route path="/Occupational/Supervisor" element={<SupervisorSummaryPage />} />
+        <Route path="/onboarding" element={<IntakeFormPage />} />
+        <Route path="/Calendar/Schedule" element={<SchedulePage />} />
+        <Route path="/Calendar/Schedule/:id" element={<SchedulePage />} />
+        <Route path="/Calendar/Schedule/:id/settings" element={<ScheduleSettingsPage />} />
+        <Route path="/signin" element={<SignInPage />} />
+        {hasDoseSpot && <Route path="/dosespot" element={<DoseSpotNotificationsPage />} />}
+        {hasScriptSure && <Route path="/scriptsure" element={<ScriptSurePage />} />}
+        <Route path="/integrations" element={<IntegrationsPage />} />
+        <Route path="/:resourceType" element={<SearchPage />} />
+        <Route path="/:resourceType/new" element={<ResourceCreatePage />} />
+        <Route path="/:resourceType/:id" element={<ResourcePage />}>
+          <Route path="" element={<ResourceDetailPage />} />
+          <Route path="details" element={<ResourceDetailPage />} />
+          <Route path="edit" element={<ResourceEditPage />} />
+          <Route path="history" element={<ResourceHistoryPage />} />
+        </Route>
+        {hasDoseSpot && <Route path="/integrations/dosespot" element={<DoseSpotFavoritesPage />} />}
+      </>
+    );
+  };
 
   return (
     <AppShell
@@ -98,189 +278,14 @@ export function App(): JSX.Element | null {
       searchParams={searchParams}
       layoutVersion="v2"
       showLayoutVersionToggle={false}
-      menus={
-        profile
-          ? isSupervisorReviewer
-            ? [
-                {
-                  links: [
-                    {
-                      icon: <IconClipboardCheck />,
-                      label: 'Supervisor Summary',
-                      href: '/Occupational/Supervisor',
-                    },
-                  ],
-                },
-              ]
-            : [
-                {
-                  links: [
-                    { icon: <IconBook2 />, label: 'Spaces', href: '/Spaces/Communication' },
-                    {
-                      icon: <IconUsers />,
-                      label: 'Patients',
-                      href: '/Patient?_count=20&_fields=name,email,gender&_sort=-_lastUpdated',
-                    },
-                    { icon: <IconCalendarEvent />, label: 'Schedule', href: `/Calendar/Schedule` },
-                    {
-                      icon: <IconMail />,
-                      label: 'Messages',
-                      href: `/Communication?status=in-progress`,
-                      notificationCount: {
-                        resourceType: 'Communication',
-                        countCriteria:
-                          'status=in-progress&_has:Communication:part-of:_id:not=null&identifier:not=ai-message-topic&_summary=count',
-                        subscriptionCriteria: `Communication?status=in-progress&_has:Communication:part-of:_id:not=null&identifier:not=ai-message-topic`,
-                      },
-                    },
-                    {
-                      icon: <IconClipboardCheck />,
-                      label: 'Tasks',
-                      href: `/Task?owner=${getReferenceString(profile)}&_sort=-_lastUpdated&status=requested,ready,received,accepted,in-progress,draft`,
-                      notificationCount: {
-                        resourceType: 'Task',
-                        countCriteria: `owner=${getReferenceString(profile)}&status=requested,ready,received,accepted,in-progress,draft&_summary=count`,
-                        subscriptionCriteria: `Task?owner=${getReferenceString(profile)}&status=requested,ready,received,accepted,in-progress,draft`,
-                      },
-                    },
-                    { icon: <IconPrinter />, label: 'Faxes', href: '/Fax/Communication' },
-                    { icon: <IconClipboardCheck />, label: 'Occupational', href: '/Occupational/Exposure' },
-                  ],
-                },
-                {
-                  title: 'Quick Links',
-                  links: [
-                    ...(!setupDismissed
-                      ? [
-                          {
-                            icon: <IconSettingsAutomation />,
-                            label: 'Get Started',
-                            href: '/getstarted',
-                            onDismiss: handleDismissSetup,
-                          },
-                        ]
-                      : []),
-                    { icon: <IconUserPlus />, label: 'New Patient', href: '/onboarding' },
-                    { icon: <IconApps />, label: 'Integrations', href: '/integrations' },
-                    ...(hasDoseSpot
-                      ? [
-                          {
-                            icon: <IconPill />,
-                            label: 'DoseSpot',
-                            href: '/dosespot',
-                            alert: true,
-                            count: doseSpotCount ?? 0,
-                          },
-                        ]
-                      : []),
-                    ...(hasScriptSure
-                      ? [
-                          {
-                            icon: <IconPill />,
-                            label: 'ScriptSure',
-                            href: '/scriptsure',
-                          },
-                        ]
-                      : []),
-                  ],
-                },
-              ]
-          : undefined
-      }
+      menus={getMenus()}
       resourceTypeSearchDisabled={true}
       spotlightPatientsOnly={true}
     >
       <Suspense fallback={<Loading />}>
         <Routes>
           {profile ? (
-            isSupervisorReviewer ? (
-              <>
-                <Route path="/" element={<Navigate to="/Occupational/Supervisor" replace />} />
-                <Route path="/Occupational/Supervisor" element={<SupervisorSummaryPage />} />
-                <Route path="/signin" element={<SignInPage />} />
-                <Route path="*" element={<Navigate to="/Occupational/Supervisor" replace />} />
-              </>
-            ) : (
-              <>
-                <Route path="/getstarted" element={<GetStartedPage />} />
-                <Route path="/Spaces/Communication" element={<SpacesPage />}>
-                  <Route index element={<SpacesPage />} />
-                  <Route path=":topicId" element={<SpacesPage />} />
-                </Route>
-                <Route
-                  path="/"
-                  element={
-                    <Navigate
-                      to={
-                        setupDismissed
-                          ? '/Patient?_count=20&_fields=name,email,gender&_sort=-_lastUpdated'
-                          : '/getstarted'
-                      }
-                      replace
-                    />
-                  }
-                />
-                <Route path="/Patient/new" element={<ResourceCreatePage />} />
-                <Route path="/Patient/:patientId" element={<PatientPage />}>
-                  <Route path="Encounter/new" element={<EncounterModal />} />
-                  <Route path="Encounter/:encounterId" element={<EncounterChartPage />}>
-                    <Route path="Task/:taskId" element={<TaskDetailsModal />} />
-                  </Route>
-                  <Route path="edit" element={<EditTab />} />
-                  <Route path="occupational/incident/new" element={<ExposureIncidentIntakePage />} />
-                  <Route path="occupational" element={<OccupationalSummaryTab />} />
-                  <Route path="Communication" element={<CommunicationTab />} />
-                  <Route path="Communication/:messageId" element={<CommunicationTab />} />
-                  <Route path="Task" element={<TasksTab />} />
-                  <Route path="Task/:taskId" element={<TasksTab />} />
-                  {hasDoseSpot && <Route path="dosespot" element={<DoseSpotTab />} />}
-                  {hasScriptSure && <Route path="scriptsure" element={<ScriptSureTab />} />}
-                  <Route path="timeline" element={<TimelineTab />} />
-                  <Route path="export" element={<ExportTab />} />
-                  <Route path="ServiceRequest" element={<LabsPage />} />
-                  <Route path="ServiceRequest/:serviceRequestId" element={<LabsPage />} />
-                  <Route path="MedicationRequest" element={<MedicationsPage />} />
-                  <Route path=":resourceType" element={<PatientSearchPage />} />
-                  <Route path="Coverage" element={<CoveragePage />} />
-                  <Route path="Coverage/:coverageId" element={<CoveragePage />} />
-                  <Route path="Coverage/:coverageId/CoverageEligibilityRequest/:requestId" element={<CoveragePage />} />
-                  <Route path=":resourceType/new" element={<ResourceCreatePage />} />
-                  <Route path=":resourceType/:id" element={<ResourcePage />}>
-                    <Route path="" element={<ResourceDetailPage />} />
-                    <Route path="edit" element={<ResourceEditPage />} />
-                    <Route path="history" element={<ResourceHistoryPage />} />
-                  </Route>
-                  <Route path="" element={<TimelineTab />} />
-                </Route>
-                <Route path="/Communication" element={<MessagesPage />}>
-                  <Route index element={<MessagesPage />} />
-                  <Route path=":messageId" element={<MessagesPage />} />
-                </Route>
-                <Route path="/Task" element={<TasksPage />} />
-                <Route path="/Task/:taskId" element={<TasksPage />} />
-                <Route path="/Fax/Communication" element={<FaxPage />} />
-                <Route path="/Fax/Communication/:faxId" element={<FaxPage />} />
-                <Route path="/Occupational/Exposure" element={<ExposureDashboardPage />} />
-                <Route path="/Occupational/Supervisor" element={<SupervisorSummaryPage />} />
-                <Route path="/onboarding" element={<IntakeFormPage />} />
-                <Route path="/Calendar/Schedule" element={<SchedulePage />} />
-                <Route path="/Calendar/Schedule/:id" element={<SchedulePage />} />
-                <Route path="/Calendar/Schedule/:id/settings" element={<ScheduleSettingsPage />} />
-                <Route path="/signin" element={<SignInPage />} />
-                {hasDoseSpot && <Route path="/dosespot" element={<DoseSpotNotificationsPage />} />}
-                {hasScriptSure && <Route path="/scriptsure" element={<ScriptSurePage />} />}
-                <Route path="/integrations" element={<IntegrationsPage />} />
-                <Route path="/:resourceType" element={<SearchPage />} />
-                <Route path="/:resourceType/new" element={<ResourceCreatePage />} />
-                <Route path="/:resourceType/:id" element={<ResourcePage />}>
-                  <Route path="" element={<ResourceDetailPage />} />
-                  <Route path="details" element={<ResourceDetailPage />} />
-                  <Route path="edit" element={<ResourceEditPage />} />
-                  <Route path="history" element={<ResourceHistoryPage />} />
-                </Route>
-                {hasDoseSpot && <Route path="/integrations/dosespot" element={<DoseSpotFavoritesPage />} />}
-              </>
-            )
+            renderAuthenticatedRoutes()
           ) : (
             <>
               <Route path="/signin" element={<SignInPage />} />
