@@ -83,7 +83,6 @@ function normalizePolicy(policy) {
   return {
     resourceType: 'AccessPolicy',
     name: policy.name,
-    description: policy.description,
     meta: policy.meta,
     resource: policy.resource,
   };
