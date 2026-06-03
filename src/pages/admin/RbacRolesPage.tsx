@@ -3,11 +3,13 @@
 import { Alert, Button, Group, Loader, Modal, Stack, Table, Text, TextInput, Textarea, Title } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
 import { normalizeErrorString } from '@medplum/core';
-import type { AccessPolicy, Coding, ProjectMembership } from '@medplum/fhirtypes';
+import type { AccessPolicy, Coding } from '@medplum/fhirtypes';
 import { useMedplum } from '@medplum/react';
 import { IconCircleCheck, IconCircleOff } from '@tabler/icons-react';
 import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { PermissionBuilder } from './PermissionBuilder';
+import { getRoleRulesCount, isProjectAdmin, isRolePolicy, logRbacAuditEvent } from './rbac-utils';
 
 const DEFAULT_ROLE_RULES = JSON.stringify(
   [
@@ -35,26 +37,9 @@ const DEFAULT_ROLE_TAGS = JSON.stringify(
 type RoleEditorState = {
   id?: string;
   name: string;
-  rulesJson: string;
+  rules: NonNullable<AccessPolicy['resource']>;
   tagsJson: string;
 };
-
-function isProjectAdmin(membership: ProjectMembership | undefined): boolean {
-  return Boolean(membership?.admin);
-}
-
-function getRoleRulesCount(policy: AccessPolicy): number {
-  return Array.isArray(policy.resource) ? policy.resource.length : 0;
-}
-
-function isRolePolicy(policy: AccessPolicy): boolean {
-  if (policy.name?.startsWith('RBAC:')) {
-    return true;
-  }
-
-  const tags = policy.meta?.tag || [];
-  return tags.some((tag) => tag.code === 'rbac-role');
-}
 
 function getTagsJson(policy: AccessPolicy): string {
   return JSON.stringify(policy.meta?.tag || [], null, 2);
@@ -114,7 +99,7 @@ export function RbacRolesPage(): JSX.Element {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorState, setEditorState] = useState<RoleEditorState>({
     name: 'RBAC: ',
-    rulesJson: DEFAULT_ROLE_RULES,
+    rules: parseRules(DEFAULT_ROLE_RULES) || [],
     tagsJson: DEFAULT_ROLE_TAGS,
   });
 
@@ -152,7 +137,7 @@ export function RbacRolesPage(): JSX.Element {
   const openCreateModal = (): void => {
     setEditorState({
       name: 'RBAC: ',
-      rulesJson: DEFAULT_ROLE_RULES,
+      rules: parseRules(DEFAULT_ROLE_RULES) || [],
       tagsJson: DEFAULT_ROLE_TAGS,
     });
     setEditorOpen(true);
@@ -162,7 +147,7 @@ export function RbacRolesPage(): JSX.Element {
     setEditorState({
       id: policy.id,
       name: policy.name || '',
-      rulesJson: JSON.stringify(policy.resource || [], null, 2),
+      rules: (policy.resource || []) as NonNullable<AccessPolicy['resource']>,
       tagsJson: getTagsJson(policy),
     });
     setEditorOpen(true);
@@ -179,7 +164,7 @@ export function RbacRolesPage(): JSX.Element {
       setSaving(true);
       setError(undefined);
 
-      const resourceRules = parseRules(editorState.rulesJson);
+      const resourceRules = editorState.rules;
       const tags = parseTags(editorState.tagsJson);
 
       const policyPayload: AccessPolicy = {
@@ -192,8 +177,10 @@ export function RbacRolesPage(): JSX.Element {
 
       if (editorState.id) {
         await medplum.updateResource(policyPayload);
+        await logRbacAuditEvent(medplum, 'U', trimmedName, 'Updated RBAC role policy');
       } else {
         await medplum.createResource(policyPayload);
+        await logRbacAuditEvent(medplum, 'C', trimmedName, 'Created RBAC role policy');
       }
 
       showNotification({
@@ -230,6 +217,7 @@ export function RbacRolesPage(): JSX.Element {
     try {
       setDeletingId(policy.id);
       await medplum.deleteResource('AccessPolicy', policy.id);
+      await logRbacAuditEvent(medplum, 'D', policy.name, 'Deleted RBAC role policy');
       showNotification({
         icon: <IconCircleCheck />,
         title: 'Role deleted',
@@ -346,13 +334,9 @@ export function RbacRolesPage(): JSX.Element {
             required
           />
 
-          <Textarea
-            label="Resource rules JSON"
-            description="JSON array of AccessPolicy.resource rules"
-            value={editorState.rulesJson}
-            minRows={10}
-            autosize
-            onChange={(event) => setEditorState((prev) => ({ ...prev, rulesJson: event.currentTarget.value }))}
+          <PermissionBuilder
+            value={editorState.rules}
+            onChange={(nextRules) => setEditorState((prev) => ({ ...prev, rules: nextRules }))}
           />
 
           <Textarea
