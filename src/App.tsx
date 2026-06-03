@@ -26,6 +26,7 @@ import './index.css';
 const SETUP_DISMISSED_KEY = 'medplum-provider-setup-completed';
 
 import HiiveHealthLogo from '../hiive-website-assets/Hiive Health Logo_Blue.svg';
+import { RbacRolesPage } from './pages/admin/RbacRolesPage';
 import { EncounterChartPage } from './pages/encounter/EncounterChartPage';
 import { EncounterModal } from './pages/encounter/EncounterModal';
 import { FaxPage } from './pages/fax/FaxPage';
@@ -73,6 +74,7 @@ export function App(): JSX.Element | null {
   const [setupDismissed, setSetupDismissed] = useState(() => localStorage.getItem(SETUP_DISMISSED_KEY) === 'true');
   const { hasAccess: hasDoseSpot } = useDoseSpotAccess();
   const membership = medplum.getProjectMembership();
+  const isProjectAdmin = Boolean(membership?.admin);
   const hasScriptSure = hasScriptSureIdentifier(membership);
   const isSupervisorReviewer = profile?.resourceType === 'RelatedPerson';
   const patientSearchPath = '/Patient?_count=20&_fields=name,email,gender&_sort=-_lastUpdated';
@@ -177,6 +179,15 @@ export function App(): JSX.Element | null {
                 },
               ]
             : []),
+          ...(isProjectAdmin
+            ? [
+                {
+                  icon: <IconSettingsAutomation />,
+                  label: 'RBAC Admin',
+                  href: '/admin/rbac/roles',
+                },
+              ]
+            : []),
         ],
       },
     ];
@@ -252,6 +263,7 @@ export function App(): JSX.Element | null {
         {hasDoseSpot && <Route path="/dosespot" element={<DoseSpotNotificationsPage />} />}
         {hasScriptSure && <Route path="/scriptsure" element={<ScriptSurePage />} />}
         <Route path="/integrations" element={<IntegrationsPage />} />
+        <Route path="/admin/rbac/roles" element={<RbacRolesPage />} />
         <Route path="/:resourceType" element={<SearchPage />} />
         <Route path="/:resourceType/new" element={<ResourceCreatePage />} />
         <Route path="/:resourceType/:id" element={<ResourcePage />}>
