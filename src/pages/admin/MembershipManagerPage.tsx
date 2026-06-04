@@ -148,13 +148,19 @@ export function MembershipManagerPage(): JSX.Element {
           label="User ID"
           placeholder="8f..."
           value={form.userId}
-          onChange={(event) => setForm((prev) => ({ ...prev, userId: event.currentTarget.value }))}
+          onChange={(event) => {
+            const value = event.currentTarget?.value ?? (event.target as HTMLInputElement | null)?.value ?? '';
+            setForm((prev) => ({ ...prev, userId: value }));
+          }}
         />
         <TextInput
           label="Profile Reference"
           placeholder="Practitioner/59ea2..."
           value={form.profileReference}
-          onChange={(event) => setForm((prev) => ({ ...prev, profileReference: event.currentTarget.value }))}
+          onChange={(event) => {
+            const value = event.currentTarget?.value ?? (event.target as HTMLInputElement | null)?.value ?? '';
+            setForm((prev) => ({ ...prev, profileReference: value }));
+          }}
         />
       </Group>
       <Group grow>
@@ -162,7 +168,10 @@ export function MembershipManagerPage(): JSX.Element {
           label="AccessPolicy ID"
           placeholder="074b3292-..."
           value={form.accessPolicyId}
-          onChange={(event) => setForm((prev) => ({ ...prev, accessPolicyId: event.currentTarget.value }))}
+          onChange={(event) => {
+            const value = event.currentTarget?.value ?? (event.target as HTMLInputElement | null)?.value ?? '';
+            setForm((prev) => ({ ...prev, accessPolicyId: value }));
+          }}
         />
         <Stack gap={4}>
           <Text size="sm" fw={500}>Admin flag</Text>
