@@ -11,6 +11,8 @@
     "lint:ci": "eslint src --ignore-pattern '**/*.test.ts' --ignore-pattern '**/*.test.tsx'",
     "lint:fix": "eslint src --fix --ignore-pattern '**/*.test.ts' --ignore-pattern '**/*.test.tsx'",
     "preview": "vite preview",
+    "rbac:seed:dry-run": "node ./scripts/seed-rbac-access-policies.mjs",
+    "rbac:seed:apply": "node ./scripts/seed-rbac-access-policies.mjs --apply",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

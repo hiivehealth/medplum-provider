@@ -1,0 +1,194 @@
+{
+  "catalogVersion": "1.0.0",
+  "description": "AccessPolicy catalog used as RBAC role source-of-truth for the occupational health demo.",
+  "policies": [
+    {
+      "name": "RBAC: Clinical Provider",
+      "description": "Clinical care team access for occupational health workflows.",
+      "meta": {
+        "tag": [
+          {
+            "system": "https://hiivecare.example/tags/rbac",
+            "code": "rbac-role",
+            "display": "RBAC Role"
+          },
+          {
+            "system": "https://hiivecare.example/tags/rbac",
+            "code": "clinical",
+            "display": "Clinical"
+          }
+        ]
+      },
+      "resource": [
+        {
+          "resourceType": "Patient",
+          "interaction": ["read", "search", "history", "vread"]
+        },
+        {
+          "resourceType": "Encounter",
+          "interaction": ["create", "read", "search", "update", "history", "vread"]
+        },
+        {
+          "resourceType": "Observation",
+          "interaction": ["create", "read", "search", "update", "history", "vread"]
+        },
+        {
+          "resourceType": "Task",
+          "interaction": ["create", "read", "search", "update", "history", "vread"]
+        },
+        {
+          "resourceType": "QuestionnaireResponse",
+          "interaction": ["create", "read", "search", "history", "vread"]
+        },
+        {
+          "resourceType": "EpisodeOfCare",
+          "interaction": ["create", "read", "search", "update", "history", "vread"]
+        }
+      ]
+    },
+    {
+      "name": "RBAC: Supervisor/HR Minimum Necessary",
+      "description": "Operational visibility into duty and restrictions with protected demographics and clinical details hidden.",
+      "meta": {
+        "tag": [
+          {
+            "system": "https://hiivecare.example/tags/rbac",
+            "code": "rbac-role",
+            "display": "RBAC Role"
+          },
+          {
+            "system": "https://hiivecare.example/tags/rbac",
+            "code": "minimum-necessary",
+            "display": "Minimum Necessary"
+          },
+          {
+            "system": "https://hiivecare.example/tags/rbac",
+            "code": "occupational-health",
+            "display": "Occupational Health"
+          }
+        ]
+      },
+      "resource": [
+        {
+          "resourceType": "Patient",
+          "interaction": ["read", "search", "history", "vread"],
+          "criteria": "Patient?_id=ALLOWED_EMPLOYEE_IDS",
+          "hiddenFields": [
+            "address",
+            "birthDate",
+            "communication",
+            "contact",
+            "deceasedBoolean",
+            "deceasedDateTime",
+            "gender",
+            "generalPractitioner",
+            "identifier",
+            "maritalStatus",
+            "photo",
+            "telecom"
+          ]
+        },
+        {
+          "resourceType": "Observation",
+          "interaction": ["read", "search", "history", "vread"],
+          "criteria": "Observation?code=return-to-work-status,work-restriction",
+          "hiddenFields": ["referenceRange", "interpretation", "method", "performer"]
+        },
+        {
+          "resourceType": "Task",
+          "interaction": ["read", "search", "history", "vread"],
+          "criteria": "Task?code=rtw-follow-up,work-readiness"
+        },
+        {
+          "resourceType": "EpisodeOfCare",
+          "interaction": ["read", "search", "history", "vread"],
+          "criteria": "EpisodeOfCare?type=occupational-illness,exposure-incident,work-related-injury"
+        }
+      ]
+    },
+    {
+      "name": "RBAC: Patient Self-Service",
+      "description": "Patient portal access to own chart, forms, and assigned tasks.",
+      "meta": {
+        "tag": [
+          {
+            "system": "https://hiivecare.example/tags/rbac",
+            "code": "rbac-role",
+            "display": "RBAC Role"
+          },
+          {
+            "system": "https://hiivecare.example/tags/rbac",
+            "code": "patient",
+            "display": "Patient"
+          }
+        ]
+      },
+      "resource": [
+        {
+          "resourceType": "Patient",
+          "interaction": ["read", "history", "vread"]
+        },
+        {
+          "resourceType": "Observation",
+          "interaction": ["read", "search", "history", "vread"],
+          "criteria": "Observation?subject={profile}"
+        },
+        {
+          "resourceType": "Encounter",
+          "interaction": ["read", "search", "history", "vread"],
+          "criteria": "Encounter?subject={profile}"
+        },
+        {
+          "resourceType": "Task",
+          "interaction": ["read", "search", "history", "vread"],
+          "criteria": "Task?for={profile}"
+        },
+        {
+          "resourceType": "QuestionnaireResponse",
+          "interaction": ["create", "read", "search", "history", "vread"],
+          "criteria": "QuestionnaireResponse?subject={profile}"
+        }
+      ]
+    },
+    {
+      "name": "RBAC: Occupational Safety Coordinator",
+      "description": "Cross-case visibility for incident operations and follow-up coordination.",
+      "meta": {
+        "tag": [
+          {
+            "system": "https://hiivecare.example/tags/rbac",
+            "code": "rbac-role",
+            "display": "RBAC Role"
+          },
+          {
+            "system": "https://hiivecare.example/tags/rbac",
+            "code": "occupational-health",
+            "display": "Occupational Health"
+          }
+        ]
+      },
+      "resource": [
+        {
+          "resourceType": "EpisodeOfCare",
+          "interaction": ["read", "search", "history", "vread", "update"],
+          "criteria": "EpisodeOfCare?status=active"
+        },
+        {
+          "resourceType": "Task",
+          "interaction": ["read", "search", "history", "vread", "update"],
+          "criteria": "Task?code=rtw-follow-up,work-readiness"
+        },
+        {
+          "resourceType": "Observation",
+          "interaction": ["read", "search", "history", "vread"],
+          "criteria": "Observation?code=return-to-work-status,work-restriction"
+        },
+        {
+          "resourceType": "Patient",
+          "interaction": ["read", "search", "history", "vread"],
+          "hiddenFields": ["identifier", "maritalStatus", "telecom"]
+        }
+      ]
+    }
+  ]
+}

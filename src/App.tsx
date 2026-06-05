@@ -26,6 +26,14 @@ import './index.css';
 const SETUP_DISMISSED_KEY = 'medplum-provider-setup-completed';
 
 import HiiveHealthLogo from '../hiive-website-assets/Hiive Health Logo_Blue.svg';
+import { AccessModelsPage } from './pages/admin/AccessModelsPage';
+import { AuditLogPage } from './pages/admin/AuditLogPage';
+import { BulkAssignmentPage } from './pages/admin/BulkAssignmentPage';
+import { MembershipManagerPage } from './pages/admin/MembershipManagerPage';
+import { RbacRolesPage } from './pages/admin/RbacRolesPage';
+import { RunbooksPage } from './pages/admin/RunbooksPage';
+import { TemplatesPage } from './pages/admin/TemplatesPage';
+import { VisibilityTesterPage } from './pages/admin/VisibilityTesterPage';
 import { EncounterChartPage } from './pages/encounter/EncounterChartPage';
 import { EncounterModal } from './pages/encounter/EncounterModal';
 import { FaxPage } from './pages/fax/FaxPage';
@@ -73,6 +81,7 @@ export function App(): JSX.Element | null {
   const [setupDismissed, setSetupDismissed] = useState(() => localStorage.getItem(SETUP_DISMISSED_KEY) === 'true');
   const { hasAccess: hasDoseSpot } = useDoseSpotAccess();
   const membership = medplum.getProjectMembership();
+  const isProjectAdmin = Boolean(membership?.admin);
   const hasScriptSure = hasScriptSureIdentifier(membership);
   const isSupervisorReviewer = profile?.resourceType === 'RelatedPerson';
   const patientSearchPath = '/Patient?_count=20&_fields=name,email,gender&_sort=-_lastUpdated';
@@ -177,6 +186,15 @@ export function App(): JSX.Element | null {
                 },
               ]
             : []),
+          ...(isProjectAdmin
+            ? [
+                {
+                  icon: <IconSettingsAutomation />,
+                  label: 'RBAC Admin',
+                  href: '/admin/rbac/roles',
+                },
+              ]
+            : []),
         ],
       },
     ];
@@ -252,6 +270,15 @@ export function App(): JSX.Element | null {
         {hasDoseSpot && <Route path="/dosespot" element={<DoseSpotNotificationsPage />} />}
         {hasScriptSure && <Route path="/scriptsure" element={<ScriptSurePage />} />}
         <Route path="/integrations" element={<IntegrationsPage />} />
+        <Route path="/admin/rbac" element={<Navigate to="/admin/rbac/roles" replace />} />
+        <Route path="/admin/rbac/roles" element={<RbacRolesPage />} />
+        <Route path="/admin/rbac/access-models" element={<AccessModelsPage />} />
+        <Route path="/admin/rbac/members" element={<MembershipManagerPage />} />
+        <Route path="/admin/rbac/test" element={<VisibilityTesterPage />} />
+        <Route path="/admin/rbac/bulk-assign" element={<BulkAssignmentPage />} />
+        <Route path="/admin/rbac/templates" element={<TemplatesPage />} />
+        <Route path="/admin/rbac/audit" element={<AuditLogPage />} />
+        <Route path="/admin/rbac/runbooks" element={<RunbooksPage />} />
         <Route path="/:resourceType" element={<SearchPage />} />
         <Route path="/:resourceType/new" element={<ResourceCreatePage />} />
         <Route path="/:resourceType/:id" element={<ResourcePage />}>
