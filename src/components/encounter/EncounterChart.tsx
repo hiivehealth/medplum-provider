@@ -16,6 +16,7 @@ import { showErrorNotification } from '../../utils/notifications';
 import { TaskPanel } from '../tasks/encounter/TaskPanel';
 import { BillingTab } from './BillingTab';
 import { EncounterHeader } from './EncounterHeader';
+import { LocationSelector } from './LocationSelector';
 import { OccupationalReturnToWorkPanel } from './OccupationalReturnToWorkPanel';
 import { SignAddendum } from './SignAddendum';
 
@@ -236,6 +237,15 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
           {activeTab === 'notes' && (
             <Stack gap="md">
               <SignAddendum encounter={encounter} provenances={provenances} chartNoteStatus={chartNoteStatus} />
+
+              <Card withBorder shadow="sm" mt="md">
+                <Title order={3}>Room and Station</Title>
+                <LocationSelector
+                  encounter={encounter}
+                  onChange={setEncounter}
+                  disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                />
+              </Card>
 
               {clinicalImpression && (
                 <Card withBorder shadow="sm" mt="md">
