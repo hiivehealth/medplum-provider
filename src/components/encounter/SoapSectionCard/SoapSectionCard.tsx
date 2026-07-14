@@ -4,7 +4,7 @@ import { Alert, Card, LoadingOverlay, Stack, Title } from '@mantine/core';
 import type { Questionnaire, QuestionnaireResponse } from '@medplum/fhirtypes';
 import { QuestionnaireForm } from '@medplum/react';
 import type { JSX } from 'react';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 export interface SoapSectionCardProps {
   title: string;
@@ -16,18 +16,41 @@ export interface SoapSectionCardProps {
   onChange: (response: QuestionnaireResponse) => void;
 }
 
+const SAVE_DEBOUNCE_MS = 750;
+
 export function SoapSectionCard(props: SoapSectionCardProps): JSX.Element {
   const { title, questionnaire, questionnaireResponse, loading, error, disabled, onChange } = props;
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pendingResponseRef = useRef<QuestionnaireResponse | undefined>(undefined);
 
   const handleChange = useCallback(
     (response: QuestionnaireResponse): void => {
       if (disabled) {
         return;
       }
-      onChange(response);
+      pendingResponseRef.current = response;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        timeoutRef.current = undefined;
+        const pending = pendingResponseRef.current;
+        pendingResponseRef.current = undefined;
+        if (pending) {
+          onChange(pending);
+        }
+      }, SAVE_DEBOUNCE_MS);
     },
     [disabled, onChange]
   );
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <Card withBorder shadow="sm" mt="md" pos="relative">

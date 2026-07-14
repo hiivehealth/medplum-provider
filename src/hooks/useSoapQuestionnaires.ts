@@ -13,7 +13,7 @@ import type {
   QuestionnaireResponse,
 } from '@medplum/fhirtypes';
 import { useMedplum, useMedplumProfile } from '@medplum/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SOAP_PLAN_URL, SOAP_QUESTIONNAIRE_URLS } from '../data/soap-questionnaires';
 import { extractSoapResponse } from '../utils/soap-extraction';
 import { showErrorNotification } from '../utils/notifications';
@@ -62,6 +62,10 @@ export function useSoapQuestionnaires(
   const [extractedDisposition, setExtractedDisposition] = useState<{ code?: string; display?: string; endDate?: string }>({});
 
   const SOAP_EXTRACT_IDENTIFIER_SYSTEM = 'https://hiivehealth.com/fhir/identifier/soap-extract';
+
+  const SAVE_DEBOUNCE_MS = 750;
+  const saveTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const pendingSaves = useRef<Map<string, QuestionnaireResponse>>(new Map());
 
   const encounterRef = useMemo(
     () => (encounter ? { reference: getReferenceString(encounter) } : undefined),
@@ -344,8 +348,14 @@ export function useSoapQuestionnaires(
     return { ...resources, questionnaireResponses: responses };
   }, [questionnaires, persistExtractedResources]);
 
-  const saveResponse = useCallback(
-    async (questionnaireUrl: string, response: QuestionnaireResponse): Promise<void> => {
+  const doSaveResponse = useCallback(
+    async (questionnaireUrl: string): Promise<void> => {
+      const response = pendingSaves.current.get(questionnaireUrl);
+      pendingSaves.current.delete(questionnaireUrl);
+      if (!response) {
+        return;
+      }
+
       const state = questionnaires.get(questionnaireUrl);
       if (!state || !encounterRef || !patientRef) {
         return;
@@ -386,6 +396,24 @@ export function useSoapQuestionnaires(
       }
     },
     [questionnaires, encounterRef, patientRef, authorRef, medplum, extractResources, persistExtractedResources]
+  );
+
+  const saveResponse = useCallback(
+    (questionnaireUrl: string, response: QuestionnaireResponse): void => {
+      pendingSaves.current.set(questionnaireUrl, response);
+      const existing = saveTimeouts.current.get(questionnaireUrl);
+      if (existing) {
+        clearTimeout(existing);
+      }
+      const timeout = setTimeout(() => {
+        saveTimeouts.current.delete(questionnaireUrl);
+        doSaveResponse(questionnaireUrl).catch(() => {
+          // error is already shown by doSaveResponse
+        });
+      }, SAVE_DEBOUNCE_MS);
+      saveTimeouts.current.set(questionnaireUrl, timeout);
+    },
+    [doSaveResponse]
   );
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import { Alert, Card, Select, Stack, Title } from '@mantine/core';
 import type { QuestionnaireResponse } from '@medplum/fhirtypes';
 import { QuestionnaireForm } from '@medplum/react';
 import type { JSX } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { DECISION_FLOWS } from '../../../data/decision-flows';
 import type { UseDecisionFlowsResult } from '../../../hooks/useDecisionFlows';
 
@@ -12,9 +13,14 @@ export interface DecisionFlowsPanelProps {
   disabled?: boolean;
 }
 
+const SAVE_DEBOUNCE_MS = 750;
+
 export function DecisionFlowsPanel(props: DecisionFlowsPanelProps): JSX.Element {
   const { decisionFlows, disabled } = props;
   const { flows, selectedFlowUrl, setSelectedFlowUrl, saveResponse } = decisionFlows;
+
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pendingResponseRef = useRef<QuestionnaireResponse | undefined>(undefined);
 
   const options = [
     { value: '', label: 'Select a decision flow...' },
@@ -22,6 +28,35 @@ export function DecisionFlowsPanel(props: DecisionFlowsPanelProps): JSX.Element 
   ];
 
   const selectedState = selectedFlowUrl ? flows.get(selectedFlowUrl) : undefined;
+
+  const handleChange = useCallback(
+    (response: QuestionnaireResponse): void => {
+      if (disabled || !selectedFlowUrl) {
+        return;
+      }
+      pendingResponseRef.current = response;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        timeoutRef.current = undefined;
+        const pending = pendingResponseRef.current;
+        pendingResponseRef.current = undefined;
+        if (pending && selectedFlowUrl) {
+          saveResponse(selectedFlowUrl, pending).catch(console.error);
+        }
+      }, SAVE_DEBOUNCE_MS);
+    },
+    [disabled, selectedFlowUrl, saveResponse]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <Card withBorder shadow="sm" mt="md">
@@ -47,12 +82,7 @@ export function DecisionFlowsPanel(props: DecisionFlowsPanelProps): JSX.Element 
             questionnaire={selectedState.questionnaire}
             questionnaireResponse={selectedState.response}
             excludeButtons={true}
-            onChange={(response: QuestionnaireResponse): void => {
-              if (disabled) {
-                return;
-              }
-              saveResponse(selectedFlowUrl, response).catch(console.error);
-            }}
+            onChange={handleChange}
           />
         )}
       </Stack>
