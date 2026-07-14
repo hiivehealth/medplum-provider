@@ -50,7 +50,7 @@ export const LocationSelector = (props: LocationSelectorProps): JSX.Element => {
     if (levelIndex === 0) {
       const result = await medplum.searchResources(
         'Location',
-        'partof:missing=true&status=active',
+        'partof:missing=true&status=active&_count=100&_sort=name',
         { cache: 'no-cache' }
       );
       return result;
@@ -60,7 +60,7 @@ export const LocationSelector = (props: LocationSelectorProps): JSX.Element => {
       return [];
     }
 
-    const filters = [`partof=${parentId}`, 'status=active'];
+    const filters = [`partof=${parentId}`, 'status=active', '_count=100', '_sort=name'];
     if (level.physicalType) {
       filters.push(`physical-type=${level.physicalType}`);
     }
