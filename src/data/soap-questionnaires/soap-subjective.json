@@ -1,0 +1,46 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://hiivehealth.com/questionnaire/soap-subjective",
+  "name": "HiiveSOAPSubjective",
+  "title": "Subjective",
+  "status": "active",
+  "description": "Subjective section of the SOAP note: HPI, chief complaint, and symptoms.",
+  "item": [
+    {
+      "linkId": "chief-complaint",
+      "type": "string",
+      "text": "Chief Complaint",
+      "repeats": true,
+      "required": true
+    },
+    {
+      "linkId": "hpi",
+      "type": "text",
+      "text": "History of Present Illness",
+      "required": false
+    },
+    {
+      "linkId": "symptom-onset",
+      "type": "dateTime",
+      "text": "Symptom onset",
+      "required": false
+    },
+    {
+      "linkId": "symptom-severity",
+      "type": "choice",
+      "text": "Symptom severity",
+      "answerOption": [
+        { "valueCoding": { "system": "https://hiivehealth.com/fhir/soap/symptom-severity", "code": "mild", "display": "Mild" } },
+        { "valueCoding": { "system": "https://hiivehealth.com/fhir/soap/symptom-severity", "code": "moderate", "display": "Moderate" } },
+        { "valueCoding": { "system": "https://hiivehealth.com/fhir/soap/symptom-severity", "code": "severe", "display": "Severe" } }
+      ],
+      "required": false
+    },
+    {
+      "linkId": "patient-self-report",
+      "type": "text",
+      "text": "Patient self-report / additional comments",
+      "required": false
+    }
+  ]
+}

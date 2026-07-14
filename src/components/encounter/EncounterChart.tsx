@@ -8,8 +8,16 @@ import { Loading, useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { SAVE_TIMEOUT_MS } from '../../config/constants';
+import {
+  SOAP_ASSESSMENT_URL,
+  SOAP_OBJECTIVE_URL,
+  SOAP_PLAN_URL,
+  SOAP_SUBJECTIVE_URL,
+  REVIEW_OF_SYSTEMS_URL,
+} from '../../data/soap-questionnaires';
 import { useDebouncedUpdateResource } from '../../hooks/useDebouncedUpdateResource';
 import { useEncounterChart } from '../../hooks/useEncounterChart';
+import { useSoapQuestionnaires } from '../../hooks/useSoapQuestionnaires';
 import { ChartNoteStatus } from '../../types/encounter';
 import { updateEncounterStatus } from '../../utils/encounter';
 import { showErrorNotification } from '../../utils/notifications';
@@ -19,6 +27,7 @@ import { EncounterHeader } from './EncounterHeader';
 import { LocationSelector } from './LocationSelector';
 import { OccupationalReturnToWorkPanel } from './OccupationalReturnToWorkPanel';
 import { SignAddendum } from './SignAddendum';
+import { SoapSectionCard } from './SoapSectionCard/SoapSectionCard';
 
 const FHIR_ACT_REASON_SYSTEM = 'http://terminology.hl7.org/CodeSystem/v3-ActReason';
 const FHIR_PROVENANCE_PARTICIPANT_TYPE_SYSTEM = 'http://terminology.hl7.org/CodeSystem/provenance-participant-type';
@@ -62,6 +71,8 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
   const debouncedUpdateResource = useDebouncedUpdateResource(medplum, SAVE_TIMEOUT_MS);
   const [provenances, setProvenances] = useState<Provenance[]>([]);
   const [chartNoteStatus, setChartNoteStatus] = useState(ChartNoteStatus.Unsigned);
+
+  const { questionnaires, saveResponse } = useSoapQuestionnaires(encounter, patientResource);
 
   useEffect(() => {
     if (!encounter) {
@@ -251,6 +262,7 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
                 <Card withBorder shadow="sm" mt="md">
                   <Title>Fill chart note</Title>
                   <Textarea
+                    aria-label="Chart note"
                     defaultValue={clinicalImpression.note?.[0]?.text}
                     value={chartNote}
                     onChange={handleChartNoteChange}
@@ -261,6 +273,56 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
                   />
                 </Card>
               )}
+              <SoapSectionCard
+                title="Subjective"
+                questionnaire={questionnaires.get(SOAP_SUBJECTIVE_URL)?.questionnaire}
+                questionnaireResponse={questionnaires.get(SOAP_SUBJECTIVE_URL)?.response}
+                loading={questionnaires.get(SOAP_SUBJECTIVE_URL)?.loading}
+                error={questionnaires.get(SOAP_SUBJECTIVE_URL)?.error}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                onChange={(response) => saveResponse(SOAP_SUBJECTIVE_URL, response)}
+              />
+
+              <SoapSectionCard
+                title="Review of Systems"
+                questionnaire={questionnaires.get(REVIEW_OF_SYSTEMS_URL)?.questionnaire}
+                questionnaireResponse={questionnaires.get(REVIEW_OF_SYSTEMS_URL)?.response}
+                loading={questionnaires.get(REVIEW_OF_SYSTEMS_URL)?.loading}
+                error={questionnaires.get(REVIEW_OF_SYSTEMS_URL)?.error}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                onChange={(response) => saveResponse(REVIEW_OF_SYSTEMS_URL, response)}
+              />
+
+              <SoapSectionCard
+                title="Objective"
+                questionnaire={questionnaires.get(SOAP_OBJECTIVE_URL)?.questionnaire}
+                questionnaireResponse={questionnaires.get(SOAP_OBJECTIVE_URL)?.response}
+                loading={questionnaires.get(SOAP_OBJECTIVE_URL)?.loading}
+                error={questionnaires.get(SOAP_OBJECTIVE_URL)?.error}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                onChange={(response) => saveResponse(SOAP_OBJECTIVE_URL, response)}
+              />
+
+              <SoapSectionCard
+                title="Assessment"
+                questionnaire={questionnaires.get(SOAP_ASSESSMENT_URL)?.questionnaire}
+                questionnaireResponse={questionnaires.get(SOAP_ASSESSMENT_URL)?.response}
+                loading={questionnaires.get(SOAP_ASSESSMENT_URL)?.loading}
+                error={questionnaires.get(SOAP_ASSESSMENT_URL)?.error}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                onChange={(response) => saveResponse(SOAP_ASSESSMENT_URL, response)}
+              />
+
+              <SoapSectionCard
+                title="Plan"
+                questionnaire={questionnaires.get(SOAP_PLAN_URL)?.questionnaire}
+                questionnaireResponse={questionnaires.get(SOAP_PLAN_URL)?.response}
+                loading={questionnaires.get(SOAP_PLAN_URL)?.loading}
+                error={questionnaires.get(SOAP_PLAN_URL)?.error}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                onChange={(response) => saveResponse(SOAP_PLAN_URL, response)}
+              />
+
               <OccupationalReturnToWorkPanel
                 patient={patientResource}
                 encounter={encounter}

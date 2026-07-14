@@ -99,7 +99,7 @@ describe('EncounterChart', () => {
       expect(screen.getByText('Fill chart note')).toBeInTheDocument();
     });
 
-    const textarea = screen.getByRole('textbox');
+    const textarea = screen.getByRole('textbox', { name: /chart note/i });
     expect(textarea).toBeInTheDocument();
     expect(textarea).toHaveValue('Test clinical note');
   });
@@ -114,7 +114,7 @@ describe('EncounterChart', () => {
       expect(screen.getByText('Fill chart note')).toBeInTheDocument();
     });
 
-    const textarea = screen.getByRole('textbox');
+    const textarea = screen.getByRole('textbox', { name: /chart note/i });
     await user.clear(textarea);
     await user.type(textarea, 'Updated note');
 
@@ -241,7 +241,7 @@ describe('EncounterChart', () => {
       expect(screen.getByText('Fill chart note')).toBeInTheDocument();
     });
 
-    const textarea = screen.getByRole('textbox');
+    const textarea = screen.getByRole('textbox', { name: /chart note/i });
     expect(textarea).not.toBeDisabled();
   });
 

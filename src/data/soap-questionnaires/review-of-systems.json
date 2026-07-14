@@ -1,0 +1,94 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://hiivehealth.com/questionnaire/review-of-systems",
+  "name": "HiiveReviewOfSystems",
+  "title": "Review of Systems",
+  "status": "active",
+  "description": "Review of Systems questionnaire grouped by body system.",
+  "item": [
+    {
+      "linkId": "constitutional",
+      "type": "group",
+      "text": "Constitutional",
+      "item": [
+        { "linkId": "constitutional-negative", "type": "boolean", "text": "Negative" },
+        { "linkId": "constitutional-fever", "type": "boolean", "text": "Fever" },
+        { "linkId": "constitutional-chills", "type": "boolean", "text": "Chills" },
+        { "linkId": "constitutional-fatigue", "type": "boolean", "text": "Fatigue" },
+        { "linkId": "constitutional-weight-change", "type": "boolean", "text": "Weight change" }
+      ]
+    },
+    {
+      "linkId": "respiratory",
+      "type": "group",
+      "text": "Respiratory",
+      "item": [
+        { "linkId": "respiratory-negative", "type": "boolean", "text": "Negative" },
+        { "linkId": "respiratory-cough", "type": "boolean", "text": "Cough" },
+        { "linkId": "respiratory-dyspnea", "type": "boolean", "text": "Shortness of breath" },
+        { "linkId": "respiratory-wheezing", "type": "boolean", "text": "Wheezing" },
+        { "linkId": "respiratory-chest-pain", "type": "boolean", "text": "Chest pain with breathing" }
+      ]
+    },
+    {
+      "linkId": "cardiovascular",
+      "type": "group",
+      "text": "Cardiovascular",
+      "item": [
+        { "linkId": "cardiovascular-negative", "type": "boolean", "text": "Negative" },
+        { "linkId": "cardiovascular-chest-pain", "type": "boolean", "text": "Chest pain" },
+        { "linkId": "cardiovascular-palpitations", "type": "boolean", "text": "Palpitations" },
+        { "linkId": "cardiovascular-edema", "type": "boolean", "text": "Edema" },
+        { "linkId": "cardiovascular-syncope", "type": "boolean", "text": "Syncope" }
+      ]
+    },
+    {
+      "linkId": "gastrointestinal",
+      "type": "group",
+      "text": "Gastrointestinal",
+      "item": [
+        { "linkId": "gastrointestinal-negative", "type": "boolean", "text": "Negative" },
+        { "linkId": "gastrointestinal-nausea", "type": "boolean", "text": "Nausea" },
+        { "linkId": "gastrointestinal-vomiting", "type": "boolean", "text": "Vomiting" },
+        { "linkId": "gastrointestinal-diarrhea", "type": "boolean", "text": "Diarrhea" },
+        { "linkId": "gastrointestinal-abdominal-pain", "type": "boolean", "text": "Abdominal pain" }
+      ]
+    },
+    {
+      "linkId": "musculoskeletal",
+      "type": "group",
+      "text": "Musculoskeletal",
+      "item": [
+        { "linkId": "musculoskeletal-negative", "type": "boolean", "text": "Negative" },
+        { "linkId": "musculoskeletal-joint-pain", "type": "boolean", "text": "Joint pain" },
+        { "linkId": "musculoskeletal-muscle-weakness", "type": "boolean", "text": "Muscle weakness" },
+        { "linkId": "musculoskeletal-back-pain", "type": "boolean", "text": "Back pain" },
+        { "linkId": "musculoskeletal-limited-range", "type": "boolean", "text": "Limited range of motion" }
+      ]
+    },
+    {
+      "linkId": "neurological",
+      "type": "group",
+      "text": "Neurological",
+      "item": [
+        { "linkId": "neurological-negative", "type": "boolean", "text": "Negative" },
+        { "linkId": "neurological-headache", "type": "boolean", "text": "Headache" },
+        { "linkId": "neurological-dizziness", "type": "boolean", "text": "Dizziness" },
+        { "linkId": "neurological-weakness", "type": "boolean", "text": "Focal weakness" },
+        { "linkId": "neurological-numbness", "type": "boolean", "text": "Numbness / tingling" }
+      ]
+    },
+    {
+      "linkId": "skin",
+      "type": "group",
+      "text": "Skin / Integumentary",
+      "item": [
+        { "linkId": "skin-negative", "type": "boolean", "text": "Negative" },
+        { "linkId": "skin-rash", "type": "boolean", "text": "Rash" },
+        { "linkId": "skin-itching", "type": "boolean", "text": "Itching" },
+        { "linkId": "skin-wound", "type": "boolean", "text": "Wound / laceration" },
+        { "linkId": "skin-burn", "type": "boolean", "text": "Burn" }
+      ]
+    }
+  ]
+}

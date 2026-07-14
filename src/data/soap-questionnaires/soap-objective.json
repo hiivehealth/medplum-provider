@@ -1,0 +1,60 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://hiivehealth.com/questionnaire/soap-objective",
+  "name": "HiiveSOAPObjective",
+  "title": "Objective",
+  "status": "active",
+  "description": "Objective section of the SOAP note: vital signs and physical examination findings.",
+  "item": [
+    {
+      "linkId": "temperature",
+      "type": "decimal",
+      "text": "Temperature (°F)"
+    },
+    {
+      "linkId": "heart-rate",
+      "type": "integer",
+      "text": "Heart rate (bpm)"
+    },
+    {
+      "linkId": "respiratory-rate",
+      "type": "integer",
+      "text": "Respiratory rate (breaths/min)"
+    },
+    {
+      "linkId": "systolic-bp",
+      "type": "integer",
+      "text": "Systolic BP (mmHg)"
+    },
+    {
+      "linkId": "diastolic-bp",
+      "type": "integer",
+      "text": "Diastolic BP (mmHg)"
+    },
+    {
+      "linkId": "spO2",
+      "type": "integer",
+      "text": "SpO₂ (%)"
+    },
+    {
+      "linkId": "weight",
+      "type": "decimal",
+      "text": "Weight (lbs)"
+    },
+    {
+      "linkId": "height",
+      "type": "decimal",
+      "text": "Height (in)"
+    },
+    {
+      "linkId": "physical-exam",
+      "type": "text",
+      "text": "Physical Examination"
+    },
+    {
+      "linkId": "objective-notes",
+      "type": "text",
+      "text": "Additional objective notes"
+    }
+  ]
+}

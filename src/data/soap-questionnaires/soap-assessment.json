@@ -1,0 +1,32 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://hiivehealth.com/questionnaire/soap-assessment",
+  "name": "HiiveSOAPAssessment",
+  "title": "Assessment",
+  "status": "active",
+  "description": "Assessment section of the SOAP note: diagnoses, differentials, and clinical reasoning.",
+  "item": [
+    {
+      "linkId": "diagnoses",
+      "type": "open-choice",
+      "text": "Diagnoses",
+      "repeats": true
+    },
+    {
+      "linkId": "differential-diagnoses",
+      "type": "open-choice",
+      "text": "Differential Diagnoses",
+      "repeats": true
+    },
+    {
+      "linkId": "assessment-note",
+      "type": "text",
+      "text": "Clinical Assessment Summary"
+    },
+    {
+      "linkId": "previous-diagnoses-review",
+      "type": "text",
+      "text": "Review of previous / active diagnoses"
+    }
+  ]
+}
