@@ -63,7 +63,7 @@ export const LocationSelector = (props: LocationSelectorProps): JSX.Element => {
       return [];
     }
 
-    const filters = [`partof=${parentId}`, 'status=active', '_count=100', '_sort=name'];
+    const filters = [`partof=Location/${parentId}`, 'status=active', '_count=100', '_sort=name'];
     if (level.physicalType) {
       filters.push(`physical-type=${level.physicalType}`);
     }
