@@ -28,6 +28,12 @@ export interface UseSoapQuestionnairesResult {
   questionnaires: Map<string, SoapQuestionnaireState>;
   refresh: () => Promise<void>;
   saveResponse: (questionnaireUrl: string, response: QuestionnaireResponse) => Promise<void>;
+  persistAll: () => Promise<{
+    observations: Observation[];
+    conditions: Condition[];
+    carePlans: CarePlan[];
+    questionnaireResponses: Map<string, QuestionnaireResponse | undefined>;
+  }>;
   extractedResources: {
     observations: Observation[];
     conditions: Condition[];
@@ -167,9 +173,13 @@ export function useSoapQuestionnaires(
   );
 
   const persistExtractedResources = useCallback(
-    async (responses: Map<string, QuestionnaireResponse | undefined>): Promise<void> => {
+    async (responses: Map<string, QuestionnaireResponse | undefined>): Promise<{
+      observations: Observation[];
+      conditions: Condition[];
+      carePlans: CarePlan[];
+    }> => {
       if (!patientResource || !encounter || !encounterRef) {
-        return;
+        return { observations: [], conditions: [], carePlans: [] };
       }
 
       const context = {
@@ -246,14 +256,30 @@ export function useSoapQuestionnaires(
         }
       }
 
-      setExtractedResources({
+      const result = {
         observations: createdObservations,
         conditions: createdConditions,
         carePlans: createdCarePlans,
-      });
+      };
+      setExtractedResources(result);
+      return result;
     },
     [patientResource, encounter, encounterRef, author, medplum]
   );
+
+  const persistAll = useCallback(async (): Promise<{
+    observations: Observation[];
+    conditions: Condition[];
+    carePlans: CarePlan[];
+    questionnaireResponses: Map<string, QuestionnaireResponse | undefined>;
+  }> => {
+    const responses = new Map<string, QuestionnaireResponse | undefined>();
+    for (const [url, state] of questionnaires.entries()) {
+      responses.set(url, state.response);
+    }
+    const resources = await persistExtractedResources(responses);
+    return { ...resources, questionnaireResponses: responses };
+  }, [questionnaires, persistExtractedResources]);
 
   const saveResponse = useCallback(
     async (questionnaireUrl: string, response: QuestionnaireResponse): Promise<void> => {
@@ -315,6 +341,7 @@ export function useSoapQuestionnaires(
     questionnaires,
     refresh: loadQuestionnaires,
     saveResponse,
+    persistAll,
     extractedResources,
     extractedDisposition,
   };

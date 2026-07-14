@@ -21,6 +21,7 @@ import { useEncounterChart } from '../../hooks/useEncounterChart';
 import { useSoapQuestionnaires } from '../../hooks/useSoapQuestionnaires';
 import { ChartNoteStatus } from '../../types/encounter';
 import { updateEncounterStatus } from '../../utils/encounter';
+import { buildSoapComposition } from '../../utils/soap-composition';
 import { showErrorNotification } from '../../utils/notifications';
 import { TaskPanel } from '../tasks/encounter/TaskPanel';
 import { BillingTab } from './BillingTab';
@@ -75,7 +76,7 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
   const [provenances, setProvenances] = useState<Provenance[]>([]);
   const [chartNoteStatus, setChartNoteStatus] = useState(ChartNoteStatus.Unsigned);
 
-  const { questionnaires, saveResponse } = useSoapQuestionnaires(encounter, patientResource);
+  const { questionnaires, saveResponse, persistAll } = useSoapQuestionnaires(encounter, patientResource);
   const decisionFlows = useDecisionFlows(encounter, patientResource);
 
   useEffect(() => {
@@ -149,8 +150,8 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
     }
   };
 
-  const handleSign = async (practitioner: Reference<Practitioner>, lock: boolean): Promise<void> => {
-    if (!encounter) {
+  const handleSign = async (practitionerRef: Reference<Practitioner>, lock: boolean): Promise<void> => {
+    if (!encounter || !patientResource || !practitioner) {
       return;
     }
 
@@ -206,7 +207,7 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
               },
             ],
           },
-          who: practitioner,
+          who: practitionerRef,
         },
       ],
       signature: [
@@ -219,12 +220,30 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
             },
           ],
           when: new Date().toISOString(),
-          who: practitioner,
+          who: practitionerRef,
         },
       ],
     });
 
     setProvenances([...provenances, newProvenance]);
+
+    // Persist all QuestionnaireResponses and create the signed SOAP Composition
+    try {
+      const { observations, conditions, carePlans, questionnaireResponses } = await persistAll();
+      const composition = buildSoapComposition({
+        patient: patientResource,
+        encounter,
+        practitioner: createReference(practitioner),
+        clinicalImpression,
+        observations,
+        conditions,
+        carePlans,
+        questionnaireResponses,
+      });
+      await medplum.createResource(composition);
+    } catch (err) {
+      showErrorNotification(err);
+    }
 
     if (lock) {
       setChartNoteStatus(ChartNoteStatus.SignedAndLocked);
