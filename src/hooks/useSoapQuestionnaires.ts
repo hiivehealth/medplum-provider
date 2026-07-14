@@ -93,7 +93,7 @@ export function useSoapQuestionnaires(
         });
 
         try {
-          const questionnaire = await medplum.searchOne('Questionnaire', { url });
+          const questionnaire = await medplum.searchOne('Questionnaire', { url }, { cache: 'no-cache' });
           if (!questionnaire) {
             nextMap.set(url, {
               questionnaire: { resourceType: 'Questionnaire', status: 'draft', url },
