@@ -36,6 +36,8 @@ import { SoapSectionCard } from './SoapSectionCard/SoapSectionCard';
 const FHIR_ACT_REASON_SYSTEM = 'http://terminology.hl7.org/CodeSystem/v3-ActReason';
 const FHIR_PROVENANCE_PARTICIPANT_TYPE_SYSTEM = 'http://terminology.hl7.org/CodeSystem/provenance-participant-type';
 const FHIR_DOCUMENT_COMPLETION_SYSTEM = 'http://terminology.hl7.org/CodeSystem/v3-DocumentCompletion';
+const CARE_TEMPLATE_EXTENSION_URL = 'https://hiivehealth.com/fhir/StructureDefinition/encounter-care-template';
+const SOAP_PLAN_DEFINITION_URL = 'https://hiivehealth.com/plandefinition/soap-note';
 
 const TASK_COMPLETED_STATUSES = new Set<Task['status']>([
   'completed',
@@ -44,6 +46,15 @@ const TASK_COMPLETED_STATUSES = new Set<Task['status']>([
   'rejected',
   'entered-in-error',
 ]);
+
+function getCareTemplateUrl(encounter: Encounter): string | undefined {
+  return encounter.extension?.find((e) => e.url === CARE_TEMPLATE_EXTENSION_URL)?.valueCanonical;
+}
+
+function isSoapNoteEncounter(encounter: Encounter): boolean {
+  const templateUrl = getCareTemplateUrl(encounter);
+  return templateUrl === undefined || templateUrl === SOAP_PLAN_DEFINITION_URL;
+}
 
 export interface EncounterChartProps {
   encounter: WithId<Encounter> | Reference<Encounter>;
@@ -228,21 +239,23 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
     setProvenances([...provenances, newProvenance]);
 
     // Persist all QuestionnaireResponses and create the signed SOAP Composition
-    try {
-      const { observations, conditions, carePlans, questionnaireResponses } = await persistAll();
-      const composition = buildSoapComposition({
-        patient: patientResource,
-        encounter,
-        practitioner: createReference(practitioner),
-        clinicalImpression,
-        observations,
-        conditions,
-        carePlans,
-        questionnaireResponses,
-      });
-      await medplum.createResource(composition);
-    } catch (err) {
-      showErrorNotification(err);
+    if (isSoapNoteEncounter(encounter)) {
+      try {
+        const { observations, conditions, carePlans, questionnaireResponses } = await persistAll();
+        const composition = buildSoapComposition({
+          patient: patientResource,
+          encounter,
+          practitioner: createReference(practitioner),
+          clinicalImpression,
+          observations,
+          conditions,
+          carePlans,
+          questionnaireResponses,
+        });
+        await medplum.createResource(composition);
+      } catch (err) {
+        showErrorNotification(err);
+      }
     }
 
     if (lock) {
@@ -296,55 +309,59 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
                   />
                 </Card>
               )}
-              <SoapSectionCard
-                title="Subjective"
-                questionnaire={questionnaires.get(SOAP_SUBJECTIVE_URL)?.questionnaire}
-                questionnaireResponse={questionnaires.get(SOAP_SUBJECTIVE_URL)?.response}
-                loading={questionnaires.get(SOAP_SUBJECTIVE_URL)?.loading}
-                error={questionnaires.get(SOAP_SUBJECTIVE_URL)?.error}
-                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
-                onChange={(response) => saveResponse(SOAP_SUBJECTIVE_URL, response)}
-              />
+              {isSoapNoteEncounter(encounter) && (
+                <>
+                  <SoapSectionCard
+                    title="Subjective"
+                    questionnaire={questionnaires.get(SOAP_SUBJECTIVE_URL)?.questionnaire}
+                    questionnaireResponse={questionnaires.get(SOAP_SUBJECTIVE_URL)?.response}
+                    loading={questionnaires.get(SOAP_SUBJECTIVE_URL)?.loading}
+                    error={questionnaires.get(SOAP_SUBJECTIVE_URL)?.error}
+                    disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                    onChange={(response) => saveResponse(SOAP_SUBJECTIVE_URL, response)}
+                  />
 
-              <SoapSectionCard
-                title="Review of Systems"
-                questionnaire={questionnaires.get(REVIEW_OF_SYSTEMS_URL)?.questionnaire}
-                questionnaireResponse={questionnaires.get(REVIEW_OF_SYSTEMS_URL)?.response}
-                loading={questionnaires.get(REVIEW_OF_SYSTEMS_URL)?.loading}
-                error={questionnaires.get(REVIEW_OF_SYSTEMS_URL)?.error}
-                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
-                onChange={(response) => saveResponse(REVIEW_OF_SYSTEMS_URL, response)}
-              />
+                  <SoapSectionCard
+                    title="Review of Systems"
+                    questionnaire={questionnaires.get(REVIEW_OF_SYSTEMS_URL)?.questionnaire}
+                    questionnaireResponse={questionnaires.get(REVIEW_OF_SYSTEMS_URL)?.response}
+                    loading={questionnaires.get(REVIEW_OF_SYSTEMS_URL)?.loading}
+                    error={questionnaires.get(REVIEW_OF_SYSTEMS_URL)?.error}
+                    disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                    onChange={(response) => saveResponse(REVIEW_OF_SYSTEMS_URL, response)}
+                  />
 
-              <SoapSectionCard
-                title="Objective"
-                questionnaire={questionnaires.get(SOAP_OBJECTIVE_URL)?.questionnaire}
-                questionnaireResponse={questionnaires.get(SOAP_OBJECTIVE_URL)?.response}
-                loading={questionnaires.get(SOAP_OBJECTIVE_URL)?.loading}
-                error={questionnaires.get(SOAP_OBJECTIVE_URL)?.error}
-                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
-                onChange={(response) => saveResponse(SOAP_OBJECTIVE_URL, response)}
-              />
+                  <SoapSectionCard
+                    title="Objective"
+                    questionnaire={questionnaires.get(SOAP_OBJECTIVE_URL)?.questionnaire}
+                    questionnaireResponse={questionnaires.get(SOAP_OBJECTIVE_URL)?.response}
+                    loading={questionnaires.get(SOAP_OBJECTIVE_URL)?.loading}
+                    error={questionnaires.get(SOAP_OBJECTIVE_URL)?.error}
+                    disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                    onChange={(response) => saveResponse(SOAP_OBJECTIVE_URL, response)}
+                  />
 
-              <SoapSectionCard
-                title="Assessment"
-                questionnaire={questionnaires.get(SOAP_ASSESSMENT_URL)?.questionnaire}
-                questionnaireResponse={questionnaires.get(SOAP_ASSESSMENT_URL)?.response}
-                loading={questionnaires.get(SOAP_ASSESSMENT_URL)?.loading}
-                error={questionnaires.get(SOAP_ASSESSMENT_URL)?.error}
-                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
-                onChange={(response) => saveResponse(SOAP_ASSESSMENT_URL, response)}
-              />
+                  <SoapSectionCard
+                    title="Assessment"
+                    questionnaire={questionnaires.get(SOAP_ASSESSMENT_URL)?.questionnaire}
+                    questionnaireResponse={questionnaires.get(SOAP_ASSESSMENT_URL)?.response}
+                    loading={questionnaires.get(SOAP_ASSESSMENT_URL)?.loading}
+                    error={questionnaires.get(SOAP_ASSESSMENT_URL)?.error}
+                    disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                    onChange={(response) => saveResponse(SOAP_ASSESSMENT_URL, response)}
+                  />
 
-              <SoapSectionCard
-                title="Plan"
-                questionnaire={questionnaires.get(SOAP_PLAN_URL)?.questionnaire}
-                questionnaireResponse={questionnaires.get(SOAP_PLAN_URL)?.response}
-                loading={questionnaires.get(SOAP_PLAN_URL)?.loading}
-                error={questionnaires.get(SOAP_PLAN_URL)?.error}
-                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
-                onChange={(response) => saveResponse(SOAP_PLAN_URL, response)}
-              />
+                  <SoapSectionCard
+                    title="Plan"
+                    questionnaire={questionnaires.get(SOAP_PLAN_URL)?.questionnaire}
+                    questionnaireResponse={questionnaires.get(SOAP_PLAN_URL)?.response}
+                    loading={questionnaires.get(SOAP_PLAN_URL)?.loading}
+                    error={questionnaires.get(SOAP_PLAN_URL)?.error}
+                    disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                    onChange={(response) => saveResponse(SOAP_PLAN_URL, response)}
+                  />
+                </>
+              )}
 
               <OrdersPanel
                 encounter={encounter}
