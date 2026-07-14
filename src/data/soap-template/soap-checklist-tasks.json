@@ -1,0 +1,118 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:task-soap-subjective",
+      "resource": {
+        "resourceType": "ActivityDefinition",
+        "url": "https://hiivehealth.com/activitydefinition/soap-note/subjective-task",
+        "name": "SoapNoteSubjectiveTask",
+        "title": "Document subjective section",
+        "status": "active",
+        "description": "Capture chief complaint, history of present illness, and review of systems.",
+        "kind": "Task",
+        "intent": "order",
+        "code": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/task-code",
+              "code": "fulfill",
+              "display": "Fulfill the focal request"
+            }
+          ],
+          "text": "Subjective"
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "ActivityDefinition",
+        "ifNoneExist": "url=https://hiivehealth.com/activitydefinition/soap-note/subjective-task"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:task-soap-objective",
+      "resource": {
+        "resourceType": "ActivityDefinition",
+        "url": "https://hiivehealth.com/activitydefinition/soap-note/objective-task",
+        "name": "SoapNoteObjectiveTask",
+        "title": "Document objective section",
+        "status": "active",
+        "description": "Capture vital signs, physical exam findings, and objective observations.",
+        "kind": "Task",
+        "intent": "order",
+        "code": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/task-code",
+              "code": "fulfill",
+              "display": "Fulfill the focal request"
+            }
+          ],
+          "text": "Objective"
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "ActivityDefinition",
+        "ifNoneExist": "url=https://hiivehealth.com/activitydefinition/soap-note/objective-task"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:task-soap-assessment",
+      "resource": {
+        "resourceType": "ActivityDefinition",
+        "url": "https://hiivehealth.com/activitydefinition/soap-note/assessment-task",
+        "name": "SoapNoteAssessmentTask",
+        "title": "Document assessment section",
+        "status": "active",
+        "description": "Capture assessment, diagnoses, and clinical impression.",
+        "kind": "Task",
+        "intent": "order",
+        "code": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/task-code",
+              "code": "fulfill",
+              "display": "Fulfill the focal request"
+            }
+          ],
+          "text": "Assessment"
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "ActivityDefinition",
+        "ifNoneExist": "url=https://hiivehealth.com/activitydefinition/soap-note/assessment-task"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:task-soap-plan",
+      "resource": {
+        "resourceType": "ActivityDefinition",
+        "url": "https://hiivehealth.com/activitydefinition/soap-note/plan-task",
+        "name": "SoapNotePlanTask",
+        "title": "Document plan section",
+        "status": "active",
+        "description": "Capture treatment plan, orders, disposition, and follow-up instructions.",
+        "kind": "Task",
+        "intent": "order",
+        "code": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/task-code",
+              "code": "fulfill",
+              "display": "Fulfill the focal request"
+            }
+          ],
+          "text": "Plan"
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "ActivityDefinition",
+        "ifNoneExist": "url=https://hiivehealth.com/activitydefinition/soap-note/plan-task"
+      }
+    }
+  ]
+}

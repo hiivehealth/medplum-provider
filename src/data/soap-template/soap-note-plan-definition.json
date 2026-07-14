@@ -1,0 +1,44 @@
+{
+  "resourceType": "PlanDefinition",
+  "url": "https://hiivehealth.com/plandefinition/soap-note",
+  "name": "SoapNoteVisit",
+  "title": "SOAP Note Visit",
+  "status": "active",
+  "description": "HiiveHealth-style SOAP note visit template with checklist tasks for Subjective, Objective, Assessment, and Plan sections.",
+  "type": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+        "code": "order-set",
+        "display": "Order Set"
+      }
+    ],
+    "text": "Order Set"
+  },
+  "action": [
+    {
+      "id": "subjective",
+      "title": "Document subjective section",
+      "description": "Capture chief complaint, history of present illness, and review of systems.",
+      "definitionCanonical": "https://hiivehealth.com/activitydefinition/soap-note/subjective-task"
+    },
+    {
+      "id": "objective",
+      "title": "Document objective section",
+      "description": "Capture vital signs, physical exam findings, and objective observations.",
+      "definitionCanonical": "https://hiivehealth.com/activitydefinition/soap-note/objective-task"
+    },
+    {
+      "id": "assessment",
+      "title": "Document assessment section",
+      "description": "Capture assessment, diagnoses, and clinical impression.",
+      "definitionCanonical": "https://hiivehealth.com/activitydefinition/soap-note/assessment-task"
+    },
+    {
+      "id": "plan",
+      "title": "Document plan section",
+      "description": "Capture treatment plan, orders, disposition, and follow-up instructions.",
+      "definitionCanonical": "https://hiivehealth.com/activitydefinition/soap-note/plan-task"
+    }
+  ]
+}
