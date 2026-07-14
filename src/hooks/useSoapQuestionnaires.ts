@@ -5,6 +5,7 @@ import type {
   CarePlan,
   Condition,
   Encounter,
+  Identifier,
   Observation,
   Patient,
   Practitioner,
@@ -59,6 +60,8 @@ export function useSoapQuestionnaires(
     carePlans: CarePlan[];
   }>({ observations: [], conditions: [], carePlans: [] });
   const [extractedDisposition, setExtractedDisposition] = useState<{ code?: string; display?: string; endDate?: string }>({});
+
+  const SOAP_EXTRACT_IDENTIFIER_SYSTEM = 'https://hiivehealth.com/fhir/identifier/soap-extract';
 
   const encounterRef = useMemo(
     () => (encounter ? { reference: getReferenceString(encounter) } : undefined),
@@ -172,6 +175,66 @@ export function useSoapQuestionnaires(
     [patientResource, encounter, author]
   );
 
+  const getExtractIdentifier = useCallback(
+    (
+      resource: Observation | Condition | CarePlan,
+      sectionUrl: string,
+      index: number
+    ): Identifier => {
+      const encounterId = encounter?.id ?? 'unknown';
+      const sectionKey = sectionUrl.replace('https://hiivehealth.com/questionnaire/', '');
+
+      let code = 'resource';
+      if (resource.resourceType === 'Observation') {
+        code =
+          resource.code?.coding?.find((c) => c.code)?.code ??
+          resource.code?.text ??
+          'observation';
+      } else if (resource.resourceType === 'Condition') {
+        code =
+          resource.code?.coding?.find((c) => c.code)?.code ??
+          resource.code?.text ??
+          'condition';
+      } else if (resource.resourceType === 'CarePlan') {
+        code = resource.title ?? 'careplan';
+      }
+
+      const safeCode = code.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-_]/g, '').slice(0, 40);
+
+      return {
+        system: SOAP_EXTRACT_IDENTIFIER_SYSTEM,
+        value: `${encounterId}-soap-${sectionKey}-${safeCode}-${index}`,
+      };
+    },
+    [encounter?.id]
+  );
+
+  const upsertExtractedResource = useCallback(
+    async <T extends Observation | Condition | CarePlan>(
+      resource: T,
+      sectionUrl: string,
+      index: number
+    ): Promise<T> => {
+      const identifier = getExtractIdentifier(resource, sectionUrl, index);
+      const resourceWithIdentifier: T = {
+        ...resource,
+        identifier: [...(resource.identifier ?? []), identifier],
+      };
+
+      const resourceType = resource.resourceType as 'Observation' | 'Condition' | 'CarePlan';
+      const existing = await medplum.searchOne(resourceType, {
+        identifier: `${identifier.system}|${identifier.value}`,
+        encounter: encounterRef?.reference ?? '',
+      });
+
+      if (existing) {
+        return medplum.updateResource({ ...resourceWithIdentifier, id: existing.id });
+      }
+      return medplum.createResource(resourceWithIdentifier);
+    },
+    [encounterRef, getExtractIdentifier, medplum]
+  );
+
   const persistExtractedResources = useCallback(
     async (responses: Map<string, QuestionnaireResponse | undefined>): Promise<{
       observations: Observation[];
@@ -198,24 +261,18 @@ export function useSoapQuestionnaires(
         }
         const extracted = extractSoapResponse(url, response, context);
 
-        for (const observation of extracted.observations) {
-          const saved = observation.id
-            ? await medplum.updateResource(observation)
-            : await medplum.createResource(observation);
+        for (let i = 0; i < extracted.observations.length; i++) {
+          const saved = await upsertExtractedResource(extracted.observations[i], url, i);
           createdObservations.push(saved);
         }
 
-        for (const condition of extracted.conditions) {
-          const saved = condition.id
-            ? await medplum.updateResource(condition)
-            : await medplum.createResource(condition);
+        for (let i = 0; i < extracted.conditions.length; i++) {
+          const saved = await upsertExtractedResource(extracted.conditions[i], url, i);
           createdConditions.push(saved);
         }
 
-        for (const carePlan of extracted.carePlans) {
-          const saved = carePlan.id
-            ? await medplum.updateResource(carePlan)
-            : await medplum.createResource(carePlan);
+        for (let i = 0; i < extracted.carePlans.length; i++) {
+          const saved = await upsertExtractedResource(extracted.carePlans[i], url, i);
           createdCarePlans.push(saved);
         }
 
@@ -225,6 +282,20 @@ export function useSoapQuestionnaires(
           const dispositionEndDate = extracted.dispositionEndDate;
 
           if (dispositionCode || dispositionEndDate) {
+            const existingExtensions = encounter.hospitalization?.extension ?? [];
+            const endDateExtensionUrl = 'https://hiivehealth.com/fhir/StructureDefinition/disposition-end-date';
+            const existingEndDateIndex = existingExtensions.findIndex((e) => e.url === endDateExtensionUrl);
+
+            let updatedExtensions = [...existingExtensions];
+            if (dispositionEndDate) {
+              const endDateExtension = { url: endDateExtensionUrl, valueDate: dispositionEndDate };
+              if (existingEndDateIndex >= 0) {
+                updatedExtensions[existingEndDateIndex] = endDateExtension;
+              } else {
+                updatedExtensions.push(endDateExtension);
+              }
+            }
+
             const updatedEncounter: Encounter = {
               ...encounter,
               hospitalization: {
@@ -240,15 +311,7 @@ export function useSoapQuestionnaires(
                       ],
                     }
                   : encounter.hospitalization?.dischargeDisposition,
-                extension: dispositionEndDate
-                  ? [
-                      ...(encounter.hospitalization?.extension ?? []),
-                      {
-                        url: 'https://hiivehealth.com/fhir/StructureDefinition/disposition-end-date',
-                        valueDate: dispositionEndDate,
-                      },
-                    ]
-                  : encounter.hospitalization?.extension,
+                extension: updatedExtensions,
               },
             };
             await medplum.updateResource(updatedEncounter);
@@ -264,7 +327,7 @@ export function useSoapQuestionnaires(
       setExtractedResources(result);
       return result;
     },
-    [patientResource, encounter, encounterRef, author, medplum]
+    [patientResource, encounter, encounterRef, author, medplum, upsertExtractedResource]
   );
 
   const persistAll = useCallback(async (): Promise<{
