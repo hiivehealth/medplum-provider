@@ -53,7 +53,10 @@ export const LocationSelector = (props: LocationSelectorProps): JSX.Element => {
         'partof:missing=true&status=active&_count=100&_sort=name',
         { cache: 'no-cache' }
       );
-      return result;
+      // Only show Locations from the HiiveCare sample hierarchy in the Room and Station selector.
+      return result.filter((loc) =>
+        loc.identifier?.some((id) => id.system === 'https://hiivehealth.com/location-ids')
+      );
     }
 
     if (!parentId) {
