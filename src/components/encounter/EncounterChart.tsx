@@ -15,6 +15,7 @@ import {
   SOAP_SUBJECTIVE_URL,
   REVIEW_OF_SYSTEMS_URL,
 } from '../../data/soap-questionnaires';
+import { useDecisionFlows } from '../../hooks/useDecisionFlows';
 import { useDebouncedUpdateResource } from '../../hooks/useDebouncedUpdateResource';
 import { useEncounterChart } from '../../hooks/useEncounterChart';
 import { useSoapQuestionnaires } from '../../hooks/useSoapQuestionnaires';
@@ -23,9 +24,11 @@ import { updateEncounterStatus } from '../../utils/encounter';
 import { showErrorNotification } from '../../utils/notifications';
 import { TaskPanel } from '../tasks/encounter/TaskPanel';
 import { BillingTab } from './BillingTab';
+import { DecisionFlowsPanel } from './DecisionFlowsPanel/DecisionFlowsPanel';
 import { EncounterHeader } from './EncounterHeader';
 import { LocationSelector } from './LocationSelector';
 import { OccupationalReturnToWorkPanel } from './OccupationalReturnToWorkPanel';
+import { OrdersPanel } from './OrdersPanel/OrdersPanel';
 import { SignAddendum } from './SignAddendum';
 import { SoapSectionCard } from './SoapSectionCard/SoapSectionCard';
 
@@ -73,6 +76,7 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
   const [chartNoteStatus, setChartNoteStatus] = useState(ChartNoteStatus.Unsigned);
 
   const { questionnaires, saveResponse } = useSoapQuestionnaires(encounter, patientResource);
+  const decisionFlows = useDecisionFlows(encounter, patientResource);
 
   useEffect(() => {
     if (!encounter) {
@@ -321,6 +325,18 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
                 error={questionnaires.get(SOAP_PLAN_URL)?.error}
                 disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
                 onChange={(response) => saveResponse(SOAP_PLAN_URL, response)}
+              />
+
+              <OrdersPanel
+                encounter={encounter}
+                patient={patientResource}
+                practitioner={practitioner}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+              />
+
+              <DecisionFlowsPanel
+                decisionFlows={decisionFlows}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
               />
 
               <OccupationalReturnToWorkPanel
