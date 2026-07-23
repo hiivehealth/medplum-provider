@@ -12,6 +12,7 @@ import {
   PatientSummary,
   useMedplum,
 } from '@medplum/react';
+import type { PatientSummarySectionConfig } from '@medplum/react';
 import type { JSX } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router';
@@ -48,12 +49,29 @@ export function PatientPage(): JSX.Element {
     setIsLabsModalOpen(false);
   }, []);
 
+  const identifiersSection: PatientSummarySectionConfig = useMemo(
+    () => ({
+      key: 'identifiers',
+      title: 'Identifiers',
+      component: PatientIdentifiersPanel,
+    }),
+    []
+  );
+
   const sections = useMemo(
-    () =>
-      getDefaultSections(() => setIsLabsModalOpen(true)).map((s) =>
+    () => {
+      const defaults = getDefaultSections(() => setIsLabsModalOpen(true)).map((s) =>
         s.key === 'pharmacies' ? createPharmaciesSection(PharmacyDialogComponent) : s
-      ),
-    [setIsLabsModalOpen, PharmacyDialogComponent]
+      );
+      // Insert the identifiers section right after demographics for Nevada demo patients.
+      if (patient && isNevadaDemoPatient(patient)) {
+        const demographicsIndex = defaults.findIndex((s) => s.key === 'demographics');
+        const insertIndex = demographicsIndex >= 0 ? demographicsIndex + 1 : 0;
+        defaults.splice(insertIndex, 0, identifiersSection);
+      }
+      return defaults;
+    },
+    [setIsLabsModalOpen, PharmacyDialogComponent, identifiersSection, patient]
   );
 
   if (outcome && !isOk(outcome)) {
@@ -89,12 +107,7 @@ export function PatientPage(): JSX.Element {
         </div>
 
         <div className={classes.content}>
-          {isNevadaDemoPatient(patient) && (
-            <>
-              <PatientIdentifiersPanel patient={patient} />
-              <ConsentBanner patientId={patientId} />
-            </>
-          )}
+          {isNevadaDemoPatient(patient) && <ConsentBanner patientId={patientId} />}
           <Paper w="100%" radius={0} style={{ borderBottom: '1px solid var(--app-shell-border-color)' }}>
             <ScrollArea>
               <LinkTabs

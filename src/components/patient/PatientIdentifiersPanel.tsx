@@ -1,11 +1,14 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Paper, Stack, Text } from '@mantine/core';
-import type { Patient } from '@medplum/fhirtypes';
+import { Box, Group, Stack, Text, Tooltip } from '@mantine/core';
+import type { Patient, Resource } from '@medplum/fhirtypes';
+import { IconFingerprint } from '@tabler/icons-react';
 import type { JSX } from 'react';
+import styles from './PatientIdentifiersPanel.module.css';
 
 export interface PatientIdentifiersPanelProps {
   patient: Patient;
+  onClickResource?: (resource: Resource) => void;
 }
 
 const ORG_ID_TO_NAME: Record<string, string> = {
@@ -33,7 +36,24 @@ function getIdentifierValue(patient: Patient, system: string): string | undefine
   return patient.identifier?.find((i) => i.system === system)?.value;
 }
 
-export function PatientIdentifiersPanel({ patient }: PatientIdentifiersPanelProps): JSX.Element {
+function IdentifierItem({ label, value }: { label: string; value: string | undefined }): JSX.Element | null {
+  if (!value) {
+    return null;
+  }
+
+  return (
+    <Tooltip label={label} position="top-start" openDelay={650}>
+      <Group gap="sm" align="center" ml={6} mr={2} style={{ cursor: 'default', flexWrap: 'nowrap', minWidth: 0 }}>
+        <IconFingerprint size={16} stroke={2} color="var(--mantine-color-gray-6)" />
+        <Text fz="sm" fw={400} truncate>
+          {value}
+        </Text>
+      </Group>
+    </Tooltip>
+  );
+}
+
+export function PatientIdentifiersPanel({ patient, onClickResource }: PatientIdentifiersPanelProps): JSX.Element {
   const mrn = getIdentifierValue(patient, `https://nevada-demo-org-neighborhood-health.example/mrn`)
     ?? getIdentifierValue(patient, `https://nevada-demo-org-desert-springs.example/mrn`);
   const medicaidId = getIdentifierValue(patient, 'https://medicaid.nv.gov/member-id');
@@ -45,32 +65,13 @@ export function PatientIdentifiersPanel({ patient }: PatientIdentifiersPanelProp
   }
 
   return (
-    <Paper w="100%" p="sm" radius={0} withBorder>
-      <Text fw={600} size="sm" mb="xs">
-        Patient Identifiers
-      </Text>
-      <Stack gap={4}>
-        {mrn && (
-          <Text size="sm">
-            <strong>MRN:</strong> {mrn}
-          </Text>
-        )}
-        {sourceOrg && (
-          <Text size="sm">
-            <strong>Source organization:</strong> {sourceOrg}
-          </Text>
-        )}
-        {ssn && (
-          <Text size="sm">
-            <strong>SSN:</strong> {ssn}
-          </Text>
-        )}
-        {medicaidId && (
-          <Text size="sm">
-            <strong>Medicaid ID:</strong> {medicaidId}
-          </Text>
-        )}
+    <Box className={styles.item} onClick={() => onClickResource?.(patient)}>
+      <Stack gap="xs" py={8}>
+        {mrn && <IdentifierItem label="MRN" value={mrn} />}
+        {sourceOrg && <IdentifierItem label="Source organization" value={sourceOrg} />}
+        {ssn && <IdentifierItem label="SSN" value={ssn} />}
+        {medicaidId && <IdentifierItem label="Medicaid ID" value={medicaidId} />}
       </Stack>
-    </Paper>
+    </Box>
   );
 }
