@@ -16,6 +16,7 @@ import type { JSX } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router';
 import { ConsentBanner } from '../../components/consent/ConsentBanner';
+import { PatientIdentifiersPanel } from '../../components/patient/PatientIdentifiersPanel';
 import { usePharmacyDialog } from '../../components/pharmacy/usePharmacyDialog';
 import { useDoseSpotAccess } from '../../hooks/useDoseSpotAccess';
 import { usePatient } from '../../hooks/usePatient';
@@ -88,7 +89,12 @@ export function PatientPage(): JSX.Element {
         </div>
 
         <div className={classes.content}>
-          {isNevadaDemoPatient(patient) && <ConsentBanner patientId={patientId} />}
+          {isNevadaDemoPatient(patient) && (
+            <>
+              <PatientIdentifiersPanel patient={patient} />
+              <ConsentBanner patientId={patientId} />
+            </>
+          )}
           <Paper w="100%" radius={0} style={{ borderBottom: '1px solid var(--app-shell-border-color)' }}>
             <ScrollArea>
               <LinkTabs
