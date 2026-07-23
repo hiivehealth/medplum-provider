@@ -1,14 +1,24 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Loader } from '@mantine/core';
+import { Loader, Stack } from '@mantine/core';
 import { PatientTimeline } from '@medplum/react';
 import type { JSX } from 'react';
+import { useParams } from 'react-router';
+import { CcdaImportCard } from '../../components/ccda/CcdaImportCard';
 import { usePatient } from '../../hooks/usePatient';
 
 export function TimelineTab(): JSX.Element {
+  const { patientId } = useParams();
   const patient = usePatient();
+
   if (!patient) {
     return <Loader />;
   }
-  return <PatientTimeline patient={patient} />;
+
+  return (
+    <Stack gap="md">
+      <CcdaImportCard patientId={patientId ?? patient.id ?? ''} />
+      <PatientTimeline patient={patient} />
+    </Stack>
+  );
 }
