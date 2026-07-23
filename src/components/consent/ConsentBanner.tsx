@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { Alert, Button, Group, Modal, Stack, Text, Textarea } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
-import { isOk, normalizeErrorString } from '@medplum/core';
+import { createReference, normalizeErrorString } from '@medplum/core';
 import type { Consent } from '@medplum/fhirtypes';
 import { useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
@@ -56,11 +56,10 @@ function useBreakGlass(patientId: string, onAuditCreated?: () => void): {
 
     setSubmitting(true);
     try {
-      const audit = createBreakGlassAudit(patientId, reason.trim(), medplum.getProfile());
-      const result = await medplum.createResource(audit);
-      if (!isOk(result)) {
-        throw new Error(normalizeErrorString(result));
-      }
+      const profile = medplum.getProfile();
+      const profileRef = profile ? createReference(profile) : undefined;
+      const audit = createBreakGlassAudit(patientId, reason.trim(), profileRef);
+      await medplum.createResource(audit);
       showNotification({ title: 'Break the glass recorded', message: 'Your access has been audited.', color: 'green' });
       setModalOpen(false);
       setReason('');
@@ -117,10 +116,7 @@ export function ConsentBanner({ patientId }: ConsentBannerProps): JSX.Element {
     setUpdating(true);
     try {
       const updated = buildUpdatedConsent(consent, patientId, status, updateReason.trim());
-      const result = await medplum.createResource(updated);
-      if (!isOk(result)) {
-        throw new Error(normalizeErrorString(result));
-      }
+      await medplum.createResource(updated);
       showNotification({ title: 'Consent updated', message: 'The consent status has been changed.', color: 'green' });
       setUpdateModalOpen(false);
       setUpdateReason('');

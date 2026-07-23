@@ -21,6 +21,7 @@ import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-rou
 import { TaskDetailsModal } from './components/tasks/TaskDetailsModal';
 import { hasScriptSureIdentifier } from './components/utils';
 import { useDoseSpotAccess } from './hooks/useDoseSpotAccess';
+import { isPayerRosterMember } from './utils/roster';
 import './index.css';
 
 const SETUP_DISMISSED_KEY = 'medplum-provider-setup-completed';
@@ -38,6 +39,7 @@ import { MessagesPage } from './pages/messages/MessagesPage';
 import { ExposureDashboardPage } from './pages/occupational/ExposureDashboardPage';
 import { ExposureIncidentIntakePage } from './pages/occupational/ExposureIncidentIntakePage';
 import { SupervisorSummaryPage } from './pages/occupational/SupervisorSummaryPage';
+import { RosterDashboardPage } from './pages/roster/RosterDashboardPage';
 import { CommunicationTab } from './pages/patient/CommunicationTab';
 import { CoveragePage } from './pages/patient/CoveragePage';
 import { DoseSpotTab } from './pages/patient/DoseSpotTab';
@@ -75,8 +77,13 @@ export function App(): JSX.Element | null {
   const membership = medplum.getProjectMembership();
   const hasScriptSure = hasScriptSureIdentifier(membership);
   const isSupervisorReviewer = profile?.resourceType === 'RelatedPerson';
+  const isRosterPayer = isPayerRosterMember(membership);
   const patientSearchPath = '/Patient?_count=20&_fields=name,email,gender&_sort=-_lastUpdated';
-  const landingPath = setupDismissed ? patientSearchPath : '/getstarted';
+
+  let landingPath = '/getstarted';
+  if (setupDismissed) {
+    landingPath = isRosterPayer ? '/Roster' : patientSearchPath;
+  }
 
   const handleDismissSetup = (): void => {
     localStorage.setItem(SETUP_DISMISSED_KEY, 'true');
@@ -101,6 +108,17 @@ export function App(): JSX.Element | null {
               label: 'Supervisor Summary',
               href: '/Occupational/Supervisor',
             },
+          ],
+        },
+      ];
+    }
+
+    if (isRosterPayer) {
+      return [
+        {
+          links: [
+            { icon: <IconUsers />, label: 'Roster', href: '/Roster' },
+            { icon: <IconUsers />, label: 'Patients', href: patientSearchPath },
           ],
         },
       ];
@@ -244,6 +262,7 @@ export function App(): JSX.Element | null {
         <Route path="/Fax/Communication/:faxId" element={<FaxPage />} />
         <Route path="/Occupational/Exposure" element={<ExposureDashboardPage />} />
         <Route path="/Occupational/Supervisor" element={<SupervisorSummaryPage />} />
+        <Route path="/Roster" element={<RosterDashboardPage />} />
         <Route path="/onboarding" element={<IntakeFormPage />} />
         <Route path="/Calendar/Schedule" element={<SchedulePage />} />
         <Route path="/Calendar/Schedule/:id" element={<SchedulePage />} />

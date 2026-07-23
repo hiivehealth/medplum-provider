@@ -1,0 +1,63 @@
+/* SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+  padding: 16px;
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.title {
+  color: light-dark(var(--mantine-color-gray-9), var(--mantine-color-white));
+  font-size: 24px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin-top: 4px;
+  color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-gray-4));
+  font-size: var(--mantine-font-size-sm);
+}
+
+.panel {
+  border: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+  border-radius: 8px;
+  background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+}
+
+.panelTitle {
+  color: light-dark(var(--mantine-color-gray-9), var(--mantine-color-white));
+  font-size: var(--mantine-font-size-md);
+  font-weight: 700;
+}
+
+.panelBody {
+  padding: 14px;
+}
+
+.emptyState {
+  padding: 32px;
+  text-align: center;
+  color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-gray-4));
+}

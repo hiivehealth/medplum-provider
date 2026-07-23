@@ -1,6 +1,36 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import type { AuditEvent, Provenance, Reference } from '@medplum/fhirtypes';
+import type {
+  AuditEvent,
+  Bot,
+  ClientApplication,
+  Device,
+  Organization,
+  Patient,
+  Practitioner,
+  PractitionerRole,
+  Provenance,
+  Reference,
+  RelatedPerson,
+  Subscription,
+} from '@medplum/fhirtypes';
+
+type AuditEventActorReference = Reference<
+  | Patient
+  | Practitioner
+  | PractitionerRole
+  | RelatedPerson
+  | Device
+  | Organization
+  | Bot
+  | ClientApplication
+>;
+
+type ObserverReference = AuditEventActorReference | Reference<Subscription>;
+
+type ProvenanceActorReference = Reference<
+  Patient | Practitioner | PractitionerRole | RelatedPerson | Device | Organization
+>;
 
 /**
  * Creates an AuditEvent documenting break-the-glass access to a patient record.
@@ -12,11 +42,17 @@ import type { AuditEvent, Provenance, Reference } from '@medplum/fhirtypes';
  */
 export function createBreakGlassAudit(patientId: string, reason: string, profile?: Reference): AuditEvent {
   const now = new Date().toISOString();
-  const who: Reference = profile ?? { reference: 'Practitioner/unknown', display: 'Unknown user' };
+  const who: AuditEventActorReference = (profile ?? {
+    reference: 'Practitioner/unknown',
+    display: 'Unknown user',
+  }) as AuditEventActorReference;
+  const observer: ObserverReference = (profile ?? {
+    reference: 'Practitioner/unknown',
+    display: 'Unknown user',
+  }) as ObserverReference;
 
   return {
     resourceType: 'AuditEvent',
-    status: 'active',
     recorded: now,
     type: {
       system: 'http://dicom.nema.org/resources/ontology/DCM',
@@ -49,7 +85,7 @@ export function createBreakGlassAudit(patientId: string, reason: string, profile
       },
     ],
     source: {
-      observer: who,
+      observer,
       type: [
         {
           system: 'http://terminology.hl7.org/CodeSystem/security-source-type',
@@ -89,7 +125,10 @@ export function createBreakGlassAudit(patientId: string, reason: string, profile
  */
 export function createBreakGlassProvenance(patientId: string, reason: string, profile?: Reference): Provenance {
   const now = new Date().toISOString();
-  const who: Reference = profile ?? { reference: 'Practitioner/unknown', display: 'Unknown user' };
+  const who: ProvenanceActorReference = (profile ?? {
+    reference: 'Practitioner/unknown',
+    display: 'Unknown user',
+  }) as ProvenanceActorReference;
 
   return {
     resourceType: 'Provenance',
