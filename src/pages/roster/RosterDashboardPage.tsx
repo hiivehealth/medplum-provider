@@ -10,8 +10,8 @@ import {
   Text,
   TextInput,
 } from '@mantine/core';
-import type { Encounter } from '@medplum/fhirtypes';
-import { useMedplum } from '@medplum/react';
+import type { Encounter, Practitioner } from '@medplum/fhirtypes';
+import { useMedplum, useMedplumProfile } from '@medplum/react';
 import type { JSX } from 'react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
@@ -59,8 +59,9 @@ function getTypeDisplay(encounter: Encounter): string {
 
 export function RosterDashboardPage(): JSX.Element {
   const medplum = useMedplum();
+  const profile = useMedplumProfile();
   const membership = medplum.getProjectMembership();
-  const roster = getRosterMembership(membership);
+  const roster = getRosterMembership(membership, profile as Practitioner | undefined);
 
   const [daysBack, setDaysBack] = useState(30);
   const [encounterClass, setEncounterClass] = useState<string>('');

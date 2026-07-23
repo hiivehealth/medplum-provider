@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
 import { getReferenceString } from '@medplum/core';
+import type { Practitioner } from '@medplum/fhirtypes';
 import { useDoseSpotNotifications } from '@medplum/dosespot-react';
 import { AppShell, Loading, useMedplum, useMedplumProfile } from '@medplum/react';
 import {
@@ -78,7 +79,7 @@ export function App(): JSX.Element | null {
   const membership = medplum.getProjectMembership();
   const hasScriptSure = hasScriptSureIdentifier(membership);
   const isSupervisorReviewer = profile?.resourceType === 'RelatedPerson';
-  const isRosterPayer = isPayerRosterMember(membership);
+  const isRosterPayer = isPayerRosterMember(membership, profile as Practitioner | undefined);
   const isAdmin = membership?.admin === true;
   const patientSearchPath = '/Patient?_count=20&_fields=name,email,gender&_sort=-_lastUpdated';
 

@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import type { ProjectMembership, Reference } from '@medplum/fhirtypes';
+import type { Practitioner, ProjectMembership, Reference } from '@medplum/fhirtypes';
 import { describe, expect, test } from 'vitest';
 import { getRosterMembership, isPayerRosterMember } from './roster';
 
@@ -59,5 +59,39 @@ describe('roster utilities', () => {
 
   test('isPayerRosterMember returns false for undefined membership', () => {
     expect(isPayerRosterMember(undefined)).toBe(false);
+  });
+
+  test('getRosterMembership falls back to Practitioner profile extension', () => {
+    const membership: ProjectMembership = {
+      resourceType: 'ProjectMembership',
+      id: 'membership-4',
+      project: { reference: 'Project/project-1' },
+      profile: { reference: 'Practitioner/practitioner-1' },
+    } as ProjectMembership;
+    const profile: Practitioner = {
+      resourceType: 'Practitioner',
+      id: 'practitioner-1',
+      extension: [
+        {
+          url: 'https://hiivehealth.com/fhir/StructureDefinition/nevada-roster-group',
+          valueReference: groupRef,
+        },
+      ],
+    } as Practitioner;
+    expect(getRosterMembership(membership, profile)?.groupReference).toEqual(groupRef);
+  });
+
+  test('isPayerRosterMember returns true when profile extension is present', () => {
+    const profile: Practitioner = {
+      resourceType: 'Practitioner',
+      id: 'practitioner-1',
+      extension: [
+        {
+          url: 'https://hiivehealth.com/fhir/StructureDefinition/nevada-roster-group',
+          valueReference: groupRef,
+        },
+      ],
+    } as Practitioner;
+    expect(isPayerRosterMember(undefined, profile)).toBe(true);
   });
 });
