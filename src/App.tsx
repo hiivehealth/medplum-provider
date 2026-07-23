@@ -39,6 +39,7 @@ import { MessagesPage } from './pages/messages/MessagesPage';
 import { ExposureDashboardPage } from './pages/occupational/ExposureDashboardPage';
 import { ExposureIncidentIntakePage } from './pages/occupational/ExposureIncidentIntakePage';
 import { SupervisorSummaryPage } from './pages/occupational/SupervisorSummaryPage';
+import { AuditDashboardPage } from './pages/audit/AuditDashboardPage';
 import { RosterDashboardPage } from './pages/roster/RosterDashboardPage';
 import { CommunicationTab } from './pages/patient/CommunicationTab';
 import { CoveragePage } from './pages/patient/CoveragePage';
@@ -78,6 +79,7 @@ export function App(): JSX.Element | null {
   const hasScriptSure = hasScriptSureIdentifier(membership);
   const isSupervisorReviewer = profile?.resourceType === 'RelatedPerson';
   const isRosterPayer = isPayerRosterMember(membership);
+  const isAdmin = membership?.admin === true;
   const patientSearchPath = '/Patient?_count=20&_fields=name,email,gender&_sort=-_lastUpdated';
 
   let landingPath = '/getstarted';
@@ -158,6 +160,7 @@ export function App(): JSX.Element | null {
           },
           { icon: <IconPrinter />, label: 'Faxes', href: '/Fax/Communication' },
           { icon: <IconClipboardCheck />, label: 'Occupational', href: '/Occupational/Exposure' },
+          ...(isAdmin ? [{ icon: <IconSettingsAutomation />, label: 'Audit', href: '/Audit' }] : []),
         ],
       },
       {
@@ -263,6 +266,7 @@ export function App(): JSX.Element | null {
         <Route path="/Occupational/Exposure" element={<ExposureDashboardPage />} />
         <Route path="/Occupational/Supervisor" element={<SupervisorSummaryPage />} />
         <Route path="/Roster" element={<RosterDashboardPage />} />
+        <Route path="/Audit" element={<AuditDashboardPage />} />
         <Route path="/onboarding" element={<IntakeFormPage />} />
         <Route path="/Calendar/Schedule" element={<SchedulePage />} />
         <Route path="/Calendar/Schedule/:id" element={<SchedulePage />} />
