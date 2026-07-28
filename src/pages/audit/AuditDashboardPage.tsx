@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Alert, Button, Group, Loader, Select, SimpleGrid, Table, TextInput } from '@mantine/core';
+import { Alert, Anchor, Button, Group, Loader, Select, SimpleGrid, Table, TextInput } from '@mantine/core';
 import { useMedplum } from '@medplum/react';
 import type { AuditEventFilters } from '../../utils/auditReport';
 import type { JSX } from 'react';
@@ -8,7 +8,10 @@ import { useMemo, useState } from 'react';
 import { useAuditEvents } from '../../hooks/useAuditEvents';
 import {
   exportAuditEventsToCsv,
+  getAuditEventAction,
   getAuditEventEntity,
+  getAuditEventEntityReference,
+  getAuditEventOutcome,
   getAuditEventType,
   getAuditEventUser,
 } from '../../utils/auditReport';
@@ -22,6 +25,8 @@ const ACTION_OPTIONS = [
   { value: 'D', label: 'Delete' },
   { value: 'E', label: 'Execute' },
 ];
+
+const MEDPLUM_APP_URL = 'https://app.ehr.hiivehealth.net';
 
 function formatRecorded(recorded: string | undefined): string {
   if (!recorded) {
@@ -112,10 +117,23 @@ export function AuditDashboardPage(): JSX.Element {
             <Table.Tr key={event.id}>
               <Table.Td>{formatRecorded(event.recorded)}</Table.Td>
               <Table.Td>{getAuditEventUser(event)}</Table.Td>
-              <Table.Td>{event.action}</Table.Td>
+              <Table.Td>{getAuditEventAction(event)}</Table.Td>
               <Table.Td>{getAuditEventType(event)}</Table.Td>
-              <Table.Td>{getAuditEventEntity(event)}</Table.Td>
-              <Table.Td>{event.outcome}</Table.Td>
+              <Table.Td>
+                {(() => {
+                  const entityRef = getAuditEventEntityReference(event);
+                  const entityLabel = getAuditEventEntity(event);
+                  if (entityRef) {
+                    return (
+                      <Anchor href={`${MEDPLUM_APP_URL}/${entityRef}`} target="_blank" rel="noopener noreferrer">
+                        {entityLabel}
+                      </Anchor>
+                    );
+                  }
+                  return entityLabel;
+                })()}
+              </Table.Td>
+              <Table.Td>{getAuditEventOutcome(event)}</Table.Td>
             </Table.Tr>
           ))}
         </Table.Tbody>

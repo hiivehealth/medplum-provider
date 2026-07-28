@@ -5,7 +5,9 @@ import { describe, expect, test } from 'vitest';
 import {
   buildAuditSearchParams,
   exportAuditEventsToCsv,
+  getAuditEventAction,
   getAuditEventEntity,
+  getAuditEventOutcome,
   getAuditEventType,
   getAuditEventUser,
 } from './auditReport';
@@ -63,6 +65,31 @@ describe('auditReport utilities', () => {
       type: { code: '110112' },
     } as AuditEvent;
     expect(getAuditEventType(event)).toBe('110112');
+  });
+
+  test('getAuditEventOutcome maps FHIR codes to labels', () => {
+    expect(getAuditEventOutcome({ resourceType: 'AuditEvent', outcome: '0' } as AuditEvent)).toBe('Success');
+    expect(getAuditEventOutcome({ resourceType: 'AuditEvent', outcome: '4' } as AuditEvent)).toBe('Minor failure');
+    expect(getAuditEventOutcome({ resourceType: 'AuditEvent', outcome: '8' } as AuditEvent)).toBe('Serious failure');
+    expect(getAuditEventOutcome({ resourceType: 'AuditEvent', outcome: '12' } as AuditEvent)).toBe('Major failure');
+  });
+
+  test('getAuditEventOutcome falls back to raw value or Unknown', () => {
+    expect(getAuditEventOutcome({ resourceType: 'AuditEvent', outcome: '99' } as AuditEvent)).toBe('99');
+    expect(getAuditEventOutcome({ resourceType: 'AuditEvent' } as AuditEvent)).toBe('Unknown');
+  });
+
+  test('getAuditEventAction maps FHIR codes to labels', () => {
+    expect(getAuditEventAction({ resourceType: 'AuditEvent', action: 'C' } as AuditEvent)).toBe('Create');
+    expect(getAuditEventAction({ resourceType: 'AuditEvent', action: 'R' } as AuditEvent)).toBe('Read');
+    expect(getAuditEventAction({ resourceType: 'AuditEvent', action: 'U' } as AuditEvent)).toBe('Update');
+    expect(getAuditEventAction({ resourceType: 'AuditEvent', action: 'D' } as AuditEvent)).toBe('Delete');
+    expect(getAuditEventAction({ resourceType: 'AuditEvent', action: 'E' } as AuditEvent)).toBe('Execute');
+  });
+
+  test('getAuditEventAction falls back to raw value or Unknown', () => {
+    expect(getAuditEventAction({ resourceType: 'AuditEvent', action: 'X' } as AuditEvent)).toBe('X');
+    expect(getAuditEventAction({ resourceType: 'AuditEvent' } as AuditEvent)).toBe('Unknown');
   });
 
   test('exportAuditEventsToCsv escapes commas and quotes', () => {

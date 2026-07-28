@@ -15,6 +15,7 @@ type ConsentStatus = 'opt-in' | 'opt-out' | 'not-declared' | 'loading' | 'error'
 
 export interface ConsentBannerProps {
   patientId: string;
+  onBreakGlassRecorded?: () => void;
 }
 
 const STATUS_CONFIG: Record<Exclude<ConsentStatus, 'loading' | 'error'>, { color: string; title: string; message: string }> = {
@@ -26,7 +27,7 @@ const STATUS_CONFIG: Record<Exclude<ConsentStatus, 'loading' | 'error'>, { color
   'opt-out': {
     color: 'red',
     title: 'Opted out',
-    message: 'This patient has opted out of data sharing. Access is restricted except where an override applies.',
+    message: 'Access permitted by Medicaid override policy.',
   },
   'not-declared': {
     color: 'yellow',
@@ -35,7 +36,11 @@ const STATUS_CONFIG: Record<Exclude<ConsentStatus, 'loading' | 'error'>, { color
   },
 };
 
-function useBreakGlass(patientId: string, onAuditCreated?: () => void): {
+function useBreakGlass(
+  patientId: string,
+  onAuditCreated?: () => void,
+  onBreakGlassRecorded?: () => void
+): {
   modalOpen: boolean;
   setModalOpen: (open: boolean) => void;
   reason: string;
@@ -64,6 +69,7 @@ function useBreakGlass(patientId: string, onAuditCreated?: () => void): {
       setModalOpen(false);
       setReason('');
       onAuditCreated?.();
+      onBreakGlassRecorded?.();
     } catch (err) {
       showNotification({
         title: 'Failed to record break the glass',
@@ -82,13 +88,13 @@ function canUpdateConsent(status: ConsentStatus): boolean {
   return status !== 'loading' && status !== 'error';
 }
 
-export function ConsentBanner({ patientId }: ConsentBannerProps): JSX.Element {
+export function ConsentBanner({ patientId, onBreakGlassRecorded }: ConsentBannerProps): JSX.Element {
   const { status, consent, error, refresh } = usePatientConsent(patientId);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [updateReason, setUpdateReason] = useState('');
   const [updating, setUpdating] = useState(false);
   const medplum = useMedplum();
-  const breakGlass = useBreakGlass(patientId, refresh);
+  const breakGlass = useBreakGlass(patientId, refresh, onBreakGlassRecorded);
 
   if (status === 'loading') {
     return (
@@ -108,14 +114,14 @@ export function ConsentBanner({ patientId }: ConsentBannerProps): JSX.Element {
 
   const config = STATUS_CONFIG[status];
 
-  const handleUpdateConsent = async (): Promise<void> => {
+  const handleUpdateConsent = async (newStatus: 'opt-in' | 'opt-out'): Promise<void> => {
     if (!updateReason.trim()) {
       showNotification({ title: 'Reason required', message: 'Enter a reason for the consent update.', color: 'red' });
       return;
     }
     setUpdating(true);
     try {
-      const updated = buildUpdatedConsent(consent, patientId, status, updateReason.trim());
+      const updated = buildUpdatedConsent(consent, patientId, newStatus, updateReason.trim());
       await medplum.createResource(updated);
       showNotification({ title: 'Consent updated', message: 'The consent status has been changed.', color: 'green' });
       setUpdateModalOpen(false);
@@ -197,7 +203,10 @@ export function ConsentBanner({ patientId }: ConsentBannerProps): JSX.Element {
             <Button variant="default" onClick={() => setUpdateModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => handleUpdateConsent()} loading={updating}>
+            <Button onClick={() => handleUpdateConsent('opt-out')} loading={updating}>
+              Opt out
+            </Button>
+            <Button onClick={() => handleUpdateConsent('opt-in')} loading={updating}>
               Opt in
             </Button>
           </Group>
@@ -210,11 +219,9 @@ export function ConsentBanner({ patientId }: ConsentBannerProps): JSX.Element {
 function buildUpdatedConsent(
   existing: Consent | undefined,
   patientId: string,
-  currentStatus: 'opt-in' | 'opt-out' | 'not-declared',
+  newStatus: 'opt-in' | 'opt-out',
   reason: string
 ): Consent {
-  const newStatus: 'opt-in' | 'opt-out' = currentStatus === 'opt-in' ? 'opt-out' : 'opt-in';
-
   return {
     resourceType: 'Consent',
     status: 'active',

@@ -6,6 +6,7 @@ import type { PractitionerRole } from '@medplum/fhirtypes';
 import { useMedplum, useSearchResources } from '@medplum/react';
 import { useEffect, useMemo } from 'react';
 import { DOSESPOT_PRACTITIONER_ROLE_TYPE_SYSTEM, hasDoseSpotIdentifier } from '../components/utils';
+import { getRosterMembership } from '../utils/roster';
 
 export interface DoseSpotAccess {
   /** True if the user is already enrolled (has a DoseSpot identifier on membership). */
@@ -33,22 +34,23 @@ export function useDoseSpotAccess(): DoseSpotAccess {
   const profile = medplum.getProfile();
   const enrolled = hasDoseSpotIdentifier(membership);
   const practitionerId = profile?.resourceType === 'Practitioner' ? profile.id : undefined;
+  const isPayerUser = getRosterMembership(membership, profile as any) !== undefined;
 
   const [roles, rolesLoading, rolesOutcome] = useSearchResources(
     'PractitionerRole',
     { practitioner: `Practitioner/${practitionerId}`, active: 'true', _count: '10' },
-    { enabled: !enrolled && !!practitionerId }
+    { enabled: !enrolled && !!practitionerId && !isPayerUser }
   );
 
   useEffect(() => {
-    if (rolesOutcome && !isOk(rolesOutcome)) {
+    if (rolesOutcome && !isOk(rolesOutcome) && !isPayerUser) {
       showNotification({
         title: 'DoseSpot Access Check Failed',
         message: normalizeErrorString(rolesOutcome),
         color: 'red',
       });
     }
-  }, [rolesOutcome]);
+  }, [rolesOutcome, isPayerUser]);
 
   const authorized = useMemo(() => !!roles && hasDoseSpotPractitionerRole(roles), [roles]);
   const hasAccess = enrolled || authorized;

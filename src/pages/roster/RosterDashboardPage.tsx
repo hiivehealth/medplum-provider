@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
   Alert,
+  Badge,
   Button,
   Group,
   Loader,
   Select,
   Table,
+  Tabs,
   Text,
   TextInput,
 } from '@mantine/core';
@@ -16,6 +18,7 @@ import type { JSX } from 'react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { getRosterMembership } from '../../utils/roster';
+import { useRosterCareGaps, type CareGap } from '../../hooks/useRosterCareGaps';
 import { useRosterEncounters } from '../../hooks/useRosterEncounters';
 import classes from './RosterDashboardPage.module.css';
 
@@ -63,6 +66,7 @@ export function RosterDashboardPage(): JSX.Element {
   const membership = medplum.getProjectMembership();
   const roster = getRosterMembership(membership, profile as Practitioner | undefined);
 
+  const [activeTab, setActiveTab] = useState<string | null>('encounters');
   const [daysBack, setDaysBack] = useState(30);
   const [encounterClass, setEncounterClass] = useState<string>('');
   const [sortBy, setSortBy] = useState<'date' | 'patientName'>('date');
@@ -77,6 +81,7 @@ export function RosterDashboardPage(): JSX.Element {
     sortBy,
     sortDirection,
   });
+  const { gaps, loading: gapsLoading, error: gapsError } = useRosterCareGaps({ groupId });
 
   const filteredEncounters = useMemo(() => {
     if (!nameFilter.trim()) {
@@ -136,7 +141,7 @@ export function RosterDashboardPage(): JSX.Element {
           {filteredEncounters.map((encounter) => (
             <Table.Tr key={encounter.id}>
               <Table.Td>
-                <Text component={Link} to={`${getPatientReference(encounter)}/timeline`} c="blue">
+                <Text component={Link} to={`/${getPatientReference(encounter)}/timeline`} c="blue">
                   {getPatientName(encounter)}
                 </Text>
               </Table.Td>
@@ -144,6 +149,68 @@ export function RosterDashboardPage(): JSX.Element {
               <Table.Td>{getClassDisplay(encounter)}</Table.Td>
               <Table.Td>{getTypeDisplay(encounter)}</Table.Td>
               <Table.Td>{encounter.status}</Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+    );
+  }
+
+  function formatCareGapDate(value: string | undefined): string {
+    if (!value) {
+      return 'Unknown';
+    }
+    return new Date(value).toLocaleDateString();
+  }
+
+  function getCareGapBadgeColor(type: CareGap['type']): string {
+    return type === 'missing-lab' ? 'orange' : 'red';
+  }
+
+  function renderCareGapsTable(): JSX.Element {
+    if (gapsLoading) {
+      return <Loader />;
+    }
+    if (gapsError) {
+      return <Alert color="red">{gapsError}</Alert>;
+    }
+    if (gaps.length === 0) {
+      return <div className={classes.emptyState}>No care gaps found for this roster.</div>;
+    }
+
+    return (
+      <Table striped highlightOnHover verticalSpacing="sm">
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Patient</Table.Th>
+            <Table.Th>Gap</Table.Th>
+            <Table.Th>Details</Table.Th>
+            <Table.Th>Due / Last Event</Table.Th>
+            <Table.Th>Status</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {gaps.map((gap, index) => (
+            <Table.Tr key={`${gap.patient.id ?? index}-${gap.type}`}>
+              <Table.Td>
+                <Text component={Link} to={`/Patient/${gap.patient.id}/timeline`} c="blue">
+                  {gap.patient.name?.[0]?.given?.[0]} {gap.patient.name?.[0]?.family}
+                </Text>
+              </Table.Td>
+              <Table.Td>{gap.title}</Table.Td>
+              <Table.Td>{gap.description}</Table.Td>
+              <Table.Td>
+                {gap.dueDate ? (
+                  <>Due {formatCareGapDate(gap.dueDate)}</>
+                ) : gap.lastEventDate ? (
+                  <>Last event {formatCareGapDate(gap.lastEventDate)}</>
+                ) : (
+                  'No prior event'
+                )}
+              </Table.Td>
+              <Table.Td>
+                <Badge color={getCareGapBadgeColor(gap.type)}>{gap.type === 'missing-lab' ? 'Lab overdue' : 'Refill overdue'}</Badge>
+              </Table.Td>
             </Table.Tr>
           ))}
         </Table.Tbody>
@@ -198,12 +265,30 @@ export function RosterDashboardPage(): JSX.Element {
         </div>
       </div>
 
-      <div className={classes.panel}>
-        <div className={classes.panelHeader}>
-          <div className={classes.panelTitle}>Encounters ({filteredEncounters.length})</div>
-        </div>
-        <div className={classes.panelBody}>{renderEncounterTable()}</div>
-      </div>
+      <Tabs value={activeTab} onChange={setActiveTab}>
+        <Tabs.List>
+          <Tabs.Tab value="encounters">Encounters ({filteredEncounters.length})</Tabs.Tab>
+          <Tabs.Tab value="caregaps">Gaps in Care ({gaps.length})</Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="encounters" pt="md">
+          <div className={classes.panel}>
+            <div className={classes.panelHeader}>
+              <div className={classes.panelTitle}>Encounters ({filteredEncounters.length})</div>
+            </div>
+            <div className={classes.panelBody}>{renderEncounterTable()}</div>
+          </div>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="caregaps" pt="md">
+          <div className={classes.panel}>
+            <div className={classes.panelHeader}>
+              <div className={classes.panelTitle}>Care Gaps ({gaps.length})</div>
+            </div>
+            <div className={classes.panelBody}>{renderCareGapsTable()}</div>
+          </div>
+        </Tabs.Panel>
+      </Tabs>
     </div>
   );
 }
