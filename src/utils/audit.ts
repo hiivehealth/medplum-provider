@@ -32,15 +32,27 @@ type ProvenanceActorReference = Reference<
   Patient | Practitioner | PractitionerRole | RelatedPerson | Device | Organization
 >;
 
+export interface BreakGlassAuditOptions {
+  consentStatus?: string;
+  correlationId?: string;
+  outcome?: '0' | '4' | '8' | '12';
+}
+
 /**
  * Creates an AuditEvent documenting break-the-glass access to a patient record.
  *
  * @param patientId - The FHIR ID of the patient whose record was accessed.
  * @param reason - Free-text reason for the emergency access.
  * @param profile - The current user's profile reference (e.g. Practitioner/123).
+ * @param options - Optional consent, correlation, and outcome metadata.
  * @returns AuditEvent resource ready to be created.
  */
-export function createBreakGlassAudit(patientId: string, reason: string, profile?: Reference): AuditEvent {
+export function createBreakGlassAudit(
+  patientId: string,
+  reason: string,
+  profile?: Reference,
+  options: BreakGlassAuditOptions = {}
+): AuditEvent {
   const now = new Date().toISOString();
   const who: AuditEventActorReference = (profile ?? {
     reference: 'Practitioner/unknown',
@@ -51,7 +63,7 @@ export function createBreakGlassAudit(patientId: string, reason: string, profile
     display: 'Unknown user',
   }) as ObserverReference;
 
-  return {
+  const audit: AuditEvent = {
     resourceType: 'AuditEvent',
     recorded: now,
     type: {
@@ -67,7 +79,7 @@ export function createBreakGlassAudit(patientId: string, reason: string, profile
       },
     ],
     action: 'R',
-    outcome: '0',
+    outcome: options.outcome ?? '0',
     outcomeDesc: reason,
     agent: [
       {
@@ -110,6 +122,28 @@ export function createBreakGlassAudit(patientId: string, reason: string, profile
       },
     ],
   };
+
+  if (options.correlationId) {
+    audit.extension = [
+      ...(audit.extension ?? []),
+      {
+        url: 'https://hiivehealth.com/fhir/StructureDefinition/break-glass-correlation-id',
+        valueString: options.correlationId,
+      },
+    ];
+  }
+
+  if (options.consentStatus) {
+    audit.extension = [
+      ...(audit.extension ?? []),
+      {
+        url: 'https://hiivehealth.com/fhir/StructureDefinition/consent-status-at-access',
+        valueCode: options.consentStatus,
+      },
+    ];
+  }
+
+  return audit;
 }
 
 /**

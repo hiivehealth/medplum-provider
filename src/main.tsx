@@ -14,10 +14,12 @@ import { RouterProvider, createBrowserRouter } from 'react-router';
 import { App } from './App';
 import { MEDPLUM_BASE_URL, MEDPLUM_CLIENT_ID } from './config/constants';
 
+const loginClientId = new URLSearchParams(window.location.search).get('client') || MEDPLUM_CLIENT_ID;
+
 const medplum = new MedplumClient({
   onUnauthenticated: () => (window.location.href = '/'),
   baseUrl: sessionStorage.getItem('medplum_base_url') || MEDPLUM_BASE_URL,
-  clientId: MEDPLUM_CLIENT_ID,
+  clientId: loginClientId,
   cacheTime: 60000,
   autoBatchTime: 100,
 });

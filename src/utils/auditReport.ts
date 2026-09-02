@@ -6,6 +6,7 @@ export interface AuditEventFilters {
   agent?: string;
   entity?: string;
   action?: string;
+  subtype?: string;
   startDate?: string;
   endDate?: string;
 }
@@ -24,6 +25,9 @@ export function buildAuditSearchParams(filters: AuditEventFilters): Record<strin
   }
   if (filters.action) {
     params.action = filters.action;
+  }
+  if (filters.subtype) {
+    params.subtype = filters.subtype;
   }
   if (filters.startDate) {
     params.date = `ge${filters.startDate}`;

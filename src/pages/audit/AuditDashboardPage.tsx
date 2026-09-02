@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Alert, Anchor, Button, Group, Loader, Select, SimpleGrid, Table, TextInput } from '@mantine/core';
+import { Alert, Button, Group, Loader, Select, SimpleGrid, Table, TextInput } from '@mantine/core';
 import { useMedplum } from '@medplum/react';
 import type { AuditEventFilters } from '../../utils/auditReport';
 import type { JSX } from 'react';
@@ -10,7 +10,6 @@ import {
   exportAuditEventsToCsv,
   getAuditEventAction,
   getAuditEventEntity,
-  getAuditEventEntityReference,
   getAuditEventOutcome,
   getAuditEventType,
   getAuditEventUser,
@@ -26,7 +25,11 @@ const ACTION_OPTIONS = [
   { value: 'E', label: 'Execute' },
 ];
 
-const MEDPLUM_APP_URL = 'https://app.ehr.hiivehealth.net';
+const EVENT_TYPE_OPTIONS = [
+  { value: '', label: 'All event types' },
+  { value: 'emergency-access', label: 'Break Glass' },
+];
+
 
 function formatRecorded(recorded: string | undefined): string {
   if (!recorded) {
@@ -56,6 +59,7 @@ export function AuditDashboardPage(): JSX.Element {
   const [agent, setAgent] = useState('');
   const [entity, setEntity] = useState('');
   const [action, setAction] = useState('');
+  const [subtype, setSubtype] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -70,7 +74,10 @@ export function AuditDashboardPage(): JSX.Element {
       const actionKey = event.action ?? 'Unknown';
       byAction.set(actionKey, (byAction.get(actionKey) ?? 0) + 1);
     }
-    return { total: events.length, byUser, byAction };
+    const breakGlass = events.filter((event) =>
+      event.subtype?.some((coding) => coding.code === 'emergency-access')
+    ).length;
+    return { total: events.length, byUser, byAction, breakGlass };
   }, [events]);
 
   const applyFilters = (): void => {
@@ -78,6 +85,7 @@ export function AuditDashboardPage(): JSX.Element {
       agent: agent || undefined,
       entity: entity || undefined,
       action: action || undefined,
+      subtype: subtype || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
     });
@@ -119,20 +127,7 @@ export function AuditDashboardPage(): JSX.Element {
               <Table.Td>{getAuditEventUser(event)}</Table.Td>
               <Table.Td>{getAuditEventAction(event)}</Table.Td>
               <Table.Td>{getAuditEventType(event)}</Table.Td>
-              <Table.Td>
-                {(() => {
-                  const entityRef = getAuditEventEntityReference(event);
-                  const entityLabel = getAuditEventEntity(event);
-                  if (entityRef) {
-                    return (
-                      <Anchor href={`${MEDPLUM_APP_URL}/${entityRef}`} target="_blank" rel="noopener noreferrer">
-                        {entityLabel}
-                      </Anchor>
-                    );
-                  }
-                  return entityLabel;
-                })()}
-              </Table.Td>
+              <Table.Td>{getAuditEventEntity(event)}</Table.Td>
               <Table.Td>{getAuditEventOutcome(event)}</Table.Td>
             </Table.Tr>
           ))}
@@ -176,6 +171,10 @@ export function AuditDashboardPage(): JSX.Element {
           <div className={classes.metricValue}>{metrics.byAction.get('C') ?? 0}</div>
           <div className={classes.metricLabel}>Creates</div>
         </div>
+        <div className={classes.metricCard}>
+          <div className={classes.metricValue}>{metrics.breakGlass}</div>
+          <div className={classes.metricLabel}>Break Glass events</div>
+        </div>
       </SimpleGrid>
 
       <div className={classes.panel}>
@@ -201,6 +200,12 @@ export function AuditDashboardPage(): JSX.Element {
               data={ACTION_OPTIONS}
               value={action}
               onChange={(value) => setAction(value ?? '')}
+            />
+            <Select
+              label="Event type"
+              data={EVENT_TYPE_OPTIONS}
+              value={subtype}
+              onChange={(value) => setSubtype(value ?? '')}
             />
             <TextInput
               label="Start date"

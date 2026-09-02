@@ -26,6 +26,7 @@ import { isPayerRosterMember } from './utils/roster';
 import './index.css';
 
 const SETUP_DISMISSED_KEY = 'medplum-provider-setup-completed';
+const SECURE_DEMO_PROJECT_ID = '3307f7df-3c3f-4b18-bad2-5f2fefe10159';
 
 import HiiveHealthLogo from '../hiive-website-assets/Hiive Health Logo_Blue.svg';
 import { EncounterChartPage } from './pages/encounter/EncounterChartPage';
@@ -53,6 +54,7 @@ import { MedicationsPage } from './pages/patient/MedicationsPage';
 import { OccupationalSummaryTab } from './pages/patient/OccupationalSummaryTab';
 import { PatientPage } from './pages/patient/PatientPage';
 import { PatientSearchPage } from './pages/patient/PatientSearchPage';
+import { SecurePatientDiscoveryPage } from './pages/patient/SecurePatientDiscoveryPage';
 import { ScriptSureTab } from './pages/patient/ScriptSureTab';
 import { TasksTab } from './pages/patient/TasksTab';
 import { TimelineTab } from './pages/patient/TimelineTab';
@@ -68,6 +70,16 @@ import { SignInPage } from './pages/SignInPage';
 import { SpacesPage } from './pages/spaces/SpacesPage';
 import { TasksPage } from './pages/tasks/TasksPage';
 
+function getProfileEmail(profile: unknown): string | undefined {
+  if (!profile || typeof profile !== 'object') {
+    return undefined;
+  }
+
+  const telecom = (profile as { telecom?: Array<{ system?: string; value?: string }> }).telecom;
+  const email = telecom?.find((value) => value.system === 'email')?.value;
+  return email?.toLowerCase();
+}
+
 export function App(): JSX.Element | null {
   const medplum = useMedplum();
   const profile = useMedplumProfile();
@@ -82,9 +94,20 @@ export function App(): JSX.Element | null {
   const isRosterPayer = isPayerRosterMember(membership, profile as Practitioner | undefined);
   const isAdmin = membership?.admin === true;
   const patientSearchPath = '/Patient?_count=20&_fields=name,email,gender&_sort=-_lastUpdated';
+  const profileEmail = getProfileEmail(profile);
+
+  const landingOverrides: Record<string, string> = {
+    'nevada.provider.alex@example.com': medplum.getProject()?.id === SECURE_DEMO_PROJECT_ID ? '/secure-discovery' : patientSearchPath,
+    'nevada.payer.sarah@example.com': '/Roster',
+    'nevada.admin@example.com': '/Audit',
+  };
+
+  const landingOverridePath = profileEmail ? landingOverrides[profileEmail] : undefined;
 
   let landingPath = '/getstarted';
-  if (setupDismissed) {
+  if (landingOverridePath) {
+    landingPath = landingOverridePath;
+  } else if (setupDismissed) {
     landingPath = isRosterPayer ? '/Roster' : patientSearchPath;
   }
 
@@ -219,6 +242,7 @@ export function App(): JSX.Element | null {
     return (
       <>
         <Route path="/getstarted" element={<GetStartedPage />} />
+        <Route path="/secure-discovery" element={<SecurePatientDiscoveryPage />} />
         <Route path="/Spaces/Communication" element={<SpacesPage />}>
           <Route index element={<SpacesPage />} />
           <Route path=":topicId" element={<SpacesPage />} />

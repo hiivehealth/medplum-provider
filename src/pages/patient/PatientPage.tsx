@@ -29,6 +29,7 @@ import { OrderLabsPage } from '../labs/OrderLabsPage';
 import classes from './PatientPage.module.css';
 import { getPatientPageTabs, patientPathPrefix } from './PatientPage.utils';
 
+
 export function PatientPage(): JSX.Element {
   const navigate = useNavigate();
   const medplum = useMedplum();

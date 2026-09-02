@@ -3,7 +3,7 @@
 import { Alert, Button, Group, Modal, Stack, Text, Textarea } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
 import { createReference, normalizeErrorString } from '@medplum/core';
-import type { Consent } from '@medplum/fhirtypes';
+import type { Consent, Practitioner, Reference } from '@medplum/fhirtypes';
 import { useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
 import { useState } from 'react';
@@ -36,8 +36,11 @@ const STATUS_CONFIG: Record<Exclude<ConsentStatus, 'loading' | 'error'>, { color
   },
 };
 
+const PRODUCTION_BREAK_GLASS_ENABLED = import.meta.env.VITE_ENABLE_PRODUCTION_BREAK_GLASS === 'true';
+
 function useBreakGlass(
   patientId: string,
+  consentStatus: ConsentStatus,
   onAuditCreated?: () => void,
   onBreakGlassRecorded?: () => void
 ): {
@@ -59,13 +62,34 @@ function useBreakGlass(
       return;
     }
 
+    if (consentStatus !== 'not-declared') {
+      showNotification({
+        title: 'Break the glass unavailable',
+        message: 'Break the glass is only available when consent is not declared.',
+        color: 'red',
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const profile = medplum.getProfile();
       const profileRef = profile ? createReference(profile) : undefined;
-      const audit = createBreakGlassAudit(patientId, reason.trim(), profileRef);
+      if (!profileRef?.reference?.startsWith('Practitioner/')) {
+        throw new Error('An authenticated practitioner profile is required to break the glass.');
+      }
+      const audit = createBreakGlassAudit(patientId, reason.trim(), profileRef, {
+        consentStatus: 'not-declared',
+        correlationId: globalThis.crypto.randomUUID(),
+      });
       await medplum.createResource(audit);
-      showNotification({ title: 'Break the glass recorded', message: 'Your access has been audited.', color: 'green' });
+      showNotification({
+        title: PRODUCTION_BREAK_GLASS_ENABLED ? 'Break the glass requested' : 'Break the glass recorded',
+        message: PRODUCTION_BREAK_GLASS_ENABLED
+          ? 'Your request was recorded and is being processed by the secure access workflow.'
+          : 'Your access has been audited.',
+        color: 'green',
+      });
       setModalOpen(false);
       setReason('');
       onAuditCreated?.();
@@ -94,7 +118,7 @@ export function ConsentBanner({ patientId, onBreakGlassRecorded }: ConsentBanner
   const [updateReason, setUpdateReason] = useState('');
   const [updating, setUpdating] = useState(false);
   const medplum = useMedplum();
-  const breakGlass = useBreakGlass(patientId, refresh, onBreakGlassRecorded);
+  const breakGlass = useBreakGlass(patientId, status, refresh, onBreakGlassRecorded);
 
   if (status === 'loading') {
     return (
