@@ -1,12 +1,22 @@
 # ARM-10 — CUI classification standard
 
-Version: 0.1 • Status: Draft for security-owner review • Prepared: 2026-09-15
+Version: 0.2 • Status: Draft for security-owner review • Prepared: 2026-09-15
 
 This document is the proposed visual, accessibility, and project-policy specification
 for ARM-10. The supplied ticket establishes the requirements below; the specific
 colors, dimensions, persistence model, and unresolved-state behavior are proposals
 until approved. No security-owner approval has been supplied. ARM-10 is not complete
 until the approval record is filled in.
+
+## ARM-11 superseding decisions
+
+The subsequent CUI Project Security Policy ticket explicitly requires a Project field
+or extension, default **false** when absent, and protected configuration readable only
+by security administrators/platform operators. These replace the initial proposals
+below for a Basic resource, no implicit default, and direct member reads. See the
+[implemented ARM-11 contract](project-security-policy.md) for the authoritative policy
+storage, permission, and shell-status behavior. Earlier proposal sections remain as
+review history; they must not be used to implement ARM-11. Visual approval remains pending.
 
 ## 1. Purpose and scope
 

@@ -10,7 +10,8 @@
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "cui:install-profiles": "node scripts/install-cui-profiles.mjs"
   },
   "prettier": {
     "plugins": [

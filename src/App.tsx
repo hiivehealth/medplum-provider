@@ -22,8 +22,10 @@ import type { JSX } from 'react';
 import { Suspense, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router';
 import { hasScriptSureIdentifier } from './components/utils';
+import { CuiPolicyProvider, useCuiPolicy } from './cui/CuiPolicyProvider';
 import { useDoseSpotAccess } from './hooks/useDoseSpotAccess';
 import './index.css';
+import { CuiPolicyPage } from './pages/settings/CuiPolicyPage';
 import { ScriptSurePracticeProvider } from './scriptsure/ScriptSurePractice';
 
 const SETUP_DISMISSED_KEY = 'medplum-provider-setup-completed';
@@ -69,7 +71,16 @@ import { SmartLogo } from './pages/smart/SmartLogo';
 import { SpacesPage } from './pages/spaces/SpacesPage';
 import { TasksPage } from './pages/tasks/TasksPage';
 
-export function App(): JSX.Element | null {
+export function App(): JSX.Element {
+  return (
+    <CuiPolicyProvider>
+      <AppContent />
+    </CuiPolicyProvider>
+  );
+}
+
+function AppContent(): JSX.Element | null {
+  const { state: cuiPolicy } = useCuiPolicy();
   const medplum = useMedplum();
   const profile = useMedplumProfile();
   const doseSpotCount = useDoseSpotNotifications();
@@ -192,6 +203,9 @@ export function App(): JSX.Element | null {
                     : []),
                   { icon: <IconUserPlus />, label: 'New Patient', href: '/onboarding' },
                   { icon: <IconApps />, label: 'Integrations', href: '/integrations' },
+                  ...(cuiPolicy.status === 'ready' && cuiPolicy.policy.canManage
+                    ? [{ icon: <IconSettingsAutomation />, label: 'Project Security', href: '/Settings/Security' }]
+                    : []),
                   ...(hasBilling
                     ? [{ icon: <IconReceipt2 />, label: 'Billing Settings', href: '/Settings/Billing' }]
                     : []),
@@ -305,6 +319,7 @@ export function App(): JSX.Element | null {
               {hasScriptSure && <Route path="/scriptsure" element={<ScriptSurePage />} />}
               <Route path="/integrations" element={<IntegrationsPage />} />
               {/* Must precede the /:resourceType catch-alls below */}
+              <Route path="/Settings/Security" element={<CuiPolicyPage />} />
               {hasBilling && <Route path="/Settings/Billing/:tab?" element={<BillingSetupPage />} />}
               <Route path="/smart-health-link" element={<SmartHealthLinkImportPage />} />
               <Route path="/:resourceType" element={<SearchPage />} />

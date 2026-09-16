@@ -1,0 +1,1039 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "StructureDefinition",
+        "id": "cui-banner-enabled",
+        "url": "https://medplum.com/fhir/StructureDefinition/cui-banner-enabled",
+        "name": "CuiBannerEnabled",
+        "title": "Show CUI banner on authenticated pages",
+        "status": "active",
+        "kind": "complex-type",
+        "abstract": false,
+        "context": [
+          {
+            "type": "element",
+            "expression": "Project"
+          }
+        ],
+        "type": "Extension",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+        "derivation": "constraint",
+        "differential": {
+          "element": [
+            {
+              "id": "Extension",
+              "path": "Extension",
+              "short": "Show CUI banner on authenticated pages"
+            },
+            {
+              "id": "Extension.extension",
+              "path": "Extension.extension",
+              "max": "0"
+            },
+            {
+              "id": "Extension.url",
+              "path": "Extension.url",
+              "fixedUri": "https://medplum.com/fhir/StructureDefinition/cui-banner-enabled"
+            },
+            {
+              "id": "Extension.value[x]",
+              "path": "Extension.value[x]",
+              "min": 1,
+              "max": "1",
+              "type": [
+                {
+                  "code": "boolean"
+                }
+              ],
+              "label": "Show CUI banner on authenticated pages"
+            }
+          ]
+        },
+        "snapshot": {
+          "element": [
+            {
+              "id": "Extension",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+                  "valueCode": "normative"
+                },
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+                  "valueCode": "4.0.0"
+                }
+              ],
+              "path": "Extension",
+              "short": "Show CUI banner on authenticated pages",
+              "definition": "Optional Extension Element - found in all resources.",
+              "min": 0,
+              "max": "*",
+              "base": {
+                "path": "Extension",
+                "min": 0,
+                "max": "*"
+              },
+              "condition": [
+                "ele-1"
+              ],
+              "constraint": [
+                {
+                  "key": "ele-1",
+                  "severity": "error",
+                  "human": "All FHIR elements must have a @value or children",
+                  "expression": "hasValue() or (children().count() > id.count())",
+                  "xpath": "@value|f:*|h:div",
+                  "source": "http://hl7.org/fhir/StructureDefinition/Element"
+                },
+                {
+                  "key": "ext-1",
+                  "severity": "error",
+                  "human": "Must have either extensions or value[x], not both",
+                  "expression": "extension.exists() != value.exists()",
+                  "xpath": "exists(f:extension)!=exists(f:*[starts-with(local-name(.), 'value')])"
+                }
+              ],
+              "isModifier": false,
+              "mapping": [
+                {
+                  "identity": "rim",
+                  "map": "n/a"
+                },
+                {
+                  "identity": "rim",
+                  "map": "N/A"
+                }
+              ]
+            },
+            {
+              "id": "Extension.id",
+              "path": "Extension.id",
+              "representation": [
+                "xmlAttr"
+              ],
+              "short": "Unique id for inter-element referencing",
+              "definition": "Unique id for the element within a resource (for internal references). This may be any string value that does not contain spaces.",
+              "min": 0,
+              "max": "1",
+              "base": {
+                "path": "Element.id",
+                "min": 0,
+                "max": "1"
+              },
+              "type": [
+                {
+                  "extension": [
+                    {
+                      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type",
+                      "valueUrl": "string"
+                    }
+                  ],
+                  "code": "http://hl7.org/fhirpath/System.String"
+                }
+              ],
+              "isModifier": false,
+              "isSummary": false,
+              "mapping": [
+                {
+                  "identity": "rim",
+                  "map": "n/a"
+                }
+              ]
+            },
+            {
+              "id": "Extension.extension",
+              "path": "Extension.extension",
+              "slicing": {
+                "discriminator": [
+                  {
+                    "type": "value",
+                    "path": "url"
+                  }
+                ],
+                "description": "Extensions are always sliced by (at least) url",
+                "rules": "open"
+              },
+              "short": "Additional content defined by implementations",
+              "definition": "May be used to represent additional information that is not part of the basic definition of the element. To make the use of extensions safe and manageable, there is a strict set of governance  applied to the definition and use of extensions. Though any implementer can define an extension, there is a set of requirements that SHALL be met as part of the definition of the extension.",
+              "comment": "There can be no stigma associated with the use of extensions by any application, project, or standard - regardless of the institution or jurisdiction that uses or defines the extensions.  The use of extensions is what allows the FHIR specification to retain a core level of simplicity for everyone.",
+              "alias": [
+                "extensions",
+                "user content"
+              ],
+              "min": 0,
+              "max": "0",
+              "base": {
+                "path": "Element.extension",
+                "min": 0,
+                "max": "*"
+              },
+              "type": [
+                {
+                  "code": "Extension"
+                }
+              ],
+              "constraint": [
+                {
+                  "key": "ele-1",
+                  "severity": "error",
+                  "human": "All FHIR elements must have a @value or children",
+                  "expression": "hasValue() or (children().count() > id.count())",
+                  "xpath": "@value|f:*|h:div",
+                  "source": "http://hl7.org/fhir/StructureDefinition/Element"
+                },
+                {
+                  "key": "ext-1",
+                  "severity": "error",
+                  "human": "Must have either extensions or value[x], not both",
+                  "expression": "extension.exists() != value.exists()",
+                  "xpath": "exists(f:extension)!=exists(f:*[starts-with(local-name(.), \"value\")])",
+                  "source": "http://hl7.org/fhir/StructureDefinition/Extension"
+                }
+              ],
+              "isModifier": false,
+              "isSummary": false,
+              "mapping": [
+                {
+                  "identity": "rim",
+                  "map": "n/a"
+                }
+              ]
+            },
+            {
+              "id": "Extension.url",
+              "path": "Extension.url",
+              "representation": [
+                "xmlAttr"
+              ],
+              "short": "identifies the meaning of the extension",
+              "definition": "Source of the definition for the extension code - a logical name or a URL.",
+              "comment": "The definition may point directly to a computable or human-readable definition of the extensibility codes, or it may be a logical URI as declared in some other specification. The definition SHALL be a URI for the Structure Definition defining the extension.",
+              "min": 1,
+              "max": "1",
+              "base": {
+                "path": "Extension.url",
+                "min": 1,
+                "max": "1"
+              },
+              "type": [
+                {
+                  "extension": [
+                    {
+                      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type",
+                      "valueUrl": "uri"
+                    }
+                  ],
+                  "code": "http://hl7.org/fhirpath/System.String"
+                }
+              ],
+              "isModifier": false,
+              "isSummary": false,
+              "mapping": [
+                {
+                  "identity": "rim",
+                  "map": "N/A"
+                }
+              ],
+              "fixedUri": "https://medplum.com/fhir/StructureDefinition/cui-banner-enabled"
+            },
+            {
+              "id": "Extension.value[x]",
+              "path": "Extension.value[x]",
+              "short": "Value of extension",
+              "definition": "Value of extension - must be one of a constrained set of the data types (see [Extensibility](extensibility.html) for a list).",
+              "min": 1,
+              "max": "1",
+              "base": {
+                "path": "Extension.value[x]",
+                "min": 0,
+                "max": "1"
+              },
+              "type": [
+                {
+                  "code": "boolean"
+                }
+              ],
+              "constraint": [
+                {
+                  "key": "ele-1",
+                  "severity": "error",
+                  "human": "All FHIR elements must have a @value or children",
+                  "expression": "hasValue() or (children().count() > id.count())",
+                  "xpath": "@value|f:*|h:div",
+                  "source": "http://hl7.org/fhir/StructureDefinition/Element"
+                }
+              ],
+              "isModifier": false,
+              "isSummary": false,
+              "mapping": [
+                {
+                  "identity": "rim",
+                  "map": "N/A"
+                }
+              ],
+              "label": "Show CUI banner on authenticated pages"
+            }
+          ]
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "StructureDefinition/cui-banner-enabled"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "StructureDefinition",
+        "id": "cui-project",
+        "url": "https://medplum.com/fhir/StructureDefinition/cui-project",
+        "name": "CuiProject",
+        "title": "Project security configuration",
+        "status": "active",
+        "kind": "resource",
+        "abstract": false,
+        "type": "Project",
+        "baseDefinition": "https://medplum.com/fhir/StructureDefinition/Project",
+        "derivation": "constraint",
+        "differential": {
+          "element": [
+            {
+              "id": "Project",
+              "path": "Project"
+            },
+            {
+              "id": "Project.extension",
+              "path": "Project.extension",
+              "slicing": {
+                "discriminator": [
+                  {
+                    "type": "value",
+                    "path": "url"
+                  }
+                ],
+                "rules": "open",
+                "ordered": false
+              }
+            },
+            {
+              "id": "Project.extension:cuiBannerEnabled",
+              "path": "Project.extension",
+              "sliceName": "cuiBannerEnabled",
+              "short": "Show CUI banner on authenticated pages",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "Extension",
+                  "profile": [
+                    "https://medplum.com/fhir/StructureDefinition/cui-banner-enabled"
+                  ]
+                }
+              ],
+              "label": "CUI classification",
+              "definition": "Project-scoped CUI classification display policy. Absence is interpreted as disabled by the server."
+            }
+          ]
+        },
+        "snapshot": {
+          "element": [
+            {
+              "id": "Project",
+              "path": "Project",
+              "short": "Encapsulation of resources for a specific project or organization.",
+              "definition": "Encapsulation of resources for a specific project or organization.",
+              "min": 0,
+              "max": "*",
+              "base": {
+                "min": 0,
+                "max": "*",
+                "path": "Project"
+              }
+            },
+            {
+              "id": "Project.id",
+              "path": "Project.id",
+              "short": "Logical id of this artifact",
+              "definition": "The logical id of the resource, as used in the URL for the resource. Once assigned, this value never changes.",
+              "min": 0,
+              "max": "1",
+              "base": {
+                "path": "Resource.id",
+                "min": 0,
+                "max": "1"
+              },
+              "type": [
+                {
+                  "code": "string"
+                }
+              ]
+            },
+            {
+              "id": "Project.meta",
+              "path": "Project.meta",
+              "definition": "The metadata about the resource. This is content that is maintained by the infrastructure. Changes to the content might not always be associated with version changes to the resource.",
+              "min": 0,
+              "max": "1",
+              "base": {
+                "path": "Resource.meta",
+                "min": 0,
+                "max": "1"
+              },
+              "type": [
+                {
+                  "code": "Meta"
+                }
+              ]
+            },
+            {
+              "id": "Project.implicitRules",
+              "path": "Project.implicitRules",
+              "definition": "A reference to a set of rules that were followed when the resource was constructed, and which must be understood when processing the content. Often, this is a reference to an implementation guide that defines the special rules along with other profiles etc.",
+              "min": 0,
+              "max": "1",
+              "base": {
+                "path": "Resource.implicitRules",
+                "min": 0,
+                "max": "1"
+              },
+              "type": [
+                {
+                  "code": "uri"
+                }
+              ]
+            },
+            {
+              "id": "Project.language",
+              "path": "Project.language",
+              "definition": "The base language in which the resource is written.",
+              "min": 0,
+              "max": "1",
+              "base": {
+                "path": "Resource.language",
+                "min": 0,
+                "max": "1"
+              },
+              "type": [
+                {
+                  "code": "code"
+                }
+              ]
+            },
+            {
+              "id": "Project.text",
+              "path": "Project.text",
+              "short": "Text summary of the resource, for human interpretation",
+              "definition": "A human-readable narrative that contains a summary of the resource and can be used to represent the content of the resource to a human. The narrative need not encode all the structured data, but is required to contain sufficient detail to make it \"clinically safe\" for a human to just read the narrative. Resource definitions may define what content should be represented in the narrative to ensure clinical safety.",
+              "min": 0,
+              "max": "1",
+              "base": {
+                "path": "DomainResource.text",
+                "min": 0,
+                "max": "1"
+              },
+              "type": [
+                {
+                  "code": "Narrative"
+                }
+              ]
+            },
+            {
+              "id": "Project.contained",
+              "path": "Project.contained",
+              "short": "Contained, inline Resources",
+              "definition": "These resources do not have an independent existence apart from the resource that contains them - they cannot be identified independently, and nor can they have their own independent transaction scope.",
+              "min": 0,
+              "max": "*",
+              "base": {
+                "path": "DomainResource.contained",
+                "min": 0,
+                "max": "*"
+              },
+              "type": [
+                {
+                  "code": "Resource"
+                }
+              ]
+            },
+            {
+              "id": "Project.extension",
+              "path": "Project.extension",
+              "short": "Additional content defined by implementations",
+              "definition": "May be used to represent additional information that is not part of the basic definition of the resource. To make the use of extensions safe and manageable, there is a strict set of governance  applied to the definition and use of extensions. Though any implementer can define an extension, there is a set of requirements that SHALL be met as part of the definition of the extension.",
+              "min": 0,
+              "max": "*",
+              "base": {
+                "path": "DomainResource.extension",
+                "min": 0,
+                "max": "*"
+              },
+              "type": [
+                {
+                  "code": "Extension"
+                }
+              ],
+              "slicing": {
+                "discriminator": [
+                  {
+                    "type": "value",
+                    "path": "url"
+                  }
+                ],
+                "rules": "open",
+                "ordered": false
+              }
+            },
+            {
+              "id": "Project.extension:cuiBannerEnabled",
+              "path": "Project.extension",
+              "sliceName": "cuiBannerEnabled",
+              "short": "Show CUI banner on authenticated pages",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "Extension",
+                  "profile": [
+                    "https://medplum.com/fhir/StructureDefinition/cui-banner-enabled"
+                  ]
+                }
+              ],
+              "label": "CUI classification",
+              "definition": "Project-scoped CUI classification display policy. Absence is interpreted as disabled by the server.",
+              "base": {
+                "path": "DomainResource.extension",
+                "min": 0,
+                "max": "*"
+              }
+            },
+            {
+              "id": "Project.modifierExtension",
+              "path": "Project.modifierExtension",
+              "short": "Extensions that cannot be ignored",
+              "definition": "May be used to represent additional information that is not part of the basic definition of the resource and that modifies the understanding of the element that contains it and/or the understanding of the containing element's descendants. Usually modifier elements provide negation or qualification. To make the use of extensions safe and manageable, there is a strict set of governance applied to the definition and use of extensions. Though any implementer is allowed to define an extension, there is a set of requirements that SHALL be met as part of the definition of the extension. Applications processing a resource are required to check for modifier extensions.\n\nModifier extensions SHALL NOT change the meaning of any elements on Resource or DomainResource (including cannot change the meaning of modifierExtension itself).",
+              "min": 0,
+              "max": "*",
+              "base": {
+                "path": "DomainResource.modifierExtension",
+                "min": 0,
+                "max": "*"
+              },
+              "type": [
+                {
+                  "code": "Extension"
+                }
+              ]
+            },
+            {
+              "id": "Project.identifier",
+              "path": "Project.identifier",
+              "short": "An identifier for this project",
+              "definition": "An identifier for this project.",
+              "min": 0,
+              "max": "*",
+              "type": [
+                {
+                  "code": "Identifier"
+                }
+              ],
+              "base": {
+                "path": "Project.identifier",
+                "min": 0,
+                "max": "*"
+              }
+            },
+            {
+              "id": "Project.name",
+              "path": "Project.name",
+              "definition": "A name associated with the Project.",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "string"
+                }
+              ],
+              "base": {
+                "path": "Project.name",
+                "min": 0,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.description",
+              "path": "Project.description",
+              "definition": "A summary, characterization or explanation of the Project.",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "string"
+                }
+              ],
+              "base": {
+                "path": "Project.description",
+                "min": 0,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.superAdmin",
+              "path": "Project.superAdmin",
+              "short": "Whether this project is the super administrator project.",
+              "definition": "Whether this project is the super administrator project. A super administrator is a user who has complete access to all resources in all projects.",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "boolean"
+                }
+              ],
+              "base": {
+                "path": "Project.superAdmin",
+                "min": 0,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.strictMode",
+              "path": "Project.strictMode",
+              "short": "Whether this project uses strict FHIR validation.",
+              "definition": "Whether this project uses strict FHIR validation.  This setting has been deprecated, and can only be set by a super admin.",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "boolean"
+                }
+              ],
+              "base": {
+                "path": "Project.strictMode",
+                "min": 0,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.checkReferencesOnWrite",
+              "path": "Project.checkReferencesOnWrite",
+              "short": "Whether this project uses referential integrity on write operations such as 'create' and 'update'.",
+              "definition": "Whether this project uses referential integrity on write operations such as 'create' and 'update'.",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "boolean"
+                }
+              ],
+              "base": {
+                "path": "Project.checkReferencesOnWrite",
+                "min": 0,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.owner",
+              "path": "Project.owner",
+              "definition": "The user who owns the project.",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "Reference",
+                  "targetProfile": [
+                    "https://medplum.com/fhir/StructureDefinition/User"
+                  ]
+                }
+              ],
+              "base": {
+                "path": "Project.owner",
+                "min": 0,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.features",
+              "path": "Project.features",
+              "definition": "A list of optional features that are enabled for the project.",
+              "min": 0,
+              "max": "*",
+              "type": [
+                {
+                  "code": "code"
+                }
+              ],
+              "base": {
+                "path": "Project.features",
+                "min": 0,
+                "max": "*"
+              },
+              "binding": {
+                "strength": "required",
+                "valueSet": "https://medplum.com/fhir/ValueSet/project-feature"
+              }
+            },
+            {
+              "id": "Project.defaultPatientAccessPolicy",
+              "path": "Project.defaultPatientAccessPolicy",
+              "definition": "The default access policy for patients using open registration.",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "Reference",
+                  "targetProfile": [
+                    "https://medplum.com/fhir/StructureDefinition/AccessPolicy"
+                  ]
+                }
+              ],
+              "base": {
+                "path": "Project.defaultPatientAccessPolicy",
+                "min": 0,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.setting",
+              "path": "Project.setting",
+              "definition": "Option or parameter that can be adjusted within the Medplum Project to customize its behavior.",
+              "min": 0,
+              "max": "*",
+              "type": [
+                {
+                  "code": "BackboneElement"
+                }
+              ],
+              "base": {
+                "path": "Project.setting",
+                "min": 0,
+                "max": "*"
+              }
+            },
+            {
+              "id": "Project.setting.name",
+              "path": "Project.setting.name",
+              "definition": "The secret name.",
+              "min": 1,
+              "max": "1",
+              "type": [
+                {
+                  "code": "string"
+                }
+              ],
+              "base": {
+                "path": "Project.setting.name",
+                "min": 1,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.setting.value[x]",
+              "path": "Project.setting.value[x]",
+              "definition": "The secret value.",
+              "min": 1,
+              "max": "1",
+              "type": [
+                {
+                  "code": "string"
+                },
+                {
+                  "code": "boolean"
+                },
+                {
+                  "code": "decimal"
+                },
+                {
+                  "code": "integer"
+                }
+              ],
+              "base": {
+                "path": "Project.setting.value[x]",
+                "min": 1,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.secret",
+              "path": "Project.secret",
+              "definition": "Option or parameter that can be adjusted within the Medplum Project to customize its behavior, only visible to project administrators.",
+              "min": 0,
+              "max": "*",
+              "base": {
+                "path": "Project.secret",
+                "min": 0,
+                "max": "*"
+              },
+              "contentReference": "#Project.setting"
+            },
+            {
+              "id": "Project.systemSetting",
+              "path": "Project.systemSetting",
+              "definition": "Option or parameter that can be adjusted within the Medplum Project to customize its behavior, only modifiable by system administrators.",
+              "min": 0,
+              "max": "*",
+              "base": {
+                "path": "Project.systemSetting",
+                "min": 0,
+                "max": "*"
+              },
+              "contentReference": "#Project.setting"
+            },
+            {
+              "id": "Project.systemSecret",
+              "path": "Project.systemSecret",
+              "definition": "Option or parameter that can be adjusted within the Medplum Project to customize its behavior, only visible to system administrators.",
+              "min": 0,
+              "max": "*",
+              "base": {
+                "path": "Project.systemSecret",
+                "min": 0,
+                "max": "*"
+              },
+              "contentReference": "#Project.setting"
+            },
+            {
+              "id": "Project.site",
+              "path": "Project.site",
+              "definition": "Web application or web site that is associated with the project.",
+              "min": 0,
+              "max": "*",
+              "type": [
+                {
+                  "code": "BackboneElement"
+                }
+              ],
+              "base": {
+                "path": "Project.site",
+                "min": 0,
+                "max": "*"
+              }
+            },
+            {
+              "id": "Project.site.name",
+              "path": "Project.site.name",
+              "definition": "Friendly name that will make it easy for you to identify the site in the future.",
+              "min": 1,
+              "max": "1",
+              "type": [
+                {
+                  "code": "string"
+                }
+              ],
+              "base": {
+                "path": "Project.site.name",
+                "min": 1,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.site.domain",
+              "path": "Project.site.domain",
+              "definition": "The list of domain names associated with the site. User authentication will be restricted to the domains you enter here, plus any subdomains. In other words, a registration for example.com also registers subdomain.example.com. A valid domain requires a host and must not include any path, port, query or fragment.",
+              "min": 1,
+              "max": "*",
+              "type": [
+                {
+                  "code": "string"
+                }
+              ],
+              "base": {
+                "path": "Project.site.domain",
+                "min": 1,
+                "max": "*"
+              }
+            },
+            {
+              "id": "Project.site.googleClientId",
+              "path": "Project.site.googleClientId",
+              "definition": "The publicly visible Google Client ID for the site. This is used to authenticate users with Google. This value is available in the Google Developer Console.",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "string"
+                }
+              ],
+              "base": {
+                "path": "Project.site.googleClientId",
+                "min": 0,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.site.googleClientSecret",
+              "path": "Project.site.googleClientSecret",
+              "definition": "The private Google Client Secret for the site. This value is available in the Google Developer Console.",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "string"
+                }
+              ],
+              "base": {
+                "path": "Project.site.googleClientSecret",
+                "min": 0,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.site.recaptchaSiteKey",
+              "path": "Project.site.recaptchaSiteKey",
+              "definition": "The publicly visible reCAPTCHA site key. This value is generated when you create a new reCAPTCHA site in the reCAPTCHA admin console. Use this site key in the HTML code your site serves to users.",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "string"
+                }
+              ],
+              "base": {
+                "path": "Project.site.recaptchaSiteKey",
+                "min": 0,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.site.recaptchaSecretKey",
+              "path": "Project.site.recaptchaSecretKey",
+              "definition": "The private reCAPTCHA secret key. This value is generated when you create a new reCAPTCHA site in the reCAPTCHA admin console. Use this secret key for communication between your site and reCAPTCHA.",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "string"
+                }
+              ],
+              "base": {
+                "path": "Project.site.recaptchaSecretKey",
+                "min": 0,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.link",
+              "path": "Project.link",
+              "definition": "Linked Projects whose contents are made available to this one",
+              "min": 0,
+              "max": "*",
+              "type": [
+                {
+                  "code": "BackboneElement"
+                }
+              ],
+              "base": {
+                "path": "Project.link",
+                "min": 0,
+                "max": "*"
+              }
+            },
+            {
+              "id": "Project.link.project",
+              "path": "Project.link.project",
+              "definition": "A reference to the Project to be linked into this one",
+              "min": 1,
+              "max": "1",
+              "type": [
+                {
+                  "code": "Reference",
+                  "targetProfile": [
+                    "Project"
+                  ]
+                }
+              ],
+              "base": {
+                "path": "Project.link.project",
+                "min": 1,
+                "max": "1"
+              }
+            },
+            {
+              "id": "Project.defaultProfile",
+              "path": "Project.defaultProfile",
+              "definition": "Default profiles to apply to resources in this project that do not individually specify profiles",
+              "min": 0,
+              "max": "*",
+              "type": [
+                {
+                  "code": "BackboneElement"
+                }
+              ],
+              "base": {
+                "path": "Project.defaultProfile",
+                "min": 0,
+                "max": "*"
+              }
+            },
+            {
+              "id": "Project.defaultProfile.resourceType",
+              "path": "Project.defaultProfile.resourceType",
+              "definition": "The resource type onto which to apply the default profiles",
+              "min": 1,
+              "max": "1",
+              "type": [
+                {
+                  "code": "code"
+                }
+              ],
+              "base": {
+                "path": "Project.defaultProfile.resourceType",
+                "min": 1,
+                "max": "1"
+              },
+              "binding": {
+                "strength": "required",
+                "valueSet": "http://hl7.org/fhir/ValueSet/resource-types"
+              }
+            },
+            {
+              "id": "Project.defaultProfile.profile",
+              "path": "Project.defaultProfile.profile",
+              "definition": "The profiles to add by default",
+              "min": 1,
+              "max": "*",
+              "type": [
+                {
+                  "code": "canonical",
+                  "targetProfile": [
+                    "http://hl7.org/fhir/StructureDefinition/StructureDefinition"
+                  ]
+                }
+              ],
+              "base": {
+                "path": "Project.defaultProfile.profile",
+                "min": 1,
+                "max": "*"
+              }
+            },
+            {
+              "id": "Project.exportedResourceType",
+              "path": "Project.exportedResourceType",
+              "definition": "The resource types exported by the project when linked",
+              "min": 0,
+              "max": "*",
+              "type": [
+                {
+                  "code": "code"
+                }
+              ],
+              "base": {
+                "path": "Project.exportedResourceType",
+                "min": 0,
+                "max": "*"
+              },
+              "binding": {
+                "strength": "required",
+                "valueSet": "http://hl7.org/fhir/ValueSet/resource-types"
+              }
+            }
+          ]
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "StructureDefinition/cui-project"
+      }
+    }
+  ]
+}
