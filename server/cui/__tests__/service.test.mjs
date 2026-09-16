@@ -34,7 +34,10 @@ async function fixture(t, options = {}) {
     const path = url.pathname;
     const auth = init.headers.Authorization;
     calls.push({ path, auth, method: init.method ?? 'GET', body: init.body?.toString(), redirect: init.redirect });
-    if (path === '/oauth2/token') return json({ access_token: 'reader-token', expires_in: 300 });
+    if (path === '/oauth2/token') {
+      if (options.tokenResponse) return options.tokenResponse();
+      return json({ access_token: 'reader-token', expires_in: 300 });
+    }
     if (path === '/auth/me' && auth === 'Bearer reader-token')
       return json({
         project: { id: options.readerProject ?? 'p1' },
@@ -146,4 +149,50 @@ test('missing provisioned record and upstream failures are operational errors', 
 });
 test('rejects non-HTTPS remote upstreams', () => {
   assert.throws(() => createCuiHandler({ ...config, medplumBaseUrl: 'http://remote.example/' }), /HTTPS/);
+});
+
+test('rejects malformed project mappings before accepting requests', () => {
+  for (const entry of [
+    null,
+    { ...config.projects.p1, configurationId: undefined },
+    { ...config.projects.p1, configurationId: 123 },
+    { ...config.projects.p1, readerClientId: true },
+    { ...config.projects.p1, readerClientSecret: ' ' },
+    { ...config.projects.p1, managerAccessPolicyIds: [null] },
+  ]) {
+    assert.throws(() => createCuiHandler({ ...config, projects: { p1: entry } }), /Invalid service project mapping/);
+  }
+});
+
+test('concurrent policy requests share a single reader token exchange', async (t) => {
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const f = await fixture(t, {
+    tokenResponse: async () => {
+      await gate;
+      return json({ access_token: 'reader-token', expires_in: 300 });
+    },
+  });
+  const requests = Array.from({ length: 5 }, () => f.get());
+  // Wait until every request has authenticated while the token exchange is held open.
+  for (let attempt = 0; attempt < 100; attempt++) {
+    if (f.calls.filter((c) => c.path === '/auth/me' && c.auth === 'Bearer caller').length === 5) break;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  release();
+  const responses = await Promise.all(requests);
+  assert.ok(responses.every((response) => response.status === 200));
+  assert.equal(f.calls.filter((c) => c.path === '/oauth2/token').length, 1);
+});
+
+test('failed token exchanges can be retried', async (t) => {
+  let attempts = 0;
+  const f = await fixture(t, {
+    tokenResponse: () => (++attempts === 1 ? json({}, 503) : json({ access_token: 'reader-token', expires_in: 300 })),
+  });
+  assert.equal((await f.get()).status, 503);
+  assert.equal((await f.get()).status, 200);
+  assert.equal(attempts, 2);
 });

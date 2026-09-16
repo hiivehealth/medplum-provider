@@ -3,13 +3,22 @@ import { normalizeOperationOutcome } from '@medplum/core';
 import type { Basic, OperationOutcome, Resource } from '@medplum/fhirtypes';
 import { Document, Loading, useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ResourceFormWithRequiredProfile } from '../../components/ResourceFormWithRequiredProfile';
 import { useCuiPolicy } from '../../features/cui/CuiPolicyProvider';
 import { CUI_CONFIGURATION_PROFILE_URL, CUI_ENABLED_URL, setCuiEnabled } from '../../features/cui/policy';
 
 /** Profile-driven configuration editor. Server permissions remain authoritative for every save. */
 export function CuiPolicyPage(): JSX.Element {
+  const { state } = useCuiPolicy();
+  const identity =
+    state.status === 'ready'
+      ? `${state.policy.projectId}/${state.policy.configurationId}/${state.policy.canManage}`
+      : state.status;
+  return <CuiPolicyEditor key={identity} />;
+}
+
+function CuiPolicyEditor(): JSX.Element {
   const medplum = useMedplum();
   const { state, refresh } = useCuiPolicy();
   const projectId = state.status === 'ready' && state.policy.canManage ? state.policy.projectId : undefined;
@@ -18,6 +27,14 @@ export function CuiPolicyPage(): JSX.Element {
   const [error, setError] = useState<string>();
   const [outcome, setOutcome] = useState<OperationOutcome>();
   const [saved, setSaved] = useState(false);
+  const saving = useRef(false);
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     setProject(undefined);
@@ -48,6 +65,8 @@ export function CuiPolicyPage(): JSX.Element {
 
   const save = async (resource: Resource): Promise<void> => {
     if (
+      saving.current ||
+      !active.current ||
       resource.resourceType !== 'Basic' ||
       resource.id !== configurationId ||
       resource.meta?.project !== projectId ||
@@ -55,17 +74,21 @@ export function CuiPolicyPage(): JSX.Element {
     ) {
       return;
     }
+    saving.current = true;
     setOutcome(undefined);
     setSaved(false);
     try {
       const updated = await medplum.updateResource(resource, {
         headers: { 'If-Match': `W/"${project.meta.versionId}"` },
       });
+      if (!active.current) return;
       setProject(updated);
       setSaved(true);
       refresh();
     } catch (err) {
-      setOutcome(normalizeOperationOutcome(err));
+      if (active.current) setOutcome(normalizeOperationOutcome(err));
+    } finally {
+      saving.current = false;
     }
   };
 

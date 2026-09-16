@@ -39,14 +39,14 @@ async function setup(enabled: boolean | null = false) {
   });
   const read = vi.spyOn(medplum, 'readResource');
   const update = vi.spyOn(medplum, 'updateResource');
-  render(
+  const view = render(
     <MemoryRouter>
       <MedplumProvider medplum={medplum}>
         <CuiPolicyPage />
       </MedplumProvider>
     </MemoryRouter>
   );
-  return { medplum, read, update };
+  return { medplum, read, update, ...view };
 }
 
 beforeEach(() => {
@@ -84,4 +84,24 @@ test('an absent policy renders an unchecked toggle without writing a default', a
   const checkbox = within(await screen.findByTestId('slice-cuiBannerEnabled')).getByRole('checkbox');
   expect(checkbox).not.toBeChecked();
   expect(update).not.toHaveBeenCalled();
+});
+
+test('ignores duplicate submissions and save completion after leaving the editor', async () => {
+  const { update, unmount } = await setup();
+  let finish!: (resource: Basic & { id: string }) => void;
+  update.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+  );
+  const button = await screen.findByRole('button', { name: 'Update' });
+  await userEvent.click(button);
+  await userEvent.click(button);
+  expect(update).toHaveBeenCalledTimes(1);
+  const resource = update.mock.calls[0][0] as Basic & { id: string };
+  unmount();
+  finish(resource);
+  await Promise.resolve();
+  expect(fixture.refresh).not.toHaveBeenCalled();
 });

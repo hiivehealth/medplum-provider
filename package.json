@@ -28,8 +28,6 @@
     "@mantine/hooks": "8.3.18",
     "@mantine/notifications": "8.3.18",
     "@mantine/spotlight": "8.3.18",
-    "@medplum/core": "5.1.37",
-    "@medplum/definitions": "5.1.37",
     "@medplum/dosespot-react": "5.1.37",
     "@medplum/eslint-config": "5.1.37",
     "@medplum/fhirtypes": "5.1.37",
@@ -67,5 +65,9 @@
   "packageManager": "npm@10.9.9",
   "engines": {
     "node": "^22.18.0 || >=24.2.0"
+  },
+  "dependencies": {
+    "@medplum/core": "5.1.37",
+    "@medplum/definitions": "5.1.37"
   }
 }

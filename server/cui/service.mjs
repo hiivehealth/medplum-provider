@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 const enabledUrl = 'https://medplum.com/fhir/StructureDefinition/cui-banner-enabled';
 const profileUrl = 'https://medplum.com/fhir/StructureDefinition/cui-configuration';
 const idPattern = /^[A-Za-z0-9.-]{1,64}$/;
+const isId = (value) => typeof value === 'string' && idPattern.test(value);
 indexStructureDefinitionBundle(readJson('fhir/r4/profiles-types.json'));
 indexStructureDefinitionBundle(readJson('fhir/r4/profiles-resources.json'));
 for (const file of SEARCH_PARAMETER_BUNDLE_FILES) indexSearchParameterBundle(readJson(file));
@@ -54,20 +55,25 @@ export function createCuiHandler(config, fetchImpl = fetch) {
   }
   if (!base.pathname.endsWith('/')) base.pathname += '/';
   const projects = config.projects;
-  if (!projects || Object.keys(projects).length === 0) throw new Error('Configure at least one project');
+  if (!projects || typeof projects !== 'object' || Array.isArray(projects) || Object.keys(projects).length === 0)
+    throw new Error('Configure at least one project');
   for (const [id, entry] of Object.entries(projects)) {
     if (
-      !idPattern.test(id) ||
-      !idPattern.test(entry.configurationId) ||
-      !entry.readerClientId ||
-      !entry.readerClientSecret ||
+      !isId(id) ||
+      !entry ||
+      typeof entry !== 'object' ||
+      !isId(entry.configurationId) ||
+      !isId(entry.readerClientId) ||
+      typeof entry.readerClientSecret !== 'string' ||
+      !entry.readerClientSecret.trim() ||
       !Array.isArray(entry.managerAccessPolicyIds) ||
       !entry.managerAccessPolicyIds.length ||
-      entry.managerAccessPolicyIds.some((value) => !idPattern.test(value))
+      entry.managerAccessPolicyIds.some((value) => !isId(value))
     )
       throw new Error('Invalid service project mapping');
   }
   const readers = new Map();
+  const pendingReaders = new Map();
   async function request(path, token, options = {}) {
     return fetchImpl(new URL(path, base), {
       ...options,
@@ -77,8 +83,18 @@ export function createCuiHandler(config, fetchImpl = fetch) {
     });
   }
   async function readerToken(projectId, entry) {
-    let cached = readers.get(projectId);
+    const cached = readers.get(projectId);
     if (cached && cached.expires > Date.now()) return cached.token;
+    if (pendingReaders.has(projectId)) return pendingReaders.get(projectId);
+    const pending = acquireReaderToken(projectId, entry);
+    pendingReaders.set(projectId, pending);
+    try {
+      return await pending;
+    } finally {
+      pendingReaders.delete(projectId);
+    }
+  }
+  async function acquireReaderToken(projectId, entry) {
     const response = await request('oauth2/token', undefined, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -90,14 +106,15 @@ export function createCuiHandler(config, fetchImpl = fetch) {
     });
     if (!response.ok) throw new ServiceError(503, 'Configuration reader unavailable');
     const body = await response.json();
-    if (typeof body.access_token !== 'string') throw new ServiceError(503, 'Configuration reader unavailable');
+    if (typeof body.access_token !== 'string' || !body.access_token)
+      throw new ServiceError(503, 'Configuration reader unavailable');
     const identity = await request('auth/me', body.access_token);
     if (!identity.ok) throw new ServiceError(503, 'Configuration reader unavailable');
     const me = await identity.json();
     if (me.project?.id !== projectId || me.project?.superAdmin || me.membership?.admin) {
       throw new ServiceError(503, 'Configuration reader must be a non-admin in the mapped project');
     }
-    cached = {
+    const cached = {
       token: body.access_token,
       expires: Date.now() + Math.max(0, Math.min(Number(body.expires_in) || 60, 300) - 30) * 1000,
     };
@@ -141,7 +158,7 @@ export function createCuiHandler(config, fetchImpl = fetch) {
       const resource = await response.json();
       const enabled = readEnabled(resource, projectId, entry.configurationId);
       const assignedRole = me.accessPolicy?.basedOn?.some((ref) =>
-        entry.managerAccessPolicyIds.includes(ref.reference?.replace(/^AccessPolicy\//, ''))
+        entry.managerAccessPolicyIds.some((id) => ref.reference === `AccessPolicy/${id}`)
       );
       let canManage = false;
       if (assignedRole && me.accessPolicy) {
