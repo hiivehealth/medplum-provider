@@ -57,9 +57,32 @@ MEDPLUM_BASE_URL=http://localhost:8103/
 
 Restart `npm run dev` after changing `.env`.
 
+For machine-specific settings, use `.env.local` (ignored by Git), which overrides `.env`:
+
+```dotenv
+MEDPLUM_BASE_URL=http://localhost:8103/
+MEDPLUM_CLIENT_ID=
+MEDPLUM_REGISTER_ENABLED=true
+GOOGLE_CLIENT_ID=
+RECAPTCHA_SITE_KEY=
+```
+
+With the Docker stack already running, run `npm install` followed by `npm run dev`.
+Open `http://localhost:3001` and sign in with your local Medplum account, or use
+Register to create one. The Docker-hosted Medplum app remains at `http://localhost:3000`.
+
+If the Medplum repository is cloned alongside this project at `../medplum`, its
+documentation is in `../medplum/packages/docs/docs` and its implementation is in
+`../medplum/packages`. These files can be read directly as development references.
+
 ### A note on value sets
 
 Some fields in this app (diagnoses, medications, race/ethnicity, and others) autocomplete against clinical terminologies such as ICD-10, RxNorm, and US Core / VSAC value sets. On hosted Medplum, these are provided by shared projects [linked](https://www.medplum.com/docs/access/projects#project-linking) into your project. A fresh self-hosted or local server includes only the base FHIR R4 terminology, so these fields will show a "ValueSet not found" message inline and you will need to enter codes manually. To enable them, upload the value sets and import their code systems into a shared project (see [`CodeSystem/$import`](https://www.medplum.com/docs/api/fhir/operations/codesystem-import)) and link that project, or contact Medplum for access to the hosted terminology.
+
+### Project specifications
+
+- [ARM-10: CUI classification standard](docs/cui/README.md) — draft visual,
+  accessibility, and project-policy specification with desktop/mobile references.
 
 ### About Medplum
 
