@@ -1,5 +1,5 @@
 import type { MedplumClient } from '@medplum/core';
-import { CUI_ENABLED_URL, resolveCuiPolicy, setCuiEnabled } from './policy';
+import { CUI_ENABLED_URL, resolveCuiPolicy, setCuiEnabled } from '../policy';
 
 const medplum = { getAccessToken: () => 'user-token', refreshIfExpired: async () => {} } as unknown as MedplumClient;
 const mockFetch = vi.fn();

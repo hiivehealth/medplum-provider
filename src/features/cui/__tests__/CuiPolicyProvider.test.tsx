@@ -1,6 +1,6 @@
 import type { MedplumClient } from '@medplum/core';
 import { act, render, screen, waitFor } from '@testing-library/react';
-import { CuiPolicyProvider, useCuiPolicy } from './CuiPolicyProvider';
+import { CuiPolicyProvider, useCuiPolicy } from '../CuiPolicyProvider';
 
 const fixture = vi.hoisted(() => ({
   projectId: 'a',
@@ -8,7 +8,7 @@ const fixture = vi.hoisted(() => ({
   get: vi.fn(),
 }));
 const medplum = { get: fixture.get, getProject: () => ({ id: fixture.projectId }) } as unknown as MedplumClient;
-vi.mock('./policy', () => ({ resolveCuiPolicy: (...args: unknown[]) => fixture.get(...args) }));
+vi.mock('../policy', () => ({ resolveCuiPolicy: (...args: unknown[]) => fixture.get(...args) }));
 vi.mock('@medplum/react', () => ({ useMedplum: () => medplum, useMedplumProfile: () => fixture.profile }));
 
 function Probe() {

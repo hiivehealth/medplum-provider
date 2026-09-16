@@ -5,7 +5,7 @@ import dns from 'dns';
 import { copyFileSync, existsSync } from 'fs';
 import path from 'path';
 import type { UserConfig } from 'vite';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 dns.setDefaultResultOrder('verbatim');
 
@@ -46,6 +46,7 @@ export default defineConfig({
     alias,
   },
   test: {
+    exclude: [...configDefaults.exclude, 'server/**', '**/*.local/**'],
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test.setup.ts',

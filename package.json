@@ -12,8 +12,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "cui:service": "node server/cui/service.mjs",
-    "cui:test-service": "node --test server/cui/*.test.mjs",
-    "cui:test-live": "node scripts/cui/verify-policy.mjs"
+    "cui:test-service": "node --test server/cui/__tests__/*.test.mjs",
+    "cui:test-live": "node server/cui/__tests__/integration/verify-policy.mjs"
   },
   "prettier": {
     "plugins": [

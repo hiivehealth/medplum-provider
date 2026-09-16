@@ -4,14 +4,14 @@ import { MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import cuiBannerEnabled from '../../../fhir/StructureDefinition/cui-banner-enabled.json';
-import cuiConfiguration from '../../../fhir/StructureDefinition/cui-configuration.json';
-import { CUI_ENABLED_URL } from '../../features/cui/policy';
-import { render, screen, userEvent, waitFor } from '../../test-utils/render';
-import { CuiPolicyPage } from './CuiPolicyPage';
+import cuiBannerEnabled from '../../../../fhir/StructureDefinition/cui-banner-enabled.json';
+import cuiConfiguration from '../../../../fhir/StructureDefinition/cui-configuration.json';
+import { CUI_ENABLED_URL } from '../../../features/cui/policy';
+import { render, screen, userEvent, waitFor } from '../../../test-utils/render';
+import { CuiPolicyPage } from '../CuiPolicyPage';
 
 const fixture = vi.hoisted(() => ({ canManage: true, refresh: vi.fn() }));
-vi.mock('../../features/cui/CuiPolicyProvider', () => ({
+vi.mock('../../../features/cui/CuiPolicyProvider', () => ({
   useCuiPolicy: () => ({
     state: {
       status: 'ready',
