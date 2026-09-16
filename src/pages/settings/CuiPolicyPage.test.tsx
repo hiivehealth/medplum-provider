@@ -4,13 +4,14 @@ import { MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import profiles from '../../../config/cui/profiles.json';
-import { CUI_ENABLED_URL } from '../../cui/policy';
+import cuiBannerEnabled from '../../../fhir/StructureDefinition/cui-banner-enabled.json';
+import cuiConfiguration from '../../../fhir/StructureDefinition/cui-configuration.json';
+import { CUI_ENABLED_URL } from '../../features/cui/policy';
 import { render, screen, userEvent, waitFor } from '../../test-utils/render';
 import { CuiPolicyPage } from './CuiPolicyPage';
 
 const fixture = vi.hoisted(() => ({ canManage: true, refresh: vi.fn() }));
-vi.mock('../../cui/CuiPolicyProvider', () => ({
+vi.mock('../../features/cui/CuiPolicyProvider', () => ({
   useCuiPolicy: () => ({
     state: {
       status: 'ready',
@@ -30,7 +31,11 @@ async function setup(enabled: boolean | null = false) {
     extension: enabled === null ? undefined : [{ url: CUI_ENABLED_URL, valueBoolean: enabled }],
   });
   vi.spyOn(medplum, 'requestProfileSchema').mockImplementation(async () => {
-    indexStructureDefinitionBundle(profiles as unknown as Bundle<StructureDefinition>);
+    indexStructureDefinitionBundle({
+      resourceType: 'Bundle',
+      type: 'collection',
+      entry: [cuiBannerEnabled, cuiConfiguration].map((resource) => ({ resource })),
+    } as unknown as Bundle<StructureDefinition>);
   });
   const read = vi.spyOn(medplum, 'readResource');
   const update = vi.spyOn(medplum, 'updateResource');

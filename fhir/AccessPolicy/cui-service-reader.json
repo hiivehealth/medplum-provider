@@ -1,0 +1,13 @@
+{
+  "resourceType": "AccessPolicy",
+  "name": "CUI Service Reader",
+  "resource": [
+    {
+      "resourceType": "Basic",
+      "criteria": "Basic?_id=REPLACE_WITH_CONFIGURATION_ID",
+      "interaction": [
+        "read"
+      ]
+    }
+  ]
+}

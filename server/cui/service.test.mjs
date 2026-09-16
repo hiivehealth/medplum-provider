@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { test } from 'node:test';
-import { createCuiHandler } from './cui-service.mjs';
+import { createCuiHandler } from './service.mjs';
 const profile = 'https://medplum.com/fhir/StructureDefinition/cui-configuration';
 const enabledUrl = 'https://medplum.com/fhir/StructureDefinition/cui-banner-enabled';
 const config = {

@@ -1,6 +1,6 @@
 import { MedplumClient } from '@medplum/core';
 import { spawnSync } from 'node:child_process';
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 
 // Bootstrap only an empty project. Existing tenants require a reviewed policy migration.
 const [projectId, output] = process.argv.slice(2);
@@ -38,35 +38,32 @@ if (members.length > 1)
   throw new Error('Only a fresh project with at most one restricted default client can be provisioned');
 // Reserve the output before making server-side changes; never overwrite credentials.
 await writeFile(output, '{}\n', { mode: 0o600, flag: 'wx' });
-const install = spawnSync(
-  process.execPath,
-  [new URL('./install-cui-profiles.mjs', import.meta.url).pathname, projectId],
-  { env: process.env, encoding: 'utf8' }
-);
+const install = spawnSync(process.execPath, [new URL('./install-profiles.mjs', import.meta.url).pathname, projectId], {
+  env: process.env,
+  encoding: 'utf8',
+});
 if (install.status !== 0) throw new Error(install.stderr || 'Profile installation failed');
+async function readTemplate(path) {
+  return JSON.parse(await readFile(new URL(`../../fhir/${path}`, import.meta.url), 'utf8'));
+}
+const configurationTemplate = await readTemplate('Basic/cui-configuration.json');
 const configuration = await medplum.createResource({
-  resourceType: 'Basic',
-  meta: { project: projectId, profile: ['https://medplum.com/fhir/StructureDefinition/cui-configuration'] },
-  code: { coding: [{ system: 'https://medplum.com/fhir/CodeSystem/project-configuration', code: 'cui-banner' }] },
+  ...configurationTemplate,
+  meta: { ...configurationTemplate.meta, project: projectId },
 });
-const manager = await medplum.createResource({
-  resourceType: 'AccessPolicy',
-  meta: { project: projectId },
-  name: 'CUI Security Administrator',
-  resource: [
-    {
-      resourceType: 'Basic',
-      criteria: `Basic?_id=${configuration.id}`,
-      interaction: ['read', 'search', 'vread', 'history', 'update'],
-    },
-  ],
-});
-const reader = await medplum.createResource({
-  resourceType: 'AccessPolicy',
-  meta: { project: projectId },
-  name: 'CUI Service Reader',
-  resource: [{ resourceType: 'Basic', criteria: `Basic?_id=${configuration.id}`, interaction: ['read'] }],
-});
+async function createPolicy(filename) {
+  const template = await readTemplate(`AccessPolicy/${filename}`);
+  return medplum.createResource({
+    ...template,
+    meta: { ...template.meta, project: projectId },
+    resource: template.resource.map((rule) => ({
+      ...rule,
+      criteria: rule.criteria.replace('REPLACE_WITH_CONFIGURATION_ID', configuration.id),
+    })),
+  });
+}
+const manager = await createPolicy('cui-security-administrator.json');
+const reader = await createPolicy('cui-service-reader.json');
 const client = await medplum.post(`admin/projects/${projectId}/client`, {
   name: 'CUI Policy Service',
   accessPolicy: { reference: `AccessPolicy/${reader.id}` },

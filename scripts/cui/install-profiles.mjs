@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 
 // This installs schema metadata only. It does not enable CUI or assign security roles.
 const baseUrl = new URL(process.env.MEDPLUM_BASE_URL ?? 'http://localhost:8103/');
@@ -28,8 +28,10 @@ async function request(path, method = 'GET', resource, extraHeaders = {}) {
 const me = await request('auth/me');
 if (me.project?.superAdmin !== true) throw new Error('A platform-operator account is required.');
 await request(`fhir/R4/Project/${projectId}`);
-const bundle = JSON.parse(await readFile(new URL('../config/cui/profiles.json', import.meta.url), 'utf8'));
-for (const { resource } of bundle.entry) {
+const directory = new URL('../../fhir/StructureDefinition/', import.meta.url);
+for (const filename of (await readdir(directory)).filter((name) => name.endsWith('.json')).sort()) {
+  const resource = JSON.parse(await readFile(new URL(filename, directory), 'utf8'));
+  if (resource.resourceType !== 'StructureDefinition') throw new Error(`Unexpected resource type in ${filename}`);
   const search = await request(
     `fhir/R4/StructureDefinition?url=${encodeURIComponent(resource.url)}&_count=2&_project=${encodeURIComponent(projectId)}`
   );

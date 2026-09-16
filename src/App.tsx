@@ -22,7 +22,7 @@ import type { JSX } from 'react';
 import { Suspense, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router';
 import { hasScriptSureIdentifier } from './components/utils';
-import { CuiPolicyProvider, useCuiPolicy } from './cui/CuiPolicyProvider';
+import { CuiPolicyProvider, useCuiPolicy } from './features/cui/CuiPolicyProvider';
 import { useDoseSpotAccess } from './hooks/useDoseSpotAccess';
 import './index.css';
 import { CuiPolicyPage } from './pages/settings/CuiPolicyPage';

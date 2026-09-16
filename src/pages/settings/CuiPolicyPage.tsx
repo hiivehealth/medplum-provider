@@ -5,8 +5,8 @@ import { Document, Loading, useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
 import { useEffect, useState } from 'react';
 import { ResourceFormWithRequiredProfile } from '../../components/ResourceFormWithRequiredProfile';
-import { useCuiPolicy } from '../../cui/CuiPolicyProvider';
-import { CUI_CONFIGURATION_PROFILE_URL, CUI_ENABLED_URL, setCuiEnabled } from '../../cui/policy';
+import { useCuiPolicy } from '../../features/cui/CuiPolicyProvider';
+import { CUI_CONFIGURATION_PROFILE_URL, CUI_ENABLED_URL, setCuiEnabled } from '../../features/cui/policy';
 
 /** Profile-driven configuration editor. Server permissions remain authoritative for every save. */
 export function CuiPolicyPage(): JSX.Element {
