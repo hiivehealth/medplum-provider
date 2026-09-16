@@ -81,7 +81,7 @@ Some fields in this app (diagnoses, medications, race/ethnicity, and others) aut
 
 ### Project specifications
 
-- [ARM-11: CUI project security policy](docs/cui/project-security-policy.md) — implementation, permissions, and backend deployment instructions.
+- [ARM-11: CUI project security policy](docs/cui/project-security-policy.md) — stock Medplum configuration, permissions, and Provider policy-service deployment.
 
 - [ARM-10: CUI classification standard](docs/cui/README.md) — draft visual,
   accessibility, and project-policy specification with desktop/mobile references.

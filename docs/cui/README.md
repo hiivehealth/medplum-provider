@@ -10,13 +10,12 @@ until the approval record is filled in.
 
 ## ARM-11 superseding decisions
 
-The subsequent CUI Project Security Policy ticket explicitly requires a Project field
-or extension, default **false** when absent, and protected configuration readable only
-by security administrators/platform operators. These replace the initial proposals
-below for a Basic resource, no implicit default, and direct member reads. See the
-[implemented ARM-11 contract](project-security-policy.md) for the authoritative policy
-storage, permission, and shell-status behavior. Earlier proposal sections remain as
-review history; they must not be used to implement ARM-11. Visual approval remains pending.
+The [implemented ARM-11 contract](project-security-policy.md) uses a profiled,
+project-scoped `Basic` configuration resource and stock Medplum AccessPolicies.
+An absent boolean means **false**. Authenticated shells receive a derived display
+decision from a read-only service maintained in the Provider repository.
+No Medplum source changes or custom Medplum endpoints are required. The earlier
+Project-extension implementation has been replaced. Visual approval remains pending.
 
 ## 1. Purpose and scope
 

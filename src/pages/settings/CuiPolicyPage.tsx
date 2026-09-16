@@ -1,19 +1,20 @@
 import { Alert, Button, Stack, Title } from '@mantine/core';
 import { normalizeOperationOutcome } from '@medplum/core';
-import type { OperationOutcome, Project, Resource } from '@medplum/fhirtypes';
+import type { Basic, OperationOutcome, Resource } from '@medplum/fhirtypes';
 import { Document, Loading, useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
 import { useEffect, useState } from 'react';
 import { ResourceFormWithRequiredProfile } from '../../components/ResourceFormWithRequiredProfile';
 import { useCuiPolicy } from '../../cui/CuiPolicyProvider';
-import { CUI_ENABLED_URL, CUI_PROJECT_PROFILE_URL, setCuiEnabled } from '../../cui/policy';
+import { CUI_CONFIGURATION_PROFILE_URL, CUI_ENABLED_URL, setCuiEnabled } from '../../cui/policy';
 
-/** Profile-driven Project editor. Server permissions remain authoritative for every save. */
+/** Profile-driven configuration editor. Server permissions remain authoritative for every save. */
 export function CuiPolicyPage(): JSX.Element {
   const medplum = useMedplum();
   const { state, refresh } = useCuiPolicy();
   const projectId = state.status === 'ready' && state.policy.canManage ? state.policy.projectId : undefined;
-  const [project, setProject] = useState<Project>();
+  const configurationId = state.status === 'ready' && state.policy.canManage ? state.policy.configurationId : undefined;
+  const [project, setProject] = useState<Basic>();
   const [error, setError] = useState<string>();
   const [outcome, setOutcome] = useState<OperationOutcome>();
   const [saved, setSaved] = useState(false);
@@ -21,14 +22,15 @@ export function CuiPolicyPage(): JSX.Element {
   useEffect(() => {
     setProject(undefined);
     setError(undefined);
-    if (!projectId) {
+    if (!projectId || !configurationId) {
       return;
     }
     let cancelled = false;
     medplum
-      .readResource('Project', projectId, { cache: 'no-store' })
+      .readResource('Basic', configurationId, { cache: 'no-store' })
       .then((value) => {
         if (!cancelled) {
+          if (value.meta?.project !== projectId) throw new Error('Configuration project mismatch');
           setProject(
             setCuiEnabled(value, value.extension?.find((e) => e.url === CUI_ENABLED_URL)?.valueBoolean === true)
           );
@@ -42,10 +44,15 @@ export function CuiPolicyPage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [medplum, projectId]);
+  }, [medplum, projectId, configurationId]);
 
   const save = async (resource: Resource): Promise<void> => {
-    if (resource.resourceType !== 'Project' || resource.id !== projectId || !project?.meta?.versionId) {
+    if (
+      resource.resourceType !== 'Basic' ||
+      resource.id !== configurationId ||
+      resource.meta?.project !== projectId ||
+      !project?.meta?.versionId
+    ) {
       return;
     }
     setOutcome(undefined);
@@ -79,12 +86,12 @@ export function CuiPolicyPage(): JSX.Element {
         )}
         {error && <Alert color="red">{error}</Alert>}
         {projectId && !project && !error && <Loading />}
-        {projectId && project?.id === projectId && (
+        {projectId && project && project.id === configurationId && project.meta?.project === projectId && (
           <ResourceFormWithRequiredProfile
             key={`${projectId}/${project.meta?.versionId}`}
             defaultValue={project}
-            profileUrl={CUI_PROJECT_PROFILE_URL}
-            missingProfileMessage="The CUI Project profile must be installed by a platform operator."
+            profileUrl={CUI_CONFIGURATION_PROFILE_URL}
+            missingProfileMessage="The CUI configuration profile must be installed by a platform operator."
             outcome={outcome}
             onSubmit={(resource) => {
               void save(resource);

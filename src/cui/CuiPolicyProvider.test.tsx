@@ -8,6 +8,7 @@ const fixture = vi.hoisted(() => ({
   get: vi.fn(),
 }));
 const medplum = { get: fixture.get, getProject: () => ({ id: fixture.projectId }) } as unknown as MedplumClient;
+vi.mock('./policy', () => ({ resolveCuiPolicy: (...args: unknown[]) => fixture.get(...args) }));
 vi.mock('@medplum/react', () => ({ useMedplum: () => medplum, useMedplumProfile: () => fixture.profile }));
 
 function Probe() {

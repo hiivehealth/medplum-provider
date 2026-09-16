@@ -28,7 +28,6 @@ async function request(path, method = 'GET', resource, extraHeaders = {}) {
 const me = await request('auth/me');
 if (me.project?.superAdmin !== true) throw new Error('A platform-operator account is required.');
 await request(`fhir/R4/Project/${projectId}`);
-await request('auth/cui-banner'); // Fail before any writes if the required server endpoint is absent.
 const bundle = JSON.parse(await readFile(new URL('../config/cui/profiles.json', import.meta.url), 'utf8'));
 for (const { resource } of bundle.entry) {
   const search = await request(

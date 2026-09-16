@@ -1,11 +1,11 @@
 {
   "resourceType": "AccessPolicy",
   "name": "CUI Project Security Administrator",
-  "extension": [
+  "resource": [
     {
-      "url": "https://medplum.com/fhir/StructureDefinition/cui-banner-security-administrator",
-      "valueBoolean": true
+      "resourceType": "Basic",
+      "criteria": "Basic?_id=REPLACE_WITH_CONFIGURATION_ID",
+      "interaction": ["read", "search", "vread", "history", "update"]
     }
-  ],
-  "resource": []
+  ]
 }

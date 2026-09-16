@@ -11,7 +11,11 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "cui:install-profiles": "node scripts/install-cui-profiles.mjs"
+    "cui:install-profiles": "node scripts/install-cui-profiles.mjs",
+    "cui:service": "node server/cui-service.mjs",
+    "cui:provision": "node scripts/provision-cui-project.mjs",
+    "cui:test-service": "node --test server/*.test.mjs",
+    "cui:test-live": "node scripts/verify-cui-policy.mjs"
   },
   "prettier": {
     "plugins": [

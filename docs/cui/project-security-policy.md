@@ -1,180 +1,222 @@
-# ARM-11 — Project security policy
+# ARM-11 — CUI project security policy on stock Medplum
 
-## Implementation and repository boundaries
+## Architecture
 
-This change implements `cuiBanner.enabled` as a boolean extension on `Project`,
-with no extension meaning **false**. The provider includes an authenticated status
-provider and a profile-driven Project editor at `/Settings/Security`. Banner rendering
-remains the responsibility of ARM-12 through ARM-15.
+All implementation code and installation artifacts live in **medplum-provider**.
+Medplum source and Docker image require no modifications. This replaces the earlier
+Project extension, custom `/auth/cui-banner` endpoint, and companion backend patch.
 
-Server enforcement lives in the adjacent Medplum source repository under
-`packages/server`. A portable [companion patch](../../config/cui/medplum-server.patch)
-is included for review and application to the corresponding backend checkout.
-The stock Docker image does **not** include these changes. Deploy the patched server
-before installing profiles and releasing the provider change. Do not ship a UI-only
-implementation or enable this on a stock backend.
+- A non-clinical, profiled **Basic** resource holds one project's `cuiBanner.enabled`.
+- Stock **AccessPolicy** rules enforce direct FHIR read/update permissions.
+- The Provider's profile-driven editor reads and updates that resource using the
+  signed-in user's token and an `If-Match` version precondition.
+- A small Node service exposes **GET `/api/cui-banner`** on the application's origin.
+  It validates the caller with Medplum `/auth/me`, selects the caller's project from
+  that verified response, and reads only that project's configured Basic resource.
+- Each project has a separate, non-admin service client whose AccessPolicy grants
+  only `read` on that exact resource. Its credentials stay on the server.
+- The service returns `{ projectId, configurationId, enabled, canManage }` with
+  `Cache-Control: no-store`. Ordinary members receive the display decision, never
+  the protected resource. The visible classification is necessarily inferable.
 
-Only the provider and upstream Medplum repositories were available locally. Patient
-and UBIX admin can consume the same endpoint and reuse `src/cui/policy.ts` and
-`src/cui/CuiPolicyProvider.tsx`; their shell mounting remains unimplemented here.
-The endpoint is application-independent: it always derives project identity from the
-validated server authentication context, not a route/query/body project identifier.
+No Bot executes, no custom AuditEvent is created, and status resolution does not
+write FHIR resources. Stock Medplum's existing authentication and resource-access
+logging/auditing still applies, as does normal audit behavior for deliberate updates.
+The actual banner and patient/admin shell integrations remain later tickets.
 
-## Stored configuration
+## Configuration resource and profile
 
-Canonical extension:
-`https://medplum.com/fhir/StructureDefinition/cui-banner-enabled`
+Profile: `https://medplum.com/fhir/StructureDefinition/cui-configuration`
+
+Boolean extension: `https://medplum.com/fhir/StructureDefinition/cui-banner-enabled`
 
 ```json
 {
-  "resourceType": "Project",
-  "extension": [
-    {
-      "url": "https://medplum.com/fhir/StructureDefinition/cui-banner-enabled",
-      "valueBoolean": true
-    }
-  ]
+  "resourceType": "Basic",
+  "meta": {
+    "profile": ["https://medplum.com/fhir/StructureDefinition/cui-configuration"]
+  },
+  "code": {
+    "coding": [{
+      "system": "https://medplum.com/fhir/CodeSystem/project-configuration",
+      "code": "cui-banner"
+    }]
+  },
+  "extension": [{
+    "url": "https://medplum.com/fhir/StructureDefinition/cui-banner-enabled",
+    "valueBoolean": false
+  }]
 }
 ```
 
-The extension has cardinality 0..1. Missing means false; an explicit boolean false
-also disables it. Duplicate extensions, non-booleans, or mixed extension values are
-invalid. Server validation applies even to platform operators. Configuration is on
-Project, never UserConfiguration, a patient resource, environment variable, or browser
-storage. Existing server auditing of Project updates remains unchanged.
+Absence of the extension means **false**. Missing deployment mapping, an inaccessible
+or deleted provisioned resource, malformed/duplicate values, or an upstream failure
+is an error, never an inferred off decision. The service checks resource ID, owning
+project, and profile. It does not accept a project/resource ID or upstream URL from
+query parameters, request bodies, cookies, or browser storage.
 
-[Profile bundle](../../config/cui/profiles.json) contains the extension and a Project
-profile with full snapshots for Medplum's profile-driven editor. It must be installed
-in each target project. The default checkbox is off when the extension is absent;
-loading the editor does not write a default. Saving uses `If-Match` to prevent silent
-lost updates. Missing profiles and backend errors show an explicit error rather than
-silently falling back to unprofiled editing.
+The resource ID mapping and reader credentials are deployment metadata; the customer
+policy value is stored only in Medplum. Never put enabled flags in environment variables.
+Only the one mapped resource per project is authoritative; creating another Basic
+with the same code cannot change the display decision.
 
-## Authorization
+## Roles and AccessPolicy composition
 
-The explicit capability is an operator-managed AccessPolicy extension:
-`https://medplum.com/fhir/StructureDefinition/cui-banner-security-administrator`,
-with `valueBoolean: true`. A project security administrator is an existing project
-administrator whose own-project AccessPolicy grants that capability. Platform operators
-use Medplum's existing super-admin mechanism. No existing user is automatically promoted.
+A security administrator is a membership assigned an operator-designated AccessPolicy
+that grants `read` and `update` on the exact configuration ID. This logical security
+role does **not** require Medplum's broad `ProjectMembership.admin` privilege.
+The service's private project mapping lists the allowed manager AccessPolicy IDs.
+It checks Medplum's resolved `accessPolicy.basedOn`, effective read/update rules,
+and a real read with the caller token before returning `canManage: true`.
+Actual saves always go directly to Medplum, which enforces permissions independently
+of the UI and the service. Operators can manage the resource through their existing
+platform-level FHIR access; this service does not provide a cross-project override.
 
-The server reads the original assigned AccessPolicy, before parameter substitution;
-the marker cannot be supplied by membership parameters, a profile, or browser state.
-It recognizes assignments through `ProjectMembership.accessPolicy` or `access[].policy`.
-The referenced policy must belong to that same project. Existing effective access-policy
-checks still apply to the requested FHIR interaction.
+The [manager template](../../config/cui/security-administrator.json) is an **additive
+CUI grant**, not a replacement for clinical permissions. Preserve existing clinical
+rules when assigning it. The configuration has no Patient subject or clinical data.
 
-- Ordinary members cannot directly read or update Project configuration.
-- Ordinary project administrators can still edit their existing Project fields, but
-  cannot read or explicitly write the CUI extension. Omission in an unrelated Project
-  update preserves the hidden extension instead of deleting it.
-- Security administrators can read and set the extension on their own project.
-- Only platform operators can create/change/delete a capability-bearing AccessPolicy,
-  or grant/reassign the capability through membership changes. Project admin status
-  alone does not grant the CUI capability.
-- The repository applies these checks to reads, history, PUT, PATCH, batch, and
-  transaction writes, in addition to the existing project boundaries.
+### Critical stock-policy behavior
 
-The server still trusts existing platform/system repositories and the existing
-project-admin identity-management model. This change does not redesign credential
-recovery, user impersonation, or platform operator authorization.
+Medplum policies are grants, not deny lists. An additional restrictive Basic rule does
+**not** override an existing `resourceType: "*"` grant. Every ordinary member, patient,
+client, bot, and ordinary administrator must have explicit effective policies that
+exclude the configuration, with no broader grant through another assigned policy.
+A member with no AccessPolicy can inherit legacy wildcard access: do not leave such
+memberships in a configured project.
 
-### Protected configuration versus display decision
-
-All authenticated shells must know whether to display CUI. Therefore ordinary members
-receive a **derived display decision**, but cannot read the protected Project extension
-through FHIR or edit it. A user can necessarily infer enabled status from a visible
-banner. “Cannot read the setting” is implemented as denial/redaction of the protected
-configuration, not secrecy of the visibly observable classification state.
-
-## Shared authenticated status API
-
-`GET /auth/cui-banner` (authenticated; `Cache-Control: no-store`):
+For users who need other Basic resources, preserve those grants with an ID exclusion:
 
 ```json
-{ "projectId": "active-project-uuid", "enabled": false, "canManage": false }
+{ "resourceType": "Basic", "criteria": "Basic?_id:not=CONFIGURATION_ID" }
 ```
 
-No caller-controlled project ID or application selector is needed. Missing configuration
-returns false. Invalid explicit configuration or transport/server failures do not return
-false; they surface as errors. An unauthenticated request returns 401.
+This only works after removing any overlapping wildcard/Basic grants. Split wildcard
+clinical permissions into explicit resource-type grants during a reviewed migration;
+do not remove or widen clinical access merely to add this feature. Protect the role
+policies, reader ClientApplication/secret, and membership assignments from ordinary
+members. Review all assigned policies and project default policies, including those
+used by future registrations. The scaffolder does not rewrite an existing tenant's
+permissions automatically.
 
-Provider's `useCuiPolicy()` returns `unauthenticated`, `loading`, `ready`, or `error`.
-It never fetches without an authenticated profile, rejects responses for another
-project, discards late responses on identity changes, and clears state on logout.
-It refetches on window focus, manual refresh, and every 60 seconds while mounted.
-Errors after a successful read retain `lastKnown` for that same identity so future
-shell integrations can preserve a visible classification while reporting a refresh
-failure. Initial errors have no guessed policy. No banner or clinical-route blocking
-is introduced by this ticket.
+**Trust boundary:** stock Medplum project administrators manage memberships and can
+reassign permissions. This implementation retains that platform trust model; it does
+not claim that an adversarial project administrator cannot promote themselves. Give
+routine users the narrow security role instead of broad project-admin status. If the
+security owner requires isolation from membership-managing administrators, a separately
+controlled configuration service/project is needed; this same-project design does not
+meet that stronger threat model. The previous implementation also retained Medplum's
+identity-management and credential-recovery trust boundary.
 
-## Deployment
+## Installation
 
-1. Merge the backend companion change. The local `/Users/alakh/medplum` checkout already
-   contains it. For a clean matching checkout, use `git apply --check` followed by
-   `git apply` with `config/cui/medplum-server.patch`; do not apply it twice. The patch
-   was prepared against upstream Medplum 5.1.10 source. Review/adapt it against UBIX's
-   backend version before release.
-2. Build and deploy that server through the existing backend deployment process.
-3. Install profiles into each target project with an existing platform-operator token:
+### Fresh project
 
-   ```sh
-   # Supply the token securely through your shell environment; do not commit it.
-   export MEDPLUM_BASE_URL=http://localhost:8103/
-   npm run cui:install-profiles -- <target-project-uuid>
-   ```
+Use an operator token in a terminal, never in a frontend environment file. Create a
+fresh Medplum project. If `$init` creates a default OAuth ClientApplication membership,
+assign that membership an empty AccessPolicy first; it must not retain wildcard access.
+The provisioner allows at most that one restricted, non-admin client and refuses
+projects with human memberships or other existing grants.
 
-   The installer requires `MEDPLUM_ACCESS_TOKEN`, checks operator status and the patched
-   endpoint before writing, refuses duplicate schemas, and updates existing schemas
-   with optimistic concurrency. It changes schema metadata only, not customer policy
-   values or role assignments.
-4. An operator assigns the capability to selected existing project administrators.
-   [Role template](../../config/cui/security-administrator.json) is an **additive
-   capability only**; never replace a user's clinical AccessPolicy with this empty
-   resource-rule template. Preserve all existing access rules and compartments.
-   For a member currently relying on legacy unrestricted access (no policy references),
-   preserve that baseline explicitly before adding a policy reference, because Medplum
-   otherwise switches from legacy wildcard access to the assigned rules.
-   A safe alternative is an operator-created copy of that member's existing policy,
-   with the marker added and the original rules retained, assigned only to that member.
-   Do not add the marker to a shared policy unless every assigned member is intended
-   to receive this role. Clinical authorization equivalence must be checked at assignment.
-5. Authorized users open **Quick Links → Project Security**, edit the CUI boolean in
-   the profile-driven Project editor, and save. Other members have no menu item, and
-   direct navigation shows permission denied without fetching the Project.
-6. Provider, patient, and admin shell integrations consume the same status API.
-   Do not read the Project extension directly in ordinary authenticated shells.
+```sh
+# MEDPLUM_BASE_URL points to the stock API. MEDPLUM_ACCESS_TOKEN is an operator token.
+npm run cui:provision -- PROJECT_UUID /private/path/cui-service.local
+```
+
+The tool installs both profiles, creates the configuration with no extension (off),
+creates manager and reader policies, and creates the narrow reader client. It writes
+credentials to a new mode-0600 file and never prints its secret. It does not assign
+human roles. Provisioning is not transactional: on failure, inspect the newly created
+resources before retrying; the output file is reserved and never overwritten.
+
+Then assign reviewed clinical policies to all human memberships and additionally assign
+the generated manager AccessPolicy only to designated security administrators.
+
+### Existing project
+
+1. Review effective policies, default policies, bots/clients, and membership administration.
+   Establish explicit clinical grants and protect policy/credential administration first.
+2. Install schema definitions with `npm run cui:install-profiles -- PROJECT_UUID`.
+3. As an operator, create one profiled Basic configuration **without enabling it**.
+4. Exclude its ID from all non-manager grants. Create the exact-resource manager grant
+   and a separate read-only service-client grant. Preserve clinical permissions.
+5. Create a non-admin ClientApplication with the reader grant and securely build the
+   service mapping from [service.example.json](../../config/cui/service.example.json).
+6. Assign the manager grant to the designated memberships and test direct API access
+   for members, ordinary admins, bots, clients, and cross-project users before rollout.
+7. Enable the setting only after these checks pass.
+
+If migrating the earlier custom-backend implementation, copy each existing Project
+extension's explicit boolean into the new Basic configuration before changing the
+application's resolver. Do not silently reset enabled projects to off. Remove the old
+endpoint dependency only after verifying parity; clean up the old extension separately.
+No existing project's data or roles are migrated by this code change.
+
+## Running and deploying the service
+
+Node 24 (or the package's supported Node 22 version) and this repository's npm dependencies
+are required. Install with `npm install --include=dev` (the repository currently keeps its
+Medplum SDK dependencies in devDependencies).
+
+```sh
+CUI_SERVICE_CONFIG=/private/path/cui-service.local npm run cui:service
+# Separately, run Provider against the same Medplum API:
+MEDPLUM_BASE_URL=http://localhost:8103/ npm run dev
+```
+
+The service binds only to `127.0.0.1:8105`. Vite dev and preview proxy `/api/cui-banner`
+to it. `CUI_SERVICE_PORT` can change the service port, but update the reverse proxy
+accordingly. The private config accepts HTTPS upstreams and loopback HTTP for local
+work. Never use a super-admin client as the reader; the service rejects admin readers.
+No service setting or credential uses the `MEDPLUM_` frontend-exposed environment prefix.
+Local `.local` files/directories are gitignored and denied by Vite's file server.
+Keep production credentials outside the public web root and rotate through your secret
+management process.
+
+Production requires a **running server process**, not just the static Vite build.
+Route `/api/cui-banner` to the service through the same-origin HTTPS reverse proxy,
+forwarding Authorization and preserving no-store/error responses. Keep SPA fallback
+routing after the API rule. Put standard rate limits at that proxy and use a process
+supervisor. A Vercel-only static deployment using the existing `vercel.json` is not
+sufficient: configure an API rewrite to the separately deployed service before rollout.
+Patient and admin apps can each use the same-origin proxy to this same service later.
 
 ## Verification
 
-Tests cover default false, authorized on/off, direct configuration denial/redaction,
-ordinary edits preserving the setting, history redaction, PATCH/batch/transaction
-protection, protected capability management, cross-project isolation, malformed policy,
-unauthenticated status requests, platform operators, and optimistic concurrency.
-Client tests cover no unauthenticated requests, identity changes, late responses,
-refresh failures, and the real profile-driven boolean editor.
-
-Useful commands:
-
 ```sh
-# Provider
-npm run build
 npm test -- src/cui src/pages/settings/CuiPolicyPage.test.tsx
-
-# Backend checkout (requires its seeded, isolated medplum_test database)
-npm run build --workspace=@medplum/server
-npm test --workspace=@medplum/server -- --runInBand --runTestsByPath \
-  src/auth/cui-banner.test.ts src/auth/me.test.ts src/fhir/accesspolicy.test.ts
+npm run cui:test-service
+npm run build
 ```
 
-Live Docker deployment, actual customer role assignment, and patient/UBIX admin shell
-integration are separate rollout steps. No live customer's policy or roles were changed.
+Focused tests cover authentication, project changes, stale responses, default off,
+profile-driven saves, optimistic concurrency, malformed configuration, upstream errors,
+project isolation, read-only service behavior, and restricted management decisions.
 
-### Local verification result
+For live checks, sign in as a designated security administrator, toggle in
+**Project Security**, save, reload, and verify both states. As an ordinary member and
+ordinary project administrator, verify the menu is absent and direct navigation to
+`/Settings/Security` is denied. Also test direct Basic GET/search/history/PUT/PATCH/delete
+and a stale If-Match write; UI visibility alone does not verify authorization.
 
-- Provider: 15 focused tests passed; production build passed.
-- Backend: 76 tests passed across CUI policy, auth/me, and existing AccessPolicy suites;
-  4 existing tests skipped. Server build and lint passed.
-- Backend tests used a newly created `medplum_test` database and the existing test Redis
-  logical databases. The development `medplum` database was not used for testing.
-- The companion patch passed a reverse-application check against the modified source.
+### Repeatable local integration test
+
+`scripts/verify-cui-policy.mjs` accepts a private JSON file containing
+`medplumBaseUrl`, `serviceBaseUrl`, `projectId`, a `security` account (`email`,
+`password`), and a `members` array of unauthorized accounts with the same fields.
+Use a disposable test project: the test intentionally updates the configuration,
+then restores its initial extensions in a `finally` block. Both URLs must be loopback.
+It also tests direct FHIR batch and transaction denial and checks that denied writes
+leave the resource version unchanged.
+
+```sh
+CUI_TEST_CONFIG=/private/path/cui-test.local npm run cui:test-live
+```
+
+### Local verification environment
+
+The isolated demo uses the existing **unmodified** Docker image reporting
+`5.1.9-ace72bb`, with a separate database `medplum_cui_stock_demo` and Redis DB 12.
+The new Medplum source checkout is version 5.1.37; it was inspected but not changed
+or built. Repeat the integration checks against the exact production image before
+rollout. No existing development project's configuration or memberships were changed.

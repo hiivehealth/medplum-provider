@@ -34,10 +34,13 @@ export default defineConfig({
   server: {
     host: 'localhost',
     port: 3001,
+    proxy: { '/api/cui-banner': 'http://127.0.0.1:8105' },
+    fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/*.local', '**/*.local/**'] },
   },
   preview: {
     host: 'localhost',
     port: 3001,
+    proxy: { '/api/cui-banner': 'http://127.0.0.1:8105' },
   },
   resolve: {
     alias,
