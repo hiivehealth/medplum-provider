@@ -21,7 +21,9 @@ import {
 import type { JSX } from 'react';
 import { Suspense, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router';
+import { CuiBanner } from './components/CuiBanner/CuiBanner';
 import { hasScriptSureIdentifier } from './components/utils';
+import cuiShellClasses from './features/cui/CuiAppShell.module.css';
 import { CuiPolicyProvider, useCuiPolicy } from './features/cui/CuiPolicyProvider';
 import { useDoseSpotAccess } from './hooks/useDoseSpotAccess';
 import './index.css';
@@ -97,6 +99,13 @@ function AppContent(): JSX.Element | null {
   const membership = medplum.getProjectMembership();
   const hasScriptSure = hasScriptSureIdentifier(membership);
   const hasBilling = project?.features?.includes('billing') ?? false;
+  let cuiEnabled = false;
+  if (cuiPolicy.status === 'ready') {
+    cuiEnabled = cuiPolicy.policy.enabled;
+  } else if (cuiPolicy.status === 'error') {
+    cuiEnabled = cuiPolicy.lastKnown?.enabled === true;
+  }
+  const showCuiBanner = Boolean(profile) && cuiEnabled && !/^\/signin\/?$/i.test(location.pathname);
 
   const [shlOpened, shlHandlers] = useDisclosure(false);
 
@@ -238,6 +247,11 @@ function AppContent(): JSX.Element | null {
       spotlightPatientsOnly={true}
       spotlightActions={spotlightActions}
     >
+      {showCuiBanner && (
+        <div className={cuiShellClasses.banner}>
+          <CuiBanner />
+        </div>
+      )}
       <Suspense fallback={<Loading />}>
         <Routes>
           {profile ? (
