@@ -207,7 +207,7 @@ function AppContent(): JSX.Element | null {
                     ? [{ icon: <IconSettingsAutomation />, label: 'Project Security', href: '/Settings/Security' }]
                     : []),
                   ...(hasBilling
-                    ? [{ icon: <IconReceipt2 />, label: 'Billing Settings', href: '/Settings/Billing' }]
+                    ? [{ icon: <IconReceipt2 />, label: 'Candid Billing Setup', href: '/Settings/Billing' }]
                     : []),
                   ...(hasDoseSpot
                     ? [
