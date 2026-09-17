@@ -28,6 +28,7 @@
     "@mantine/hooks": "8.3.18",
     "@mantine/notifications": "8.3.18",
     "@mantine/spotlight": "8.3.18",
+    "@medplum/core": "5.1.39",
     "@medplum/dosespot-react": "5.1.39",
     "@medplum/eslint-config": "5.1.39",
     "@medplum/fhirtypes": "5.1.39",
