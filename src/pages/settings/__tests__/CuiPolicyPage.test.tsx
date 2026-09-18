@@ -1,11 +1,8 @@
-import { indexStructureDefinitionBundle } from '@medplum/core';
-import type { Basic, Bundle, StructureDefinition } from '@medplum/fhirtypes';
+import type { Basic, Resource } from '@medplum/fhirtypes';
 import { MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import cuiBannerEnabled from '../../../../fhir/StructureDefinition/cui-banner-enabled.json';
-import cuiConfiguration from '../../../../fhir/StructureDefinition/cui-configuration.json';
 import { CUI_ENABLED_URL } from '../../../features/cui/policy';
 import { render, screen, userEvent, waitFor } from '../../../test-utils/render';
 import { CuiPolicyPage } from '../CuiPolicyPage';
@@ -21,6 +18,45 @@ vi.mock('../../../features/cui/CuiPolicyProvider', () => ({
   }),
 }));
 
+vi.mock('../../../components/ResourceFormWithRequiredProfile', async () => {
+  const React = await import('react');
+  return {
+    ResourceFormWithRequiredProfile: ({
+      defaultValue,
+      onSubmit,
+    }: {
+      defaultValue: Basic;
+      onSubmit: (resource: Resource) => void;
+    }) => {
+      const [resource, setResource] = React.useState(defaultValue);
+      const enabled = resource.extension?.find((extension) => extension.url === CUI_ENABLED_URL)?.valueBoolean === true;
+      return (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit(resource);
+          }}
+        >
+          <label data-testid="slice-cuiBannerEnabled">
+            Show CUI banner
+            <input
+              type="checkbox"
+              checked={enabled}
+              onChange={(event) =>
+                setResource({
+                  ...resource,
+                  extension: [{ url: CUI_ENABLED_URL, valueBoolean: event.currentTarget.checked }],
+                })
+              }
+            />
+          </label>
+          <button type="submit">Update</button>
+        </form>
+      );
+    },
+  };
+});
+
 async function setup(enabled: boolean | null = false) {
   const medplum = new MockClient();
   await medplum.createResource<Basic>({
@@ -29,13 +65,6 @@ async function setup(enabled: boolean | null = false) {
     meta: { project: 'p1' },
     code: { text: 'CUI configuration' },
     extension: enabled === null ? undefined : [{ url: CUI_ENABLED_URL, valueBoolean: enabled }],
-  });
-  vi.spyOn(medplum, 'requestProfileSchema').mockImplementation(async () => {
-    indexStructureDefinitionBundle({
-      resourceType: 'Bundle',
-      type: 'collection',
-      entry: [cuiBannerEnabled, cuiConfiguration].map((resource) => ({ resource })),
-    } as unknown as Bundle<StructureDefinition>);
   });
   const read = vi.spyOn(medplum, 'readResource');
   const update = vi.spyOn(medplum, 'updateResource');

@@ -46,7 +46,7 @@ async function main() {
   const id = first.configurationId;
   const read = () => security.readResource('Basic', id, { cache: 'no-store' });
   const initial = await read();
-  const enabledUrl = 'https://medplum.com/fhir/StructureDefinition/cui-banner-enabled';
+  const enabledUrl = 'https://ehr.hiivehealth.net/fhir/StructureDefinition/cui-banner-enabled';
   try {
     for (const enabled of [true, false]) {
       const current = await read();

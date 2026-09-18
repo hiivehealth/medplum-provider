@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { test } from 'node:test';
 import { createCuiHandler } from '../service.mjs';
-const profile = 'https://medplum.com/fhir/StructureDefinition/cui-configuration';
-const enabledUrl = 'https://medplum.com/fhir/StructureDefinition/cui-banner-enabled';
+const profile = 'https://ehr.hiivehealth.net/fhir/StructureDefinition/cui-configuration';
+const enabledUrl = 'https://ehr.hiivehealth.net/fhir/StructureDefinition/cui-banner-enabled';
 const config = {
   medplumBaseUrl: 'https://medplum.example/',
   projects: {

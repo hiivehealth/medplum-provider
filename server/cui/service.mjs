@@ -4,8 +4,8 @@ import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
 
-const enabledUrl = 'https://medplum.com/fhir/StructureDefinition/cui-banner-enabled';
-const profileUrl = 'https://medplum.com/fhir/StructureDefinition/cui-configuration';
+const enabledUrl = 'https://ehr.hiivehealth.net/fhir/StructureDefinition/cui-banner-enabled';
+const profileUrl = 'https://ehr.hiivehealth.net/fhir/StructureDefinition/cui-configuration';
 const idPattern = /^[A-Za-z0-9.-]{1,64}$/;
 const isId = (value) => typeof value === 'string' && idPattern.test(value);
 indexStructureDefinitionBundle(readJson('fhir/r4/profiles-types.json'));

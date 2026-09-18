@@ -1,8 +1,9 @@
 import type { MedplumClient } from '@medplum/core';
 import type { Basic } from '@medplum/fhirtypes';
 
-export const CUI_ENABLED_URL = 'https://medplum.com/fhir/StructureDefinition/cui-banner-enabled';
-export const CUI_CONFIGURATION_PROFILE_URL = 'https://medplum.com/fhir/StructureDefinition/cui-configuration';
+export const CUI_ENABLED_URL = 'https://ehr.hiivehealth.net/fhir/StructureDefinition/cui-banner-enabled';
+export const CUI_CONFIGURATION_PROFILE_URL =
+  'https://ehr.hiivehealth.net/fhir/StructureDefinition/cui-configuration';
 
 export interface CuiPolicy {
   readonly projectId: string;
