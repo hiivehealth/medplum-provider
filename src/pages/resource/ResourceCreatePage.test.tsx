@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
-import { HomerSimpson, MockClient } from '@medplum/mock';
+import type { Project } from '@medplum/fhirtypes';
+import { HomerSimpson, MockClient, TestProject } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -10,6 +11,7 @@ import * as reactRouter from 'react-router';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { ResourceCreatePage } from './ResourceCreatePage';
+import { RESOURCE_PROFILE_URLS } from './utils';
 
 describe('ResourceCreatePage', () => {
   let medplum: MockClient;
@@ -165,6 +167,45 @@ describe('ResourceCreatePage', () => {
       expect(medplum.createResource).toHaveBeenCalled();
       // Should show error notification
       expect(screen.getByText(/failed to create resource/i)).toBeInTheDocument();
+    });
+  });
+
+  test('Uses the default Patient profile when the project has no override', async () => {
+    vi.spyOn(medplum, 'requestProfileSchema').mockResolvedValue(undefined);
+
+    await setup('/Patient/new');
+
+    await waitFor(() => {
+      expect(medplum.requestProfileSchema).toHaveBeenCalledWith(RESOURCE_PROFILE_URLS.Patient, expect.anything());
+    });
+  });
+
+  test('Uses the project-level defaultProfile:Patient setting override when present', async () => {
+    const overrideUrl = 'https://ehr.example.com/fhir/StructureDefinition/some-other-tenant-patient';
+    const projectWithOverride: Project = {
+      ...TestProject,
+      setting: [{ name: 'defaultProfile:Patient', valueString: overrideUrl }],
+    };
+    const tenantMedplum = new MockClient({ project: projectWithOverride });
+    vi.spyOn(tenantMedplum, 'requestProfileSchema').mockResolvedValue(undefined);
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={['/Patient/new']}>
+          <MedplumProvider medplum={tenantMedplum}>
+            <MantineProvider>
+              <Notifications />
+              <Routes>
+                <Route path="/:resourceType/new" element={<ResourceCreatePage />} />
+              </Routes>
+            </MantineProvider>
+          </MedplumProvider>
+        </MemoryRouter>
+      );
+    });
+
+    await waitFor(() => {
+      expect(tenantMedplum.requestProfileSchema).toHaveBeenCalledWith(overrideUrl, expect.anything());
     });
   });
 });
