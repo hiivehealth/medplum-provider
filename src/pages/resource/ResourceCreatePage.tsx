@@ -3,13 +3,13 @@
 import { Stack, Text } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
 import { createReference, normalizeErrorString, normalizeOperationOutcome } from '@medplum/core';
-import type { OperationOutcome, Patient, Questionnaire, QuestionnaireResponse, Resource, ResourceType } from '@medplum/fhirtypes';
+import type { OperationOutcome, Patient, Questionnaire, Resource, ResourceType } from '@medplum/fhirtypes';
 import { Document, Loading, useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ResourceFormWithRequiredProfile } from '../../components/ResourceFormWithRequiredProfile';
-import { ArmyDemographicsQuestionnaireForm } from '../../components/ArmyDemographicsQuestionnaireForm';
+import { TenantQuestionnaireForm } from '../../components/TenantQuestionnaireForm';
 import { usePatient } from '../../hooks/usePatient';
 import { prependPatientPath } from '../patient/PatientPage.utils';
 import { getDefaultProfileUrl, getDefaultQuestionnaireUrl } from './utils';
@@ -63,7 +63,6 @@ export function ResourceCreatePage(): JSX.Element {
   const resourceType = params.resourceType || getResourceTypeFromPath(location.pathname);
   const patientId = params.patientId;
   const [loadingPatient, setLoadingPatient] = useState(Boolean(patientId));
-  const [questionnaire, setQuestionnaire] = useState<Questionnaire>();
   const [defaultValue, setDefaultValue] = useState<Partial<Resource>>(() => {
     if (!resourceType) {
       return {};
@@ -71,7 +70,8 @@ export function ResourceCreatePage(): JSX.Element {
     return getDefaultValue(resourceType, patient);
   });
   const profileUrl = resourceType && getDefaultProfileUrl(resourceType, medplum.getProject());
-  const questionnaireUrl = resourceType === 'Patient' ? getDefaultQuestionnaireUrl('Patient', medplum.getProject()) : undefined;
+  const questionnaireUrl = resourceType && getDefaultQuestionnaireUrl(resourceType, medplum.getProject());
+  const [questionnaire, setQuestionnaire] = useState<Questionnaire>();
 
   useEffect(() => {
     if (patient && resourceType) {
@@ -81,10 +81,7 @@ export function ResourceCreatePage(): JSX.Element {
   }, [patient, resourceType]);
 
   useEffect(() => {
-    if (!questionnaireUrl) {
-      setQuestionnaire(undefined);
-      return;
-    }
+    if (!questionnaireUrl) return;
     medplum.searchOne('Questionnaire', { url: questionnaireUrl }).then(setQuestionnaire).catch((err) => {
       setOutcome(normalizeOperationOutcome(err));
     });
@@ -110,11 +107,11 @@ export function ResourceCreatePage(): JSX.Element {
       });
   };
 
-  const handleQuestionnaireSubmit = async (newPatient: Patient, response: QuestionnaireResponse): Promise<void> => {
-    const result = await medplum.createResource(newPatient);
+  const handleQuestionnaireSubmit = async (newResource: Resource, response: import('@medplum/fhirtypes').QuestionnaireResponse): Promise<void> => {
+    const result = await medplum.createResource(newResource);
     response.subject = createReference(result);
     await medplum.createResource(response);
-    await navigate(prependPatientPath(patient, `/Patient/${result.id}/timeline`));
+    await navigate(prependPatientPath(patient, `/${result.resourceType}/${result.id}`));
   };
 
   if (loadingPatient) {
@@ -126,7 +123,7 @@ export function ResourceCreatePage(): JSX.Element {
       <Stack>
         <Text fw={500}>New&nbsp;{resourceType}</Text>
         {questionnaire ? (
-          <ArmyDemographicsQuestionnaireForm questionnaire={questionnaire} onSubmit={handleQuestionnaireSubmit} />
+          <TenantQuestionnaireForm questionnaire={questionnaire} onSubmit={handleQuestionnaireSubmit} />
         ) : (
           <ResourceFormWithRequiredProfile
             defaultValue={defaultValue}

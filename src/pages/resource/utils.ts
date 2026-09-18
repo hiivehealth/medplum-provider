@@ -3,7 +3,6 @@
 import type { Project, ResourceType } from '@medplum/fhirtypes';
 
 export const RESOURCE_PROFILE_URLS: Partial<Record<ResourceType, string>> = {
-  Patient: 'https://ehr.hiivehealth.net/fhir/StructureDefinition/hiive-army-demographics-patient',
   ServiceRequest: 'http://medplum.com/StructureDefinition/medplum-provider-lab-procedure-servicerequest',
   Device: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-implantable-device',
 };
@@ -27,6 +26,5 @@ export function getDefaultProfileUrl(resourceType: ResourceType, project: Projec
 }
 
 export function getDefaultQuestionnaireUrl(resourceType: ResourceType, project: Project | undefined): string | undefined {
-  const settingName = `${DEFAULT_QUESTIONNAIRE_SETTING_PREFIX}${resourceType}`;
-  return project?.setting?.find((s) => s.name === settingName)?.valueString;
+  return project?.setting?.find((s) => s.name === `${DEFAULT_QUESTIONNAIRE_SETTING_PREFIX}${resourceType}`)?.valueString;
 }

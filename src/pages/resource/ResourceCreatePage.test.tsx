@@ -11,7 +11,6 @@ import * as reactRouter from 'react-router';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { ResourceCreatePage } from './ResourceCreatePage';
-import { RESOURCE_PROFILE_URLS } from './utils';
 
 describe('ResourceCreatePage', () => {
   let medplum: MockClient;
@@ -167,16 +166,6 @@ describe('ResourceCreatePage', () => {
       expect(medplum.createResource).toHaveBeenCalled();
       // Should show error notification
       expect(screen.getByText(/failed to create resource/i)).toBeInTheDocument();
-    });
-  });
-
-  test('Uses the default Patient profile when the project has no override', async () => {
-    vi.spyOn(medplum, 'requestProfileSchema').mockResolvedValue(undefined);
-
-    await setup('/Patient/new');
-
-    await waitFor(() => {
-      expect(medplum.requestProfileSchema).toHaveBeenCalledWith(RESOURCE_PROFILE_URLS.Patient, expect.anything());
     });
   });
 

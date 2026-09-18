@@ -2,16 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 import { Anchor } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
-import { deepClone, normalizeErrorString, normalizeOperationOutcome } from '@medplum/core';
-import type { OperationOutcome, Patient, Questionnaire, QuestionnaireResponse, Resource } from '@medplum/fhirtypes';
+import { createReference, deepClone, normalizeErrorString, normalizeOperationOutcome } from '@medplum/core';
+import type { OperationOutcome, Questionnaire, Resource } from '@medplum/fhirtypes';
 import { Document, useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ResourceFormWithRequiredProfile } from '../../components/ResourceFormWithRequiredProfile';
-import { ArmyDemographicsQuestionnaireForm } from '../../components/ArmyDemographicsQuestionnaireForm';
-import { getDefaultProfileUrl } from '../resource/utils';
-import { getDefaultQuestionnaireUrl } from '../resource/utils';
+import { TenantQuestionnaireForm } from '../../components/TenantQuestionnaireForm';
+import { getDefaultProfileUrl, getDefaultQuestionnaireUrl } from '../resource/utils';
 
 export function EditTab(): JSX.Element | null {
   const medplum = useMedplum();
@@ -42,10 +41,7 @@ export function EditTab(): JSX.Element | null {
   }, [medplum, patientId]);
 
   useEffect(() => {
-    if (!questionnaireUrl) {
-      setQuestionnaire(undefined);
-      return;
-    }
+    if (!questionnaireUrl) return;
     medplum.searchOne('Questionnaire', { url: questionnaireUrl }).then(setQuestionnaire).catch((err) => {
       setOutcome(normalizeOperationOutcome(err));
     });
@@ -69,9 +65,9 @@ export function EditTab(): JSX.Element | null {
   );
 
   const handleQuestionnaireSubmit = useCallback(
-    async (newPatient: Patient, response: QuestionnaireResponse): Promise<void> => {
-      const updated = await medplum.updateResource(newPatient);
-      response.subject = { reference: `Patient/${updated.id}` };
+    async (newResource: Resource, response: import('@medplum/fhirtypes').QuestionnaireResponse): Promise<void> => {
+      const updated = await medplum.updateResource(newResource);
+      response.subject = createReference(updated);
       await medplum.createResource(response);
       navigate(`/Patient/${patientId}/timeline`)?.catch(console.error);
     },
@@ -85,11 +81,7 @@ export function EditTab(): JSX.Element | null {
   return (
     <Document>
       {questionnaire ? (
-        <ArmyDemographicsQuestionnaireForm
-          questionnaire={questionnaire}
-          patient={value as Patient}
-          onSubmit={handleQuestionnaireSubmit}
-        />
+        <TenantQuestionnaireForm questionnaire={questionnaire} patient={value as import('@medplum/fhirtypes').Patient} onSubmit={handleQuestionnaireSubmit} />
       ) : (
         <ResourceFormWithRequiredProfile
           missingProfileMessage={missingProfileMessage}

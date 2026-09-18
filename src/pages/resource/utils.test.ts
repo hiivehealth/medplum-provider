@@ -40,18 +40,17 @@ describe('getDefaultProfileUrl', () => {
 });
 
 describe('getDefaultQuestionnaireUrl', () => {
-  test('uses the project-level Patient Questionnaire override', () => {
-    const questionnaireUrl = 'https://ehr.example.com/fhir/Questionnaire/patient-intake';
+  test('resolves a tenant-configured Questionnaire URL', () => {
     const project: Project = {
       resourceType: 'Project',
-      name: 'Test Project',
-      setting: [{ name: 'defaultQuestionnaire:Patient', valueString: questionnaireUrl }],
+      name: 'Tenant',
+      setting: [{ name: 'defaultQuestionnaire:Patient', valueString: 'https://tenant.example/Questionnaire/patient' }],
     };
-    expect(getDefaultQuestionnaireUrl('Patient', project)).toBe(questionnaireUrl);
+    expect(getDefaultQuestionnaireUrl('Patient', project)).toBe('https://tenant.example/Questionnaire/patient');
   });
 
-  test('returns undefined when a tenant has no Questionnaire override', () => {
-    const project: Project = { resourceType: 'Project', name: 'Test Project' };
-    expect(getDefaultQuestionnaireUrl('Patient', project)).toBeUndefined();
+  test('returns undefined without tenant Questionnaire configuration', () => {
+    expect(getDefaultQuestionnaireUrl('Patient', { resourceType: 'Project', name: 'Tenant' })).toBeUndefined();
   });
 });
+

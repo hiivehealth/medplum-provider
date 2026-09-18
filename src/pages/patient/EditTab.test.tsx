@@ -2,46 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
-import { loadDataType } from '@medplum/core';
-import type { Project, StructureDefinition } from '@medplum/fhirtypes';
+import type { Project } from '@medplum/fhirtypes';
 import { HomerSimpson, MockClient, TestProject } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as reactRouter from 'react-router';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { EditTab } from './EditTab';
 
 describe('EditTab', () => {
   let medplum: MockClient;
   let navigateSpy: ReturnType<typeof vi.fn>;
-
-  beforeAll(() => {
-    // Load a minimal Hiive Army Demographics Patient profile schema for tests
-    const armyDemographicsPatientProfile: StructureDefinition = {
-      resourceType: 'StructureDefinition',
-      id: 'hiive-army-demographics-patient',
-      url: 'https://ehr.hiivehealth.net/fhir/StructureDefinition/hiive-army-demographics-patient',
-      name: 'HiiveArmyDemographicsPatient',
-      status: 'active',
-      kind: 'resource',
-      abstract: false,
-      type: 'Patient',
-      baseDefinition: 'http://hl7.org/fhir/StructureDefinition/Patient',
-      derivation: 'constraint',
-      snapshot: {
-        element: [
-          {
-            id: 'Patient',
-            path: 'Patient',
-            definition: 'Hiive Army Demographics Patient Profile',
-          },
-        ],
-      },
-    };
-    loadDataType(armyDemographicsPatientProfile);
-  });
 
   beforeEach(async () => {
     medplum = new MockClient();
