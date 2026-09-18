@@ -10,6 +10,7 @@ export const RESOURCE_PROFILE_URLS: Partial<Record<ResourceType, string>> = {
 
 /** Project.setting name prefix for a tenant-specific default profile override, e.g. "defaultProfile:Patient". */
 const DEFAULT_PROFILE_SETTING_PREFIX = 'defaultProfile:';
+const DEFAULT_QUESTIONNAIRE_SETTING_PREFIX = 'defaultQuestionnaire:';
 
 /**
  * Resolves the default profile URL for a resource type, preferring a per-tenant override from
@@ -23,4 +24,9 @@ export function getDefaultProfileUrl(resourceType: ResourceType, project: Projec
   const settingName = `${DEFAULT_PROFILE_SETTING_PREFIX}${resourceType}`;
   const override = project?.setting?.find((s) => s.name === settingName)?.valueString;
   return override ?? RESOURCE_PROFILE_URLS[resourceType];
+}
+
+export function getDefaultQuestionnaireUrl(resourceType: ResourceType, project: Project | undefined): string | undefined {
+  const settingName = `${DEFAULT_QUESTIONNAIRE_SETTING_PREFIX}${resourceType}`;
+  return project?.setting?.find((s) => s.name === settingName)?.valueString;
 }

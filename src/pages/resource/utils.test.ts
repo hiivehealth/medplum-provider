@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { Project } from '@medplum/fhirtypes';
 import { describe, expect, test } from 'vitest';
-import { RESOURCE_PROFILE_URLS, getDefaultProfileUrl } from './utils';
+import { RESOURCE_PROFILE_URLS, getDefaultProfileUrl, getDefaultQuestionnaireUrl } from './utils';
 
 describe('getDefaultProfileUrl', () => {
   test('falls back to RESOURCE_PROFILE_URLS when project has no override setting', () => {
@@ -36,5 +36,22 @@ describe('getDefaultProfileUrl', () => {
   test('returns undefined for a resource type with no default and no override', () => {
     const project: Project = { resourceType: 'Project', name: 'Test Project' };
     expect(getDefaultProfileUrl('Observation', project)).toBeUndefined();
+  });
+});
+
+describe('getDefaultQuestionnaireUrl', () => {
+  test('uses the project-level Patient Questionnaire override', () => {
+    const questionnaireUrl = 'https://ehr.example.com/fhir/Questionnaire/patient-intake';
+    const project: Project = {
+      resourceType: 'Project',
+      name: 'Test Project',
+      setting: [{ name: 'defaultQuestionnaire:Patient', valueString: questionnaireUrl }],
+    };
+    expect(getDefaultQuestionnaireUrl('Patient', project)).toBe(questionnaireUrl);
+  });
+
+  test('returns undefined when a tenant has no Questionnaire override', () => {
+    const project: Project = { resourceType: 'Project', name: 'Test Project' };
+    expect(getDefaultQuestionnaireUrl('Patient', project)).toBeUndefined();
   });
 });
