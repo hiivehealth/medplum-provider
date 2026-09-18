@@ -1,0 +1,23 @@
+:global(.mantine-AppShell-root):has(.banner) {
+  --cui-provider-banner-height: 32px;
+}
+
+:global(.mantine-AppShell-root):has(.banner) :global(.mantine-AppShell-navbar) {
+  top: calc(var(--app-shell-header-offset, 0rem) + var(--cui-provider-banner-height));
+  height: calc(
+    100dvh - var(--app-shell-header-offset, 0rem) - var(--app-shell-footer-offset, 0rem) -
+      var(--cui-provider-banner-height)
+  );
+}
+
+:global(.mantine-AppShell-root):has(.banner) :global(.mantine-AppShell-main) {
+  padding-top: calc(
+    var(--app-shell-header-offset, 0rem) + var(--app-shell-padding, 0px) + var(--cui-provider-banner-height)
+  );
+}
+
+.banner {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 102;
+}
