@@ -3,7 +3,7 @@
 import type { PaperProps } from '@mantine/core';
 import { Divider, Flex, Paper, Stack, Text } from '@mantine/core';
 import { createReference } from '@medplum/core';
-import type { Organization, Patient, Practitioner, Reference, ResourceType, Task } from '@medplum/fhirtypes';
+import type { HealthcareService, Organization, Patient, Practitioner, Reference, ResourceType, Task } from '@medplum/fhirtypes';
 import { CodeInput, DateTimeInput, ReferenceInput, ResourceInput } from '@medplum/react';
 import React, { useEffect, useState } from 'react';
 
@@ -34,7 +34,9 @@ export function TaskProperties(props: TaskPropertiesProps): React.JSX.Element {
     await handleTaskUpdate({ ...task, priority: value as Task['priority'] } as Task);
   };
 
-  const handleOwnerChange = async (value: Reference<Practitioner | Organization> | undefined): Promise<void> => {
+  const handleOwnerChange = async (
+    value: Reference<HealthcareService | Practitioner | Organization> | undefined
+  ): Promise<void> => {
     await handleTaskUpdate({ ...task, owner: value } as Task);
   };
 
@@ -76,9 +78,9 @@ export function TaskProperties(props: TaskPropertiesProps): React.JSX.Element {
             </Text>
             <ReferenceInput
               name="owner"
-              targetTypes={['Practitioner', 'Organization']}
+              targetTypes={['HealthcareService', 'Practitioner', 'Organization']}
               defaultValue={task?.owner ? { reference: task.owner.reference } : undefined}
-              onChange={async (value: Reference<Practitioner | Organization> | undefined) => {
+              onChange={async (value: Reference<HealthcareService | Practitioner | Organization> | undefined) => {
                 await handleOwnerChange(value ? { reference: value.reference } : undefined);
               }}
             />

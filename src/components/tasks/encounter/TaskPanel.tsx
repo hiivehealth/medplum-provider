@@ -16,6 +16,8 @@ import { TaskQuestionnaireForm } from './TaskQuestionnaireForm';
 import { TaskServiceRequest } from './TaskServiceRequest';
 import { TaskStatusPanel } from './TaskStatusPanel';
 
+const A01_TASK_CODE = 'ADTMC A-01 Sore Throat/Hoarseness';
+
 interface TaskPanelProps {
   task: WithId<Task>;
   enabled?: boolean;
@@ -33,6 +35,30 @@ export const TaskPanel = (props: TaskPanelProps): JSX.Element => {
 
   const onChangeResponse = (response: QuestionnaireResponse): void => {
     saveQuestionnaireResponse(task, response);
+  };
+
+  const onSubmitA01Response = async (response: QuestionnaireResponse): Promise<void> => {
+    try {
+      const completedResponse = await medplum.createResource(response);
+      const completedTask = await medplum.updateResource<Task>({
+        ...task,
+        status: 'completed',
+        output: [
+          {
+            type: { text: 'QuestionnaireResponse' },
+            valueReference: createReference(completedResponse),
+          },
+        ],
+      });
+      onUpdateTask(completedTask);
+    } catch (err) {
+      showNotification({
+        color: 'red',
+        icon: <IconCircleOff />,
+        title: 'Error',
+        message: normalizeErrorString(err),
+      });
+    }
   };
 
   const onSaveDiagnosticReport = (diagnosticReport: DiagnosticReport): void => {
@@ -90,7 +116,13 @@ export const TaskPanel = (props: TaskPanelProps): JSX.Element => {
       <Stack gap="xs">
         <Stack p="md">
           {task.focus?.reference?.startsWith('Questionnaire/') && (
-            <TaskQuestionnaireForm key={task.id} task={task} onChangeResponse={onChangeResponse} />
+            <TaskQuestionnaireForm
+              key={task.id}
+              task={task}
+              autoSave={task.code?.text !== A01_TASK_CODE}
+              onChangeResponse={onChangeResponse}
+              onSubmitResponse={onSubmitA01Response}
+            />
           )}
           {task.focus?.reference?.startsWith('ServiceRequest/') && (
             <TaskServiceRequest key={task.id} task={task} saveDiagnosticReport={onSaveDiagnosticReport} />

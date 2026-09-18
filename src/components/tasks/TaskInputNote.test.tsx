@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
 import { MantineProvider } from '@mantine/core';
-import type { Task } from '@medplum/fhirtypes';
-import { MockClient } from '@medplum/mock';
+import type { Practitioner, Task } from '@medplum/fhirtypes';
+import { DrAliceSmith, MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { TaskInputNote } from './TaskInputNote';
 
 describe('TaskInputNote', () => {
@@ -13,6 +14,7 @@ describe('TaskInputNote', () => {
 
   beforeEach(() => {
     medplum = new MockClient();
+    medplum.setProfile(DrAliceSmith as Practitioner);
     vi.clearAllMocks();
   });
 
@@ -21,11 +23,16 @@ describe('TaskInputNote', () => {
     props: Partial<React.ComponentProps<typeof TaskInputNote>> = {}
   ): ReturnType<typeof render> => {
     return render(
-      <MedplumProvider medplum={medplum}>
-        <MantineProvider>
-          <TaskInputNote task={task} {...props} />
-        </MantineProvider>
-      </MedplumProvider>
+      <MemoryRouter initialEntries={['/Task/task-123']}>
+        <MedplumProvider medplum={medplum}>
+          <MantineProvider>
+            <Routes>
+              <Route path="/Task/:taskId" element={<TaskInputNote task={task} {...props} />} />
+              <Route path="/Patient/:patientId/Encounter/:encounterId" element={<LocationDisplay />} />
+            </Routes>
+          </MantineProvider>
+        </MedplumProvider>
+      </MemoryRouter>
     );
   };
 
@@ -131,4 +138,38 @@ describe('TaskInputNote', () => {
 
     expect(onTaskChange).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' }));
   });
+
+  test('claims a linked encounter task before opening the chart', async () => {
+    const taskWithEncounter: Task = {
+      ...mockTask,
+      for: { reference: 'Patient/patient-123' },
+      encounter: { reference: 'Encounter/encounter-123' },
+    };
+    medplum.updateResource = vi.fn().mockResolvedValue({
+      ...taskWithEncounter,
+      owner: { reference: `Practitioner/${DrAliceSmith.id}` },
+      status: 'in-progress',
+    });
+
+    setup(taskWithEncounter);
+
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'Claim & Open Encounter' }));
+    });
+
+    await waitFor(() => {
+      expect(medplum.updateResource).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: expect.objectContaining({ reference: `Practitioner/${DrAliceSmith.id}` }),
+          status: 'in-progress',
+        })
+      );
+    });
+    expect(await screen.findByText('/Patient/patient-123/Encounter/encounter-123')).toBeInTheDocument();
+  });
 });
+
+function LocationDisplay(): React.JSX.Element {
+  const location = useLocation();
+  return <div>{location.pathname}</div>;
+}

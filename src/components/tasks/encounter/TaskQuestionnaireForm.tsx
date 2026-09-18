@@ -13,13 +13,23 @@ import {
 import type { JSX } from 'react';
 import { useEffect, useState } from 'react';
 import { showErrorNotification } from '../../../utils/notifications';
+import { A01CompactQuestionnaire } from './A01CompactQuestionnaire';
+
+const A01_QUESTIONNAIRE_URL = 'https://ehr.hiivehealth.net/fhir/Questionnaire/a01-sore-throat';
 
 interface TaskQuestionnaireFormProps {
   task: Task;
   onChangeResponse?: (response: QuestionnaireResponse) => void;
+  onSubmitResponse?: (response: QuestionnaireResponse) => void;
+  autoSave?: boolean;
 }
 
-export const TaskQuestionnaireForm = ({ task, onChangeResponse }: TaskQuestionnaireFormProps): JSX.Element => {
+export const TaskQuestionnaireForm = ({
+  task,
+  onChangeResponse,
+  onSubmitResponse,
+  autoSave = true,
+}: TaskQuestionnaireFormProps): JSX.Element => {
   const medplum = useMedplum();
   const author = useMedplumProfile();
   const [questionnaire, setQuestionnaire] = useState<Questionnaire | undefined>(undefined);
@@ -51,7 +61,18 @@ export const TaskQuestionnaireForm = ({ task, onChangeResponse }: TaskQuestionna
       encounter: task.encounter,
     };
 
-    onChangeResponse?.(updatedResponse);
+    if (autoSave) {
+      onChangeResponse?.(updatedResponse);
+    }
+  };
+
+  const onSubmit = (response: QuestionnaireResponse): void => {
+    onSubmitResponse?.({
+      ...response,
+      subject: task.for,
+      encounter: task.encounter,
+      source: author && createReference(author),
+    });
   };
 
   useEffect(() => {
@@ -85,12 +106,21 @@ export const TaskQuestionnaireForm = ({ task, onChangeResponse }: TaskQuestionna
 
   return (
     <Box p={0}>
-      {task.status !== 'completed' && questionnaire && (
+      {task.status !== 'completed' && questionnaire?.url === A01_QUESTIONNAIRE_URL && (
+        <A01CompactQuestionnaire
+          questionnaire={questionnaire}
+          questionnaireResponse={questionnaireResponse}
+          onSubmit={onSubmit}
+        />
+      )}
+      {task.status !== 'completed' && questionnaire && questionnaire.url !== A01_QUESTIONNAIRE_URL && (
         <QuestionnaireForm
           questionnaire={questionnaire}
           questionnaireResponse={questionnaireResponse}
-          excludeButtons={true}
+          excludeButtons={autoSave}
           onChange={onChange}
+          onSubmit={onSubmit}
+          submitButtonText="Complete A-01"
         />
       )}
       {task.status === 'completed' && questionnaireResponse && (

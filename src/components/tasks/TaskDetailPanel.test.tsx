@@ -7,7 +7,7 @@ import { MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { TaskDetailPanel } from './TaskDetailPanel';
 
@@ -81,6 +81,31 @@ describe('TaskDetailPanel', () => {
       },
       { timeout: 3000 }
     );
+  });
+
+  test('opens the linked encounter chart', async () => {
+    const user = userEvent.setup();
+    const taskWithEncounter: WithId<Task> = {
+      ...mockTask,
+      encounter: { reference: 'Encounter/encounter-123' },
+    };
+
+    render(
+      <MemoryRouter initialEntries={['/Task/task-123']}>
+        <MedplumProvider medplum={medplum}>
+          <MantineProvider>
+            <Routes>
+              <Route path="/Task/:taskId" element={<TaskDetailPanel task={taskWithEncounter} />} />
+              <Route path="/Patient/:patientId/Encounter/:encounterId" element={<LocationDisplay />} />
+            </Routes>
+          </MantineProvider>
+        </MedplumProvider>
+      </MemoryRouter>
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Claim & Open Encounter' }));
+
+    expect(await screen.findByText('/Patient/patient-123/Encounter/encounter-123')).toBeInTheDocument();
   });
 
   test('renders task detail with task reference', async () => {
@@ -277,3 +302,8 @@ describe('TaskDetailPanel', () => {
     });
   });
 });
+
+function LocationDisplay(): JSX.Element {
+  const location = useLocation();
+  return <div>{location.pathname}</div>;
+}
