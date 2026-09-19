@@ -4,7 +4,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { getReferenceString } from '@medplum/core';
 import { useDoseSpotNotifications } from '@medplum/dosespot-react';
 import type { SpotlightLinkAction } from '@medplum/react';
-import { AppShell, Loading, Logo, useMedplum, useMedplumProfile } from '@medplum/react';
+import { AppShell, Loading, useMedplum, useMedplumProfile } from '@medplum/react';
 import {
   IconApps,
   IconBook2,
@@ -23,6 +23,7 @@ import { Suspense, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router';
 import { hasScriptSureIdentifier } from './components/utils';
 import { useDoseSpotAccess } from './hooks/useDoseSpotAccess';
+import HiiveHealthLogo from '../hiive-website-assets/Hiive Health Logo_Blue.png';
 import './index.css';
 import { ScriptSurePracticeProvider } from './scriptsure/ScriptSurePractice';
 
@@ -37,6 +38,9 @@ import { DoseSpotNotificationsPage } from './pages/integrations/DoseSpotNotifica
 import { IntegrationsPage } from './pages/integrations/IntegrationsPage';
 import { ScriptSurePage } from './pages/integrations/ScriptSurePage';
 import { MessagesPage } from './pages/messages/MessagesPage';
+import { CaliforniaPatientSearchPage } from './pages/patient/CaliforniaPatientSearchPage';
+import { CaliforniaViewerAuditPage } from './pages/patient/CaliforniaViewerAuditPage';
+import { CaliforniaViewerTab } from './pages/patient/CaliforniaViewerTab';
 import { CommunicationTab } from './pages/patient/CommunicationTab';
 import { CoveragePage } from './pages/patient/CoveragePage';
 import { DocumentsPage } from './pages/patient/DocumentsPage';
@@ -136,7 +140,7 @@ export function App(): JSX.Element | null {
 
   const appShellContent = (
     <AppShell
-      logo={<Logo size={24} />}
+      logo={<img src={HiiveHealthLogo} alt="Hiive Health" style={{ display: 'block', height: 28, width: 'auto' }} />}
       pathname={location.pathname}
       searchParams={searchParams}
       layoutVersion="v2"
@@ -152,6 +156,8 @@ export function App(): JSX.Element | null {
                     label: 'Patients',
                     href: '/Patient?_count=20&_fields=name,email,gender&_sort=-_lastUpdated',
                   },
+                  { icon: <IconUsers />, label: 'California HIE', href: '/California/Patients' },
+                  { icon: <IconClipboardCheck />, label: 'California Audit', href: '/California/Audit' },
                   { icon: <IconCalendarEvent />, label: 'Schedule', href: `/Calendar/Schedule` },
                   {
                     icon: <IconMail />,
@@ -247,7 +253,10 @@ export function App(): JSX.Element | null {
                 }
               />
               <Route path="/Patient/new" element={<ResourceCreatePage />} />
+              <Route path="/California/Patients" element={<CaliforniaPatientSearchPage />} />
+              <Route path="/California/Audit" element={<CaliforniaViewerAuditPage />} />
               <Route path="/Patient/:patientId" element={<PatientPage />}>
+                <Route path="california-viewer" element={<CaliforniaViewerTab />} />
                 <Route path="Encounter" element={<EncountersPage />} />
                 <Route path="Encounter/:encounterId/Task?/:taskId?" element={<EncountersPage />} />
                 <Route path="edit" element={<EditTab />} />

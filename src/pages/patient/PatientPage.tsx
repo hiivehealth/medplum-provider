@@ -14,7 +14,7 @@ import {
 } from '@medplum/react';
 import type { JSX } from 'react';
 import { useCallback, useMemo, useState } from 'react';
-import { Outlet, useNavigate } from 'react-router';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 import { usePharmacyDialog } from '../../components/pharmacy/usePharmacyDialog';
 import { useDoseSpotAccess } from '../../hooks/useDoseSpotAccess';
 import { usePatient } from '../../hooks/usePatient';
@@ -24,6 +24,7 @@ import { getPatientPageTabs, patientPathPrefix } from './PatientPage.utils';
 
 export function PatientPage(): JSX.Element {
   const navigate = useNavigate();
+  const location = useLocation();
   const medplum = useMedplum();
   const membership = medplum.getProjectMembership();
   const [outcome, setOutcome] = useState<OperationOutcome>();
@@ -62,6 +63,10 @@ export function PatientPage(): JSX.Element {
   }
 
   const patientId = patient?.id;
+  const isFocusedWorkspace =
+    location.pathname.endsWith('/california-viewer') ||
+    location.pathname.includes('/DocumentReference/') ||
+    location.pathname.endsWith('/export');
   if (!patientId) {
     return (
       <Document>
@@ -73,19 +78,21 @@ export function PatientPage(): JSX.Element {
   return (
     <>
       <div key={getReferenceString(patient)} className={classes.container}>
-        <div className={classes.sidebar}>
-          <ScrollArea className={classes.scrollArea}>
-            <PatientSummary
-              patient={patient}
-              onClickResource={(resource) =>
-                navigate(`/Patient/${patientId}/${resource.resourceType}/${resource.id}`)?.catch(console.error)
-              }
-              sections={sections}
-            />
-          </ScrollArea>
-        </div>
+        {!isFocusedWorkspace && (
+          <div className={classes.sidebar}>
+            <ScrollArea className={classes.scrollArea}>
+              <PatientSummary
+                patient={patient}
+                onClickResource={(resource) =>
+                  navigate(`/Patient/${patientId}/${resource.resourceType}/${resource.id}`)?.catch(console.error)
+                }
+                sections={sections}
+              />
+            </ScrollArea>
+          </div>
+        )}
 
-        <div className={classes.content}>
+        <div className={isFocusedWorkspace ? classes.fullWidthContent : classes.content}>
           <Paper w="100%" radius={0} style={{ borderBottom: '1px solid var(--app-shell-border-color)' }}>
             <ScrollArea>
               <LinkTabs

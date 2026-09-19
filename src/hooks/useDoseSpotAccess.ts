@@ -1,10 +1,8 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { showNotification } from '@mantine/notifications';
-import { isOk, normalizeErrorString } from '@medplum/core';
 import type { PractitionerRole } from '@medplum/fhirtypes';
 import { useMedplum, useSearchResources } from '@medplum/react';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { DOSESPOT_PRACTITIONER_ROLE_TYPE_SYSTEM, hasDoseSpotIdentifier } from '../components/utils';
 
 export interface DoseSpotAccess {
@@ -34,21 +32,11 @@ export function useDoseSpotAccess(): DoseSpotAccess {
   const enrolled = hasDoseSpotIdentifier(membership);
   const practitionerId = profile?.resourceType === 'Practitioner' ? profile.id : undefined;
 
-  const [roles, rolesLoading, rolesOutcome] = useSearchResources(
+  const [roles, rolesLoading] = useSearchResources(
     'PractitionerRole',
     { practitioner: `Practitioner/${practitionerId}`, active: 'true', _count: '10' },
     { enabled: !enrolled && !!practitionerId }
   );
-
-  useEffect(() => {
-    if (rolesOutcome && !isOk(rolesOutcome)) {
-      showNotification({
-        title: 'DoseSpot Access Check Failed',
-        message: normalizeErrorString(rolesOutcome),
-        color: 'red',
-      });
-    }
-  }, [rolesOutcome]);
 
   const authorized = useMemo(() => !!roles && hasDoseSpotPractitionerRole(roles), [roles]);
   const hasAccess = enrolled || authorized;
