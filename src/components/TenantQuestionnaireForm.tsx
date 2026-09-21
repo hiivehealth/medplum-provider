@@ -4,6 +4,7 @@ import type { Bundle, Patient, Parameters, Questionnaire, QuestionnaireResponse,
 import { QuestionnaireForm, useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
 import { useState } from 'react';
+import { removeEmptyAnswers, validateQuestionnaireResponse } from '../utils/questionnaire-validation';
 
 interface TenantQuestionnaireFormProps {
   questionnaire: Questionnaire;
@@ -14,10 +15,18 @@ interface TenantQuestionnaireFormProps {
 export function TenantQuestionnaireForm({ questionnaire, patient, onSubmit }: TenantQuestionnaireFormProps): JSX.Element {
   const medplum = useMedplum();
   const [error, setError] = useState<string>();
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   async function handleSubmit(response: QuestionnaireResponse): Promise<void> {
+    const cleanedResponse = removeEmptyAnswers(response);
+    const errors = validateQuestionnaireResponse(questionnaire, cleanedResponse);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors([]);
     try {
-      const responseWithSubject = patient ? { ...response, subject: createReference(patient) } : response;
+      const responseWithSubject = patient ? { ...cleanedResponse, subject: createReference(patient) } : cleanedResponse;
       const parameters: Parameters = {
         resourceType: 'Parameters',
         parameter: [
@@ -42,11 +51,13 @@ export function TenantQuestionnaireForm({ questionnaire, patient, onSubmit }: Te
 
   return (
     <Stack>
+      {validationErrors.length > 0 && <Alert color="red">{validationErrors.join('\n')}</Alert>}
       {error && <Alert color="red">{error}</Alert>}
       <QuestionnaireForm
         questionnaire={questionnaire}
         questionnaireResponse={patient ? undefined : undefined}
         subject={patient ? createReference(patient) : undefined}
+        onChange={(nextResponse) => setValidationErrors(validateQuestionnaireResponse(questionnaire, removeEmptyAnswers(nextResponse)))}
         onSubmit={handleSubmit}
       />
     </Stack>
