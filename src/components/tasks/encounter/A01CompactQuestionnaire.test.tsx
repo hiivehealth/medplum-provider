@@ -3,7 +3,7 @@ import type { Questionnaire, QuestionnaireResponse } from '@medplum/fhirtypes';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, test, vi } from 'vitest';
-import { A01CompactQuestionnaire, shouldOpenProviderNowModal } from './A01CompactQuestionnaire';
+import { A01CompactQuestionnaire, shouldOpenAemNowModal, shouldOpenProviderNowModal } from './A01CompactQuestionnaire';
 
 const RED_FLAG_IDS = ['shortness-of-breath', 'stridor', 'deviated-uvula', 'drooling-trouble-swallowing', 'stiff-neck'];
 const DP1_IDS = ['symptoms-more-than-10-days', 'immunosuppression', 'inhaled-steroid', 'fever'];
@@ -73,9 +73,12 @@ const questionnaire: Questionnaire = {
     },
     {
       linkId: 'additional-screen',
-      text: 'Screen Cold, Skin, Ear Pain if present',
+      text: 'Screen Cold Symptoms, Ear Pain if present',
       type: 'group',
-      item: [{ linkId: 'cold-present', text: 'Cold present', type: 'choice', required: true }],
+      item: [
+        { linkId: 'cold-present', text: 'Cold present', type: 'choice', required: true },
+        { linkId: 'ear-pain-present', text: 'Ear pain present', type: 'choice', required: true },
+      ],
     },
   ],
 };
@@ -147,6 +150,26 @@ describe('A01CompactQuestionnaire', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  test('offers optional Scope of Practice PDFs without adding questionnaire requirements', async () => {
+    render(
+      <MantineProvider>
+        <A01CompactQuestionnaire questionnaire={questionnaire} onSubmit={vi.fn()} />
+      </MantineProvider>
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Scope of Practice' }));
+
+    const algorithmLink = await screen.findByRole('link', { name: 'A-1 Sore Throat/Hoarseness' });
+    expect(algorithmLink).toHaveAttribute(
+      'href',
+      '/documents/adtmc/a01/scope-of-practice.html?document=a01-sore-throat-hoarseness'
+    );
+    expect(screen.getAllByRole('link')).toHaveLength(5);
+    screen.getAllByRole('link').forEach((link) => expect(link).toHaveAttribute('target', '_blank'));
+    expect(screen.getByRole('button', { name: 'Complete A-01' })).toBeDisabled();
+  });
+
   test('shows the source-faithful DP1 guidance below its questions after every red flag is answered No', async () => {
     const questionnaireResponse: QuestionnaireResponse = {
       resourceType: 'QuestionnaireResponse',
@@ -181,7 +204,7 @@ describe('A01CompactQuestionnaire', () => {
     const dp1Prompt = screen.getByText('Does patient have any of the following?');
     expect(dp1Prompt.parentElement).toContainElement(screen.getByText('Screening DP1:'));
     expect(screen.queryByText('Screening DP2:')).not.toBeInTheDocument();
-    expect(screen.queryByText('Screen Cold, Skin, Ear Pain if present')).not.toBeInTheDocument();
+    expect(screen.queryByText('Screen Cold Symptoms, Ear Pain if present')).not.toBeInTheDocument();
   });
 
   test('shows the additional screen only for the Minor Care path', () => {
@@ -215,13 +238,62 @@ describe('A01CompactQuestionnaire', () => {
       </MantineProvider>
     );
 
-    expect(screen.getByText('Screen Cold, Skin, Ear Pain if present')).toBeInTheDocument();
+    expect(screen.getByText('Screen Cold Symptoms, Ear Pain if present')).toBeInTheDocument();
   });
 
   test('opens Provider Now only after the complete DP1 contains a Yes answer', () => {
     const partialDp1 = Object.fromEntries(DP1_IDS.slice(0, 3).map((linkId) => [linkId, 'false']));
     expect(shouldOpenProviderNowModal('inhaled-steroid', partialDp1)).toBe(false);
     expect(shouldOpenProviderNowModal('fever', { ...partialDp1, fever: 'true' })).toBe(true);
+  });
+
+  test('opens AEM Now only for a positive test with three or more strep criteria', () => {
+    const threeCriteria = {
+      'dp2-fever': 'true',
+      'no-cough': 'true',
+      'tonsillar-exudate': 'true',
+      'swollen-anterior-cervical-nodes': 'false',
+      'rapid-strep-culture-result': 'positive',
+    };
+
+    expect(shouldOpenAemNowModal('rapid-strep-culture-result', threeCriteria)).toBe(true);
+    expect(shouldOpenAemNowModal('rapid-strep-culture-result', { ...threeCriteria, 'tonsillar-exudate': 'false' })).toBe(false);
+    expect(shouldOpenAemNowModal('rapid-strep-culture-result', { ...threeCriteria, 'rapid-strep-culture-result': 'negative' })).toBe(false);
+  });
+
+  test('blocks screening and routes AEM Now after a positive test with three criteria', async () => {
+    const onSubmit = vi.fn();
+    const questionnaireResponse: QuestionnaireResponse = {
+      resourceType: 'QuestionnaireResponse',
+      status: 'in-progress',
+      item: [
+        { linkId: 'initial-escalation-screen', item: RED_FLAG_IDS.map((linkId) => ({ linkId, answer: [{ valueCoding: { code: 'false' } }] })) },
+        { linkId: 'dp1-screen', item: DP1_IDS.map((linkId) => ({ linkId, answer: [{ valueCoding: { code: 'false' } }] })) },
+        {
+          linkId: 'dp2-screen',
+          item: [
+            { linkId: 'dp2-fever', answer: [{ valueCoding: { code: 'true' } }] },
+            { linkId: 'no-cough', answer: [{ valueCoding: { code: 'true' } }] },
+            { linkId: 'tonsillar-exudate', answer: [{ valueCoding: { code: 'true' } }] },
+            { linkId: 'swollen-anterior-cervical-nodes', answer: [{ valueCoding: { code: 'false' } }] },
+          ],
+        },
+      ],
+    };
+
+    render(
+      <MantineProvider>
+        <A01CompactQuestionnaire questionnaire={questionnaire} questionnaireResponse={questionnaireResponse} onSubmit={onSubmit} />
+      </MantineProvider>
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('radio', { name: 'Positive' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Route to AEM Now' })).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Route to AEM Now' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' }));
   });
 
   test('blocks screening and routes Provider Now after all red flags are answered with at least one positive', async () => {

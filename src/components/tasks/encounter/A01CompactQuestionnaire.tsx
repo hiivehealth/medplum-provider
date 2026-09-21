@@ -1,5 +1,6 @@
-import { Alert, Button, Group, Modal, Paper, Radio, Stack, Text, Title } from '@mantine/core';
+import { Accordion, Alert, Anchor, Button, Group, Modal, Paper, Radio, Stack, Text, Title } from '@mantine/core';
 import type { Questionnaire, QuestionnaireItem, QuestionnaireResponse, QuestionnaireResponseItem } from '@medplum/fhirtypes';
+import { IconExternalLink, IconFileText } from '@tabler/icons-react';
 import type { JSX } from 'react';
 import { useState } from 'react';
 
@@ -19,6 +20,13 @@ const RED_FLAG_IDS = ['shortness-of-breath', 'stridor', 'deviated-uvula', 'drool
 const DP1_IDS = ['symptoms-more-than-10-days', 'immunosuppression', 'inhaled-steroid', 'fever'];
 const STREP_CRITERIA_IDS = ['dp2-fever', 'no-cough', 'tonsillar-exudate', 'swollen-anterior-cervical-nodes'];
 const PROVIDER_NOW_IDS = [...RED_FLAG_IDS, ...DP1_IDS];
+const SCOPE_OF_PRACTICE_DOCUMENTS = [
+  { title: 'A-1 Sore Throat/Hoarseness', href: '/documents/adtmc/a01/scope-of-practice.html?document=a01-sore-throat-hoarseness' },
+  { title: 'Policy Guide', href: '/documents/adtmc/a01/scope-of-practice.html?document=policy-guide' },
+  { title: 'Obtain a Throat Culture', href: '/documents/adtmc/a01/scope-of-practice.html?document=obtain-a-throat-culture' },
+  { title: 'Perform an HEENT Exam', href: '/documents/adtmc/a01/scope-of-practice.html?document=perform-an-heent-exam' },
+  { title: 'Care for Common Throat Infections', href: '/documents/adtmc/a01/scope-of-practice.html?document=care-for-common-throat-infections' },
+] as const;
 
 export function A01CompactQuestionnaire({
   questionnaire,
@@ -28,6 +36,7 @@ export function A01CompactQuestionnaire({
   const [answers, setAnswers] = useState<Readonly<Record<string, string>>>(() => getAnswers(questionnaireResponse));
   const [showValidation, setShowValidation] = useState(false);
   const [providerNowModalOpen, setProviderNowModalOpen] = useState(false);
+  const [aemNowModalOpen, setAemNowModalOpen] = useState(false);
   const groups = questionnaire.item ?? [];
   const hasRedFlag = RED_FLAG_IDS.some((linkId) => answers[linkId] === 'true');
   const redFlagsAnswered = RED_FLAG_IDS.every((linkId) => answers[linkId] !== undefined);
@@ -66,6 +75,9 @@ export function A01CompactQuestionnaire({
       if (shouldOpenProviderNowModal(linkId, updatedAnswers)) {
         setProviderNowModalOpen(true);
       }
+      if (shouldOpenAemNowModal(linkId, updatedAnswers)) {
+        setAemNowModalOpen(true);
+      }
       return updatedAnswers;
     });
   };
@@ -76,16 +88,7 @@ export function A01CompactQuestionnaire({
       return;
     }
 
-    onSubmit({
-      resourceType: 'QuestionnaireResponse',
-      questionnaire: questionnaire.url ? `${questionnaire.url}|${questionnaire.version}` : `Questionnaire/${questionnaire.id}`,
-      status: 'completed',
-      item: groups.map((group) => ({
-        linkId: group.linkId,
-        text: group.text,
-        item: (group.item ?? []).map((question) => buildResponseItem(question, answers[question.linkId])),
-      })),
-    });
+    onSubmit(buildCompletedResponse(questionnaire, groups, answers));
   };
 
   const routeProviderNow = (): void => {
@@ -101,10 +104,32 @@ export function A01CompactQuestionnaire({
     });
   };
 
+  const routeAemNow = (): void => {
+    setAemNowModalOpen(false);
+    onSubmit(buildCompletedResponse(questionnaire, groups, answers));
+  };
+
   return (
     <Stack gap="md">
       <Title order={3}>{questionnaire.title}</Title>
       {questionnaire.description && <Text size="sm" fw={500}>{questionnaire.description}</Text>}
+      <Accordion variant="separated" radius="sm">
+        <Accordion.Item value="scope-of-practice">
+          <Accordion.Control icon={<IconFileText size={18} />}>Scope of Practice</Accordion.Control>
+          <Accordion.Panel>
+            <Stack gap="xs">
+              {SCOPE_OF_PRACTICE_DOCUMENTS.map((document) => (
+                <Anchor key={document.href} href={document.href} target="_blank" rel="noreferrer" underline="hover">
+                  <Group justify="space-between" wrap="nowrap">
+                    <Text size="sm">{document.title}</Text>
+                    <IconExternalLink size={16} aria-hidden />
+                  </Group>
+                </Anchor>
+              ))}
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
+      </Accordion>
       {visibleGroups.map((group) => {
         const questionPrompt = group.item?.find((item) => item.linkId?.endsWith('-question-prompt'));
         const renderedItems = group.item?.filter((item) => item.linkId !== questionPrompt?.linkId) ?? [];
@@ -154,6 +179,27 @@ export function A01CompactQuestionnaire({
           </Group>
         </Stack>
       </Modal>
+      <Modal
+        opened={aemNowModalOpen}
+        onClose={() => undefined}
+        centered
+        closeOnClickOutside={false}
+        closeOnEscape={false}
+        withCloseButton={false}
+      >
+        <Stack gap="md">
+          <Alert color="red" title="AEM Now">
+            A positive rapid strep/culture result requires immediate AEM routing. Please discontinue the ADTMC
+            screening process at this time.
+          </Alert>
+          <Text size="sm">
+            Routing records the ADTMC response and assigns a ready handoff task to the AEM Now Queue.
+          </Text>
+          <Group justify="flex-end">
+            <Button color="red" onClick={routeAemNow}>Route to AEM Now</Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Stack>
   );
 }
@@ -171,6 +217,31 @@ export function shouldOpenProviderNowModal(
     currentStageIds.every((stageId) => answers[stageId] !== undefined) &&
     currentStageIds.some((stageId) => answers[stageId] === 'true')
   );
+}
+
+export function shouldOpenAemNowModal(linkId: string, answers: Readonly<Record<string, string>>): boolean {
+  return (
+    linkId === 'rapid-strep-culture-result' &&
+    answers[linkId] === 'positive' &&
+    STREP_CRITERIA_IDS.filter((criterionId) => answers[criterionId] === 'true').length >= 3
+  );
+}
+
+function buildCompletedResponse(
+  questionnaire: Questionnaire,
+  groups: QuestionnaireItem[],
+  answers: Readonly<Record<string, string>>
+): QuestionnaireResponse {
+  return {
+    resourceType: 'QuestionnaireResponse',
+    questionnaire: questionnaire.url ? `${questionnaire.url}|${questionnaire.version}` : `Questionnaire/${questionnaire.id}`,
+    status: 'completed',
+    item: groups.map((group) => ({
+      linkId: group.linkId,
+      text: group.text,
+      item: (group.item ?? []).map((question) => buildResponseItem(question, answers[question.linkId])),
+    })),
+  };
 }
 
 function QuestionRow({

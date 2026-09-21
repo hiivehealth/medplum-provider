@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scope of Practice</title>
+    <link rel="icon" type="image/png" href="/Hiive%20Favicon%20Dark.png" />
+    <style>
+      html,
+      body,
+      iframe {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <iframe title="Scope of Practice reference document"></iframe>
+    <script>
+      const documents = {
+        'a01-sore-throat-hoarseness': {
+          title: 'A-1 Sore Throat/Hoarseness',
+          file: 'a01-sore-throat-hoarseness.pdf',
+        },
+        'policy-guide': { title: 'Policy Guide', file: 'Policy%20Guide.pdf' },
+        'obtain-a-throat-culture': {
+          title: 'Obtain a Throat Culture',
+          file: 'How%20to%20Obtain%20a%20Throat%20Culture.pdf',
+        },
+        'perform-an-heent-exam': {
+          title: 'Perform an HEENT Exam',
+          file: 'How%20to%20Perform%20an%20HEENT%20Exam.pdf',
+        },
+        'care-for-common-throat-infections': {
+          title: 'Care for Common Throat Infections',
+          file: 'How%20to%20Provide%20Care%20for%20Common%20Throat%20Infections.pdf',
+        },
+      };
+      const documentConfig = documents[new URLSearchParams(location.search).get('document')];
+
+      if (documentConfig) {
+        window.document.title = documentConfig.title;
+        window.document.querySelector('iframe').src = documentConfig.file;
+      }
+    </script>
+  </body>
+</html>
