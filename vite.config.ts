@@ -13,18 +13,30 @@ if (!existsSync(path.join(import.meta.dirname, '.env'))) {
   copyFileSync(path.join(import.meta.dirname, '.env.defaults'), path.join(import.meta.dirname, '.env'));
 }
 
-// Resolve aliases to local packages when working within the monorepo
+function localPackage(packageName: string): string {
+  const candidates = [
+    path.resolve(import.meta.dirname, `../medplum/packages/${packageName}/src`),
+    path.resolve(import.meta.dirname, `../../packages/${packageName}/src`),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? '';
+}
+
+// Resolve aliases to local packages when this app is developed beside or inside the Medplum checkout.
 const alias: NonNullable<UserConfig['resolve']>['alias'] = Object.fromEntries(
   Object.entries({
-    '@medplum/core': path.resolve(import.meta.dirname, '../../packages/core/src'),
-    '@medplum/dosespot-react': path.resolve(import.meta.dirname, '../../packages/dosespot-react/src'),
-    '@medplum/scriptsure-react': path.resolve(import.meta.dirname, '../../packages/scriptsure-react/src'),
-    '@medplum/react': path.resolve(import.meta.dirname, '../../packages/react/src'),
-    '@medplum/react-scheduling': path.resolve(import.meta.dirname, '../../packages/react-scheduling/src'),
-    '@medplum/react-hooks': path.resolve(import.meta.dirname, '../../packages/react-hooks/src'),
-    '@medplum/health-gorilla-core': path.resolve(import.meta.dirname, '../../packages/health-gorilla-core/src'),
-    '@medplum/health-gorilla-react': path.resolve(import.meta.dirname, '../../packages/health-gorilla-react/src'),
-  }).filter(([, relPath]) => existsSync(relPath))
+    '@medplum/core': localPackage('core'),
+    '@medplum/definitions': localPackage('definitions'),
+    '@medplum/dosespot-core': localPackage('dosespot-core'),
+    '@medplum/dosespot-react': localPackage('dosespot-react'),
+    '@medplum/scriptsure-core': localPackage('scriptsure-core'),
+    '@medplum/scriptsure-react': localPackage('scriptsure-react'),
+    '@medplum/react': localPackage('react'),
+    '@medplum/react-scheduling': localPackage('react-scheduling'),
+    '@medplum/react-hooks': localPackage('react-hooks'),
+    '@medplum/health-gorilla-core': localPackage('health-gorilla-core'),
+    '@medplum/health-gorilla-react': localPackage('health-gorilla-react'),
+    '@medplum/mock': localPackage('mock'),
+  }).filter(([, packagePath]) => packagePath)
 );
 
 // https://vitejs.dev/config/
@@ -41,6 +53,14 @@ export default defineConfig({
   },
   resolve: {
     alias,
+    dedupe: [
+      'react',
+      'react-dom',
+      '@mantine/core',
+      '@mantine/hooks',
+      '@mantine/notifications',
+      '@mantine/spotlight',
+    ],
   },
   test: {
     globals: true,

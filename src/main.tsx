@@ -13,10 +13,18 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider, createBrowserRouter } from 'react-router';
 import { App } from './App';
+import { getRuntimeConfig } from './config/runtime';
+
+const runtimeConfig = getRuntimeConfig();
 
 const medplum = new MedplumClient({
   onUnauthenticated: () => (window.location.href = '/'),
-  baseUrl: sessionStorage.getItem('medplum_base_url') || import.meta.env.MEDPLUM_BASE_URL || undefined,
+  baseUrl:
+    sessionStorage.getItem('medplum_base_url') ||
+    runtimeConfig.medplumBaseUrl ||
+    import.meta.env.MEDPLUM_BASE_URL ||
+    undefined,
+  clientId: runtimeConfig.medplumClientId || import.meta.env.MEDPLUM_CLIENT_ID || undefined,
   cacheTime: 60000,
   autoBatchTime: 100,
 });
