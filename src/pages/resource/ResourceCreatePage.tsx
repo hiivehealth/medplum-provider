@@ -3,16 +3,15 @@
 import { Stack, Text } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
 import { createReference, normalizeErrorString, normalizeOperationOutcome } from '@medplum/core';
-import type { OperationOutcome, Patient, Questionnaire, Resource, ResourceType } from '@medplum/fhirtypes';
+import type { OperationOutcome, Patient, Resource, ResourceType } from '@medplum/fhirtypes';
 import { Document, Loading, useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ResourceFormWithRequiredProfile } from '../../components/ResourceFormWithRequiredProfile';
-import { TenantQuestionnaireForm } from '../../components/TenantQuestionnaireForm';
 import { usePatient } from '../../hooks/usePatient';
 import { prependPatientPath } from '../patient/PatientPage.utils';
-import { getDefaultProfileUrl, getDefaultQuestionnaireUrl } from './utils';
+import { getDefaultProfileUrl } from './utils';
 
 const PatientReferencesElements: Partial<Record<ResourceType, string[]>> = {
   Task: ['for'],
@@ -70,8 +69,6 @@ export function ResourceCreatePage(): JSX.Element {
     return getDefaultValue(resourceType, patient);
   });
   const profileUrl = resourceType && getDefaultProfileUrl(resourceType, medplum.getProject());
-  const questionnaireUrl = resourceType && getDefaultQuestionnaireUrl(resourceType, medplum.getProject());
-  const [questionnaire, setQuestionnaire] = useState<Questionnaire>();
 
   useEffect(() => {
     if (patient && resourceType) {
@@ -79,13 +76,6 @@ export function ResourceCreatePage(): JSX.Element {
     }
     setLoadingPatient(false);
   }, [patient, resourceType]);
-
-  useEffect(() => {
-    if (!questionnaireUrl) return;
-    medplum.searchOne('Questionnaire', { url: questionnaireUrl }).then(setQuestionnaire).catch((err) => {
-      setOutcome(normalizeOperationOutcome(err));
-    });
-  }, [medplum, questionnaireUrl]);
 
   const handleSubmit = (newResource: Resource): void => {
     if (outcome) {
@@ -107,13 +97,6 @@ export function ResourceCreatePage(): JSX.Element {
       });
   };
 
-  const handleQuestionnaireSubmit = async (newResource: Resource, response: import('@medplum/fhirtypes').QuestionnaireResponse): Promise<void> => {
-    const result = await medplum.createResource(newResource);
-    response.subject = createReference(result);
-    await medplum.createResource(response);
-    await navigate(prependPatientPath(patient, `/${result.resourceType}/${result.id}`));
-  };
-
   if (loadingPatient) {
     return <Loading />;
   }
@@ -122,16 +105,12 @@ export function ResourceCreatePage(): JSX.Element {
     <Document shadow="xs">
       <Stack>
         <Text fw={500}>New&nbsp;{resourceType}</Text>
-        {questionnaire ? (
-          <TenantQuestionnaireForm questionnaire={questionnaire} onSubmit={handleQuestionnaireSubmit} />
-        ) : (
-          <ResourceFormWithRequiredProfile
-            defaultValue={defaultValue}
-            onSubmit={handleSubmit}
-            outcome={outcome}
-            profileUrl={profileUrl}
-          />
-        )}
+        <ResourceFormWithRequiredProfile
+          defaultValue={defaultValue}
+          onSubmit={handleSubmit}
+          outcome={outcome}
+          profileUrl={profileUrl}
+        />
       </Stack>
     </Document>
   );

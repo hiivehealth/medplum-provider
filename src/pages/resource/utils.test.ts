@@ -39,18 +39,3 @@ describe('getDefaultProfileUrl', () => {
   });
 });
 
-describe('getDefaultQuestionnaireUrl', () => {
-  test('resolves a tenant-configured Questionnaire URL', () => {
-    const project: Project = {
-      resourceType: 'Project',
-      name: 'Tenant',
-      setting: [{ name: 'defaultQuestionnaire:Patient', valueString: 'https://tenant.example/Questionnaire/patient' }],
-    };
-    expect(getDefaultQuestionnaireUrl('Patient', project)).toBe('https://tenant.example/Questionnaire/patient');
-  });
-
-  test('returns undefined without tenant Questionnaire configuration', () => {
-    expect(getDefaultQuestionnaireUrl('Patient', { resourceType: 'Project', name: 'Tenant' })).toBeUndefined();
-  });
-});
-

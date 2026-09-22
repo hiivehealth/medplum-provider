@@ -50,7 +50,7 @@ export function PatientPage(): JSX.Element {
       getDefaultSections(() => setIsLabsModalOpen(true)).map((s) =>
         s.key === 'pharmacies' ? createPharmaciesSection(PharmacyDialogComponent) : s
       ),
-    [setIsLabsModalOpen, PharmacyDialogComponent]
+    [PharmacyDialogComponent]
   );
 
   if (outcome && !isOk(outcome)) {

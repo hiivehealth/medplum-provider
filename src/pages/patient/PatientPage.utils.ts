@@ -51,7 +51,7 @@ export function getPatientPageTabs(
 ): PatientPageTabInfo[] {
   const hasDoseSpot = options?.hasDoseSpotAccess ?? hasDoseSpotIdentifier(membership);
   const hasScriptSure = hasScriptSureIdentifier(membership);
-  return PatientPageTabs.filter((tab) => {
+  const tabs = PatientPageTabs.filter((tab) => {
     if (tab.id === 'dosespot') {
       return hasDoseSpot;
     }
@@ -60,6 +60,7 @@ export function getPatientPageTabs(
     }
     return true;
   });
+  return tabs;
 }
 
 export const PatientPageTabs: PatientPageTabInfo[] = [
