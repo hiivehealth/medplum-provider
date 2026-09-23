@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { Project } from '@medplum/fhirtypes';
 import { describe, expect, test } from 'vitest';
-import { RESOURCE_PROFILE_URLS, getDefaultProfileUrl, getDefaultQuestionnaireUrl } from './utils';
+import { RESOURCE_PROFILE_URLS, getDefaultProfileUrl } from './utils';
 
 describe('getDefaultProfileUrl', () => {
   test('falls back to RESOURCE_PROFILE_URLS when project has no override setting', () => {
