@@ -4,7 +4,6 @@ import react from '@vitejs/plugin-react';
 import dns from 'dns';
 import { copyFileSync, existsSync } from 'fs';
 import path from 'path';
-import type { UserConfig } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 dns.setDefaultResultOrder('verbatim');
@@ -12,32 +11,6 @@ dns.setDefaultResultOrder('verbatim');
 if (!existsSync(path.join(import.meta.dirname, '.env'))) {
   copyFileSync(path.join(import.meta.dirname, '.env.defaults'), path.join(import.meta.dirname, '.env'));
 }
-
-function localPackage(packageName: string): string {
-  const candidates = [
-    path.resolve(import.meta.dirname, `../medplum/packages/${packageName}/src`),
-    path.resolve(import.meta.dirname, `../../packages/${packageName}/src`),
-  ];
-  return candidates.find((candidate) => existsSync(candidate)) ?? '';
-}
-
-// Resolve aliases to local packages when this app is developed beside or inside the Medplum checkout.
-const alias: NonNullable<UserConfig['resolve']>['alias'] = Object.fromEntries(
-  Object.entries({
-    '@medplum/core': localPackage('core'),
-    '@medplum/definitions': localPackage('definitions'),
-    '@medplum/dosespot-core': localPackage('dosespot-core'),
-    '@medplum/dosespot-react': localPackage('dosespot-react'),
-    '@medplum/scriptsure-core': localPackage('scriptsure-core'),
-    '@medplum/scriptsure-react': localPackage('scriptsure-react'),
-    '@medplum/react': localPackage('react'),
-    '@medplum/react-scheduling': localPackage('react-scheduling'),
-    '@medplum/react-hooks': localPackage('react-hooks'),
-    '@medplum/health-gorilla-core': localPackage('health-gorilla-core'),
-    '@medplum/health-gorilla-react': localPackage('health-gorilla-react'),
-    '@medplum/mock': localPackage('mock'),
-  }).filter(([, packagePath]) => packagePath)
-);
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -52,7 +25,6 @@ export default defineConfig({
     port: 3001,
   },
   resolve: {
-    alias,
     dedupe: [
       'react',
       'react-dom',
