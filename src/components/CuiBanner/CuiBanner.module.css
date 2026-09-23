@@ -1,0 +1,12 @@
+.banner {
+  align-items: center;
+  background-color: var(--cui-background);
+  color: var(--cui-foreground);
+  display: flex;
+  font-size: 16px;
+  font-weight: 700;
+  height: var(--cui-height);
+  justify-content: center;
+  line-height: 1;
+  width: 100%;
+}

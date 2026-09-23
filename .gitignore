@@ -13,6 +13,12 @@ dist-ssr
 *.local
 package-lock.json
 
+# Local environment configuration
+.env
+.env.*
+!.env.example
+!.env.defaults
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

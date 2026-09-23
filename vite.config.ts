@@ -5,7 +5,7 @@ import dns from 'dns';
 import { copyFileSync, existsSync } from 'fs';
 import path from 'path';
 import type { UserConfig } from 'vite';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 dns.setDefaultResultOrder('verbatim');
 
@@ -34,15 +34,19 @@ export default defineConfig({
   server: {
     host: 'localhost',
     port: 3001,
+    proxy: { '/api/cui-banner': 'http://127.0.0.1:8105' },
+    fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/*.local', '**/*.local/**'] },
   },
   preview: {
     host: 'localhost',
     port: 3001,
+    proxy: { '/api/cui-banner': 'http://127.0.0.1:8105' },
   },
   resolve: {
     alias,
   },
   test: {
+    exclude: [...configDefaults.exclude, 'server/**', '**/*.local/**'],
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test.setup.ts',
