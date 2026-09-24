@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
+import { Button, Center, Stack, Text, Title } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { getReferenceString } from '@medplum/core';
 import { useDoseSpotNotifications } from '@medplum/dosespot-react';
@@ -82,7 +83,7 @@ export function App(): JSX.Element {
 }
 
 function AppContent(): JSX.Element | null {
-  const { state: cuiPolicy } = useCuiPolicy();
+  const { state: cuiPolicy, refresh: refreshCuiPolicy } = useCuiPolicy();
   const medplum = useMedplum();
   const profile = useMedplumProfile();
   const doseSpotCount = useDoseSpotNotifications();
@@ -99,13 +100,11 @@ function AppContent(): JSX.Element | null {
   const membership = medplum.getProjectMembership();
   const hasScriptSure = hasScriptSureIdentifier(membership);
   const hasBilling = project?.features?.includes('billing') ?? false;
-  let cuiEnabled = false;
-  if (cuiPolicy.status === 'ready') {
-    cuiEnabled = cuiPolicy.policy.enabled;
-  } else if (cuiPolicy.status === 'error') {
-    cuiEnabled = cuiPolicy.lastKnown?.enabled === true;
-  }
-  const showCuiBanner = Boolean(profile) && cuiEnabled && !/^\/signin\/?$/i.test(location.pathname);
+  const showCuiBanner =
+    Boolean(profile) &&
+    cuiPolicy.status === 'ready' &&
+    cuiPolicy.policy.enabled &&
+    !/^\/signin\/?$/i.test(location.pathname);
 
   const [shlOpened, shlHandlers] = useDisclosure(false);
 
@@ -152,6 +151,28 @@ function AppContent(): JSX.Element | null {
 
   if (medplum.isLoading()) {
     return null;
+  }
+
+  if (profile && cuiPolicy.status !== 'ready') {
+    const unavailable = cuiPolicy.status === 'error';
+    return (
+      <Center component="main" mih="100vh" p="xl">
+        <Stack align="center" maw={480} ta="center">
+          {unavailable ? (
+            <>
+              <Title order={1}>Security configuration unavailable</Title>
+              <Text>Provider cannot verify this project&apos;s CUI policy.</Text>
+              <Button onClick={refreshCuiPolicy}>Retry</Button>
+            </>
+          ) : (
+            <>
+              <Loading />
+              <Text>Loading security configuration</Text>
+            </>
+          )}
+        </Stack>
+      </Center>
+    );
   }
 
   const appShellContent = (

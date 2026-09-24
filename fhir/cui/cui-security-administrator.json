@@ -1,0 +1,11 @@
+{
+  "resourceType": "AccessPolicy",
+  "name": "CUI Provider Security Administrator",
+  "resource": [
+    {
+      "resourceType": "Basic",
+      "criteria": "Basic?_id=REPLACE_WITH_CONFIGURATION_ID",
+      "interaction": ["read", "search", "vread", "history", "update"]
+    }
+  ]
+}

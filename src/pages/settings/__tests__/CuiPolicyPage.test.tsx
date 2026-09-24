@@ -7,12 +7,17 @@ import { CUI_ENABLED_URL } from '../../../features/cui/policy';
 import { render, screen, userEvent, waitFor } from '../../../test-utils/render';
 import { CuiPolicyPage } from '../CuiPolicyPage';
 
-const fixture = vi.hoisted(() => ({ canManage: true, refresh: vi.fn() }));
+const fixture = vi.hoisted(() => ({ canManage: true, configurationId: 'c1' as string | undefined, refresh: vi.fn() }));
 vi.mock('../../../features/cui/CuiPolicyProvider', () => ({
   useCuiPolicy: () => ({
     state: {
       status: 'ready',
-      policy: { projectId: 'p1', configurationId: 'c1', enabled: false, canManage: fixture.canManage },
+      policy: {
+        projectId: 'p1',
+        configurationId: fixture.configurationId,
+        enabled: false,
+        canManage: fixture.canManage,
+      },
     },
     refresh: fixture.refresh,
   }),
@@ -67,6 +72,7 @@ async function setup(enabled: boolean | null = false) {
     extension: enabled === null ? undefined : [{ url: CUI_ENABLED_URL, valueBoolean: enabled }],
   });
   const read = vi.spyOn(medplum, 'readResource');
+  const create = vi.spyOn(medplum, 'createResource');
   const update = vi.spyOn(medplum, 'updateResource');
   const view = render(
     <MemoryRouter>
@@ -75,11 +81,12 @@ async function setup(enabled: boolean | null = false) {
       </MedplumProvider>
     </MemoryRouter>
   );
-  return { medplum, read, update, ...view };
+  return { medplum, create, read, update, ...view };
 }
 
 beforeEach(() => {
   fixture.canManage = true;
+  fixture.configurationId = 'c1';
   fixture.refresh.mockReset();
 });
 
@@ -113,6 +120,23 @@ test('an absent policy renders an unchecked toggle without writing a default', a
   const checkbox = within(await screen.findByTestId('slice-cuiBannerEnabled')).getByRole('checkbox');
   expect(checkbox).not.toBeChecked();
   expect(update).not.toHaveBeenCalled();
+});
+
+test('an authorized administrator creates a missing project configuration', async () => {
+  fixture.configurationId = undefined;
+  const { create, read, update } = await setup();
+  const checkbox = within(await screen.findByTestId('slice-cuiBannerEnabled')).getByRole('checkbox');
+  await userEvent.click(checkbox);
+  await userEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+  await waitFor(() => expect(create).toHaveBeenCalled());
+  expect(read).not.toHaveBeenCalled();
+  expect(update).not.toHaveBeenCalled();
+  expect(create.mock.calls[0][0]).toMatchObject({
+    resourceType: 'Basic',
+    meta: { project: 'p1', profile: ['https://ehr.hiivehealth.net/fhir/StructureDefinition/cui-configuration'] },
+    extension: [{ url: CUI_ENABLED_URL, valueBoolean: true }],
+  });
 });
 
 test('ignores duplicate submissions and save completion after leaving the editor', async () => {

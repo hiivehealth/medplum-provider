@@ -1,0 +1,60 @@
+name: CUI Provider Release Gate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cui-provider.yml'
+      - 'docs/cui-banner-implementation-plan.md'
+      - 'fhir/cui/**'
+      - 'scripts/provision-cui.mjs'
+      - 'src/App.tsx'
+      - 'src/components/CuiBanner/**'
+      - 'src/features/cui/**'
+      - 'src/pages/settings/CuiPolicyPage.tsx'
+      - 'src/pages/settings/__tests__/CuiPolicyPage.test.tsx'
+      - 'src/__tests__/CuiAppShell.test.tsx'
+      - 'package.json'
+      - 'package-lock.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cui-provider.yml'
+      - 'docs/cui-banner-implementation-plan.md'
+      - 'fhir/cui/**'
+      - 'scripts/provision-cui.mjs'
+      - 'src/App.tsx'
+      - 'src/components/CuiBanner/**'
+      - 'src/features/cui/**'
+      - 'src/pages/settings/CuiPolicyPage.tsx'
+      - 'src/pages/settings/__tests__/CuiPolicyPage.test.tsx'
+      - 'src/__tests__/CuiAppShell.test.tsx'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cui-provider-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Build and CUI tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: >-
+          npm test -- --run
+          src/features/cui/__tests__/policy.test.ts
+          src/features/cui/__tests__/CuiPolicyProvider.test.tsx
+          src/components/CuiBanner/__tests__/CuiBanner.test.tsx
+          src/pages/settings/__tests__/CuiPolicyPage.test.tsx
+          src/__tests__/CuiAppShell.test.tsx
