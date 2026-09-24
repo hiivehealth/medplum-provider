@@ -73,6 +73,6 @@ describe('SignInPage', () => {
     });
 
     // After successful sign-in, user is redirected to /getstarted
-    expect(await screen.findByText('Get Started with Medplum Provider')).toBeInTheDocument();
+    expect(await screen.findByText('Get Started with Hiive Provider')).toBeInTheDocument();
   });
 });

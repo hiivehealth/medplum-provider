@@ -45,6 +45,11 @@ export const LOINC_CODES: Record<string, Coding> = {
     code: '8302-2',
     display: 'Body height',
   },
+  bloodGlucose: {
+    system: LOINC_SYSTEM,
+    code: '2339-0',
+    display: 'Glucose [Mass/volume] in Blood',
+  },
   hpi: {
     system: LOINC_SYSTEM,
     code: '29545-4',
@@ -76,10 +81,14 @@ export const UCUM_SYSTEM = 'http://unitsofmeasure.org';
 
 export const UCUM_UNITS: Record<string, string> = {
   fahrenheit: '[degF]',
+  celsius: 'Cel',
   bpm: '/min',
   breathsPerMin: '/min',
   percent: '%',
   mmHg: 'mm[Hg]',
   lbs: '[lb_av]',
+  kilograms: 'kg',
   inches: '[in_i]',
+  centimeters: 'cm',
+  milligramsPerDeciliter: 'mg/dL',
 };

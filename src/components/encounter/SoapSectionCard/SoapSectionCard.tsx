@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Alert, Card, LoadingOverlay, Stack, Title } from '@mantine/core';
+import { Alert, Card, LoadingOverlay, Stack } from '@mantine/core';
 import type { Questionnaire, QuestionnaireResponse } from '@medplum/fhirtypes';
 import { QuestionnaireForm } from '@medplum/react';
 import type { JSX } from 'react';
@@ -22,6 +22,9 @@ export function SoapSectionCard(props: SoapSectionCardProps): JSX.Element {
   const { title, questionnaire, questionnaireResponse, loading, error, disabled, onChange } = props;
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingResponseRef = useRef<QuestionnaireResponse | undefined>(undefined);
+  const responseKey = questionnaireResponse
+    ? `${questionnaireResponse.id ?? ''}-${questionnaireResponse.meta?.versionId ?? JSON.stringify(questionnaireResponse.item ?? [])}`
+    : 'empty-response';
 
   const handleChange = useCallback(
     (response: QuestionnaireResponse): void => {
@@ -53,10 +56,9 @@ export function SoapSectionCard(props: SoapSectionCardProps): JSX.Element {
   }, []);
 
   return (
-    <Card withBorder shadow="sm" mt="md" pos="relative">
+    <Card withBorder shadow="sm" mt="md" pos="relative" aria-label={title}>
       <LoadingOverlay visible={loading ?? false} overlayProps={{ radius: 'sm', blur: 2 }} />
       <Stack gap="sm">
-        <Title order={3}>{title}</Title>
         {error && (
           <Alert color="red" title="Unable to load section">
             {error}
@@ -64,6 +66,7 @@ export function SoapSectionCard(props: SoapSectionCardProps): JSX.Element {
         )}
         {questionnaire && !error && (
           <QuestionnaireForm
+            key={responseKey}
             questionnaire={questionnaire}
             questionnaireResponse={questionnaireResponse}
             excludeButtons={true}

@@ -5,22 +5,25 @@ import type { QuestionnaireResponse } from '@medplum/fhirtypes';
 import { QuestionnaireForm } from '@medplum/react';
 import type { JSX } from 'react';
 import { useCallback, useEffect, useRef } from 'react';
-import { DECISION_FLOWS } from '../../../data/decision-flows';
+import { A01CompactQuestionnaire } from '../../tasks/encounter/A01CompactQuestionnaire';
+import { A01_SORE_THROAT_DECISION_FLOW_URL, DECISION_FLOWS } from '../../../data/decision-flows';
 import type { UseDecisionFlowsResult } from '../../../hooks/useDecisionFlows';
 
 export interface DecisionFlowsPanelProps {
   decisionFlows: UseDecisionFlowsResult;
   disabled?: boolean;
+  onA01Completed?: () => void;
 }
 
 const SAVE_DEBOUNCE_MS = 750;
 
 export function DecisionFlowsPanel(props: DecisionFlowsPanelProps): JSX.Element {
-  const { decisionFlows, disabled } = props;
-  const { flows, selectedFlowUrl, setSelectedFlowUrl, saveResponse } = decisionFlows;
+  const { decisionFlows, disabled, onA01Completed } = props;
+  const { flows, selectedFlowUrl, setSelectedFlowUrl, saveResponse, completeResponse } = decisionFlows;
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pendingResponseRef = useRef<QuestionnaireResponse | undefined>(undefined);
+  const a01RefreshTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const options = [
     { value: '', label: 'Select a decision flow...' },
@@ -43,7 +46,7 @@ export function DecisionFlowsPanel(props: DecisionFlowsPanelProps): JSX.Element 
         const pending = pendingResponseRef.current;
         pendingResponseRef.current = undefined;
         if (pending && selectedFlowUrl) {
-          saveResponse(selectedFlowUrl, pending).catch(console.error);
+          saveResponse(selectedFlowUrl, pending);
         }
       }, SAVE_DEBOUNCE_MS);
     },
@@ -55,8 +58,16 @@ export function DecisionFlowsPanel(props: DecisionFlowsPanelProps): JSX.Element 
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
+      a01RefreshTimeoutsRef.current.forEach(clearTimeout);
     };
   }, []);
+
+  const refreshA01Result = useCallback((): void => {
+    onA01Completed?.();
+    a01RefreshTimeoutsRef.current = [1000, 3000].map((delay) =>
+      setTimeout(() => onA01Completed?.(), delay)
+    );
+  }, [onA01Completed]);
 
   return (
     <Card withBorder shadow="sm" mt="md">
@@ -78,12 +89,25 @@ export function DecisionFlowsPanel(props: DecisionFlowsPanelProps): JSX.Element 
         )}
 
         {selectedFlowUrl && selectedState?.questionnaire && !selectedState.error && (
-          <QuestionnaireForm
-            questionnaire={selectedState.questionnaire}
-            questionnaireResponse={selectedState.response}
-            excludeButtons={true}
-            onChange={handleChange}
-          />
+          <>
+            {selectedFlowUrl === A01_SORE_THROAT_DECISION_FLOW_URL ? (
+              <A01CompactQuestionnaire
+                questionnaire={selectedState.questionnaire}
+                questionnaireResponse={selectedState.response}
+                onSubmit={async (response) => {
+                  await completeResponse(selectedFlowUrl, response);
+                  refreshA01Result();
+                }}
+              />
+            ) : (
+              <QuestionnaireForm
+                questionnaire={selectedState.questionnaire}
+                questionnaireResponse={selectedState.response}
+                excludeButtons={true}
+                onChange={handleChange}
+              />
+            )}
+          </>
         )}
       </Stack>
     </Card>

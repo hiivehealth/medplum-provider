@@ -26,6 +26,8 @@ export interface SoapCompositionResources {
   encounter: Encounter;
   practitioner: Reference<Practitioner>;
   clinicalImpression?: ClinicalImpression;
+  adtmcA01ClinicalImpression?: ClinicalImpression;
+  adtmcA01QuestionnaireResponse?: QuestionnaireResponse;
   observations: Observation[];
   conditions: Condition[];
   carePlans: CarePlan[];
@@ -33,7 +35,18 @@ export interface SoapCompositionResources {
 }
 
 export function buildSoapComposition(resources: SoapCompositionResources): Composition {
-  const { patient, encounter, practitioner, clinicalImpression, observations, conditions, carePlans, questionnaireResponses } = resources;
+  const {
+    patient,
+    encounter,
+    practitioner,
+    clinicalImpression,
+    adtmcA01ClinicalImpression,
+    adtmcA01QuestionnaireResponse,
+    observations,
+    conditions,
+    carePlans,
+    questionnaireResponses,
+  } = resources;
 
   const now = new Date().toISOString();
 
@@ -69,6 +82,12 @@ export function buildSoapComposition(resources: SoapCompositionResources): Compo
   const sectionEntries: Reference[] = [];
   if (clinicalImpression?.id) {
     sectionEntries.push({ reference: getReferenceString(clinicalImpression) });
+  }
+  if (adtmcA01ClinicalImpression?.id) {
+    sectionEntries.push({ reference: getReferenceString(adtmcA01ClinicalImpression) });
+  }
+  if (adtmcA01QuestionnaireResponse?.id) {
+    sectionEntries.push({ reference: getReferenceString(adtmcA01QuestionnaireResponse) });
   }
 
   return {
@@ -124,6 +143,7 @@ export function buildSoapComposition(resources: SoapCompositionResources): Compo
         entry: [
           ...toRefs(assessmentObservations),
           ...toRefs(diagnosisConditions),
+          ...sectionEntries,
           ...(assessmentResponse?.id ? [{ reference: `QuestionnaireResponse/${assessmentResponse.id}` }] : []),
         ],
         text: {
@@ -136,6 +156,7 @@ export function buildSoapComposition(resources: SoapCompositionResources): Compo
         code: { coding: [{ system: 'http://loinc.org', code: '18776-5', display: 'Plan of care note' }] },
         entry: [
           ...toRefs(carePlans),
+          ...sectionEntries,
           ...(planResponse?.id ? [{ reference: `QuestionnaireResponse/${planResponse.id}` }] : []),
         ],
         text: {

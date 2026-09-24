@@ -1,0 +1,22 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://hiivehealth.com/questionnaire/ros-unable-to-obtain",
+  "name": "HiiveRosUnableToObtain",
+  "title": "ROS Unable to Obtain",
+  "status": "active",
+  "description": "ROS template used when a normal review cannot be obtained.",
+  "item": [
+    {
+      "linkId": "ros-unable-reason",
+      "type": "choice",
+      "text": "Unable to obtain ROS secondary to",
+      "required": true,
+      "answerOption": [
+        { "valueString": "altered mental status" },
+        { "valueString": "decreased level of consciousness" },
+        { "valueString": "uncooperative behavior" },
+        { "valueString": "intubation" }
+      ]
+    }
+  ]
+}

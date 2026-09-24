@@ -2,49 +2,84 @@
   "resourceType": "Questionnaire",
   "url": "https://hiivehealth.com/questionnaire/soap-objective",
   "name": "HiiveSOAPObjective",
-  "title": "Objective",
   "status": "active",
   "description": "Objective section of the SOAP note: vital signs and physical examination findings.",
   "item": [
     {
-      "linkId": "temperature",
-      "type": "decimal",
-      "text": "Temperature (°F)"
-    },
-    {
-      "linkId": "heart-rate",
-      "type": "integer",
-      "text": "Heart rate (bpm)"
-    },
-    {
-      "linkId": "respiratory-rate",
-      "type": "integer",
-      "text": "Respiratory rate (breaths/min)"
-    },
-    {
-      "linkId": "systolic-bp",
-      "type": "integer",
-      "text": "Systolic BP (mmHg)"
-    },
-    {
-      "linkId": "diastolic-bp",
-      "type": "integer",
-      "text": "Diastolic BP (mmHg)"
-    },
-    {
-      "linkId": "spO2",
-      "type": "integer",
-      "text": "SpO₂ (%)"
-    },
-    {
-      "linkId": "weight",
-      "type": "decimal",
-      "text": "Weight (lbs)"
-    },
-    {
-      "linkId": "height",
-      "type": "decimal",
-      "text": "Height (in)"
+      "linkId": "vitals",
+      "type": "group",
+      "text": "Vitals",
+      "item": [
+        {
+          "linkId": "temperature-unit",
+          "type": "choice",
+          "text": "Temperature unit",
+          "answerOption": [
+            { "valueCoding": { "system": "http://unitsofmeasure.org", "code": "[degF]", "display": "Fahrenheit (°F)" }, "initialSelected": true },
+            { "valueCoding": { "system": "http://unitsofmeasure.org", "code": "Cel", "display": "Celsius (°C)" } }
+          ]
+        },
+        {
+          "linkId": "temperature-f",
+          "type": "decimal",
+          "text": "Temperature (°F)",
+          "enableWhen": [{ "question": "temperature-unit", "operator": "=", "answerCoding": { "system": "http://unitsofmeasure.org", "code": "[degF]" } }]
+        },
+        {
+          "linkId": "temperature-c",
+          "type": "decimal",
+          "text": "Temperature (°C)",
+          "enableWhen": [{ "question": "temperature-unit", "operator": "=", "answerCoding": { "system": "http://unitsofmeasure.org", "code": "Cel" } }]
+        },
+        { "linkId": "heart-rate", "type": "integer", "text": "Heart rate (bpm)" },
+        {
+          "linkId": "weight-unit",
+          "type": "choice",
+          "text": "Weight unit",
+          "answerOption": [
+            { "valueCoding": { "system": "http://unitsofmeasure.org", "code": "[lb_av]", "display": "Pounds (lb)" }, "initialSelected": true },
+            { "valueCoding": { "system": "http://unitsofmeasure.org", "code": "kg", "display": "Kilograms (kg)" } }
+          ]
+        },
+        {
+          "linkId": "weight-lb",
+          "type": "decimal",
+          "text": "Weight (lb)",
+          "enableWhen": [{ "question": "weight-unit", "operator": "=", "answerCoding": { "system": "http://unitsofmeasure.org", "code": "[lb_av]" } }]
+        },
+        {
+          "linkId": "weight-kg",
+          "type": "decimal",
+          "text": "Weight (kg)",
+          "enableWhen": [{ "question": "weight-unit", "operator": "=", "answerCoding": { "system": "http://unitsofmeasure.org", "code": "kg" } }]
+        },
+        {
+          "linkId": "height-unit",
+          "type": "choice",
+          "text": "Height unit",
+          "answerOption": [
+            { "valueCoding": { "system": "http://unitsofmeasure.org", "code": "[in_i]", "display": "Inches (in)" }, "initialSelected": true },
+            { "valueCoding": { "system": "http://unitsofmeasure.org", "code": "cm", "display": "Centimeters (cm)" } }
+          ]
+        },
+        {
+          "linkId": "height-in",
+          "type": "decimal",
+          "text": "Height (in)",
+          "enableWhen": [{ "question": "height-unit", "operator": "=", "answerCoding": { "system": "http://unitsofmeasure.org", "code": "[in_i]" } }]
+        },
+        {
+          "linkId": "height-cm",
+          "type": "decimal",
+          "text": "Height (cm)",
+          "enableWhen": [{ "question": "height-unit", "operator": "=", "answerCoding": { "system": "http://unitsofmeasure.org", "code": "cm" } }]
+        },
+        { "linkId": "spO2", "type": "integer", "text": "SpO₂ (%)" },
+        { "linkId": "respiratory-rate", "type": "integer", "text": "Respiratory rate (breaths/min)" },
+        { "linkId": "systolic-bp", "type": "integer", "text": "Systolic BP (mmHg)" },
+        { "linkId": "diastolic-bp", "type": "integer", "text": "Diastolic BP (mmHg)" },
+        { "linkId": "blood-glucose", "type": "decimal", "text": "Blood glucose (mg/dL)" }
+      ]
     },
     {
       "linkId": "physical-exam",

@@ -12,12 +12,33 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider, createBrowserRouter } from 'react-router';
 import { App } from './App';
-import { MEDPLUM_BASE_URL, MEDPLUM_CLIENT_ID } from './config/constants';
+import { MEDPLUM_BASE_URL, MEDPLUM_CLIENT_ID, MEDPLUM_PROJECT_ID } from './config/constants';
+
+const PROJECT_ID_STORAGE_KEY = 'medplum_project_id';
+const CLIENT_ID_STORAGE_KEY = 'medplum_client_id';
+const loginParameters = new URLSearchParams(window.location.search);
+const queryProjectId = loginParameters.get('project');
+const queryClientId = loginParameters.get('client');
+
+if (queryProjectId) {
+  sessionStorage.setItem(PROJECT_ID_STORAGE_KEY, queryProjectId);
+}
+if (queryClientId) {
+  sessionStorage.setItem(CLIENT_ID_STORAGE_KEY, queryClientId);
+}
+
+const projectId = sessionStorage.getItem(PROJECT_ID_STORAGE_KEY) || MEDPLUM_PROJECT_ID;
+const clientId = sessionStorage.getItem(CLIENT_ID_STORAGE_KEY) || MEDPLUM_CLIENT_ID;
+
+function signInUrl(): string {
+  const parameters = new URLSearchParams({ project: projectId, client: clientId });
+  return `/signin?${parameters.toString()}`;
+}
 
 const medplum = new MedplumClient({
-  onUnauthenticated: () => (window.location.href = '/'),
+  onUnauthenticated: () => (window.location.href = signInUrl()),
   baseUrl: sessionStorage.getItem('medplum_base_url') || MEDPLUM_BASE_URL,
-  clientId: MEDPLUM_CLIENT_ID,
+  clientId,
   cacheTime: 60000,
   autoBatchTime: 100,
 });

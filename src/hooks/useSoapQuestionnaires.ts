@@ -29,6 +29,7 @@ export interface UseSoapQuestionnairesResult {
   questionnaires: Map<string, SoapQuestionnaireState>;
   refresh: () => Promise<void>;
   saveResponse: (questionnaireUrl: string, response: QuestionnaireResponse) => Promise<void>;
+  removeResponse: (questionnaireUrl: string) => Promise<void>;
   persistAll: () => Promise<{
     observations: Observation[];
     conditions: Condition[];
@@ -81,7 +82,7 @@ export function useSoapQuestionnaires(
   );
 
   const loadQuestionnaires = useCallback(async (): Promise<void> => {
-    if (!encounterRef || !patientRef) {
+    if (!encounterRef) {
       return;
     }
 
@@ -375,9 +376,20 @@ export function useSoapQuestionnaires(
       };
 
       try {
-        const saved = updatedResponse.id
-          ? await medplum.updateResource(updatedResponse)
-          : await medplum.createResource(updatedResponse);
+        let saved: QuestionnaireResponse;
+        if (updatedResponse.id) {
+          try {
+            saved = await medplum.updateResource(updatedResponse);
+          } catch (err) {
+            if (!isConflictError(err)) {
+              throw err;
+            }
+            const latestResponse = await medplum.readResource('QuestionnaireResponse', updatedResponse.id);
+            saved = await medplum.updateResource({ ...latestResponse, ...updatedResponse, meta: latestResponse.meta });
+          }
+        } else {
+          saved = await medplum.createResource(updatedResponse);
+        }
 
         const nextResponses = new Map<string, QuestionnaireResponse | undefined>();
         setQuestionnaires((prev) => {
@@ -416,6 +428,22 @@ export function useSoapQuestionnaires(
     [doSaveResponse]
   );
 
+  const removeResponse = useCallback(async (questionnaireUrl: string): Promise<void> => {
+    const response = questionnaires.get(questionnaireUrl)?.response;
+    if (response?.id) {
+      await medplum.deleteResource('QuestionnaireResponse', response.id);
+    }
+    setQuestionnaires((previous) => {
+      const state = previous.get(questionnaireUrl);
+      if (!state) {
+        return previous;
+      }
+      const next = new Map(previous);
+      next.set(questionnaireUrl, { ...state, response: undefined });
+      return next;
+    });
+  }, [medplum, questionnaires]);
+
   useEffect(() => {
     let cancelled = false;
     loadQuestionnaires().catch((err) => {
@@ -432,8 +460,13 @@ export function useSoapQuestionnaires(
     questionnaires,
     refresh: loadQuestionnaires,
     saveResponse,
+    removeResponse,
     persistAll,
     extractedResources,
     extractedDisposition,
   };
+}
+
+function isConflictError(error: unknown): boolean {
+  return normalizeErrorString(error).includes('409');
 }

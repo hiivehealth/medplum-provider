@@ -18,7 +18,8 @@ export interface UseDecisionFlowsResult {
   flows: Map<string, DecisionFlowState>;
   selectedFlowUrl: string | null;
   setSelectedFlowUrl: (url: string | null) => void;
-  saveResponse: (questionnaireUrl: string, response: QuestionnaireResponse) => Promise<void>;
+  saveResponse: (questionnaireUrl: string, response: QuestionnaireResponse) => void;
+  completeResponse: (questionnaireUrl: string, response: QuestionnaireResponse) => Promise<void>;
 }
 
 export function useDecisionFlows(
@@ -162,6 +163,48 @@ export function useDecisionFlows(
     [doSaveResponse]
   );
 
+  const completeResponse = useCallback(
+    async (questionnaireUrl: string, response: QuestionnaireResponse): Promise<void> => {
+      const pendingSave = saveTimeouts.current.get(questionnaireUrl);
+      if (pendingSave) {
+        clearTimeout(pendingSave);
+        saveTimeouts.current.delete(questionnaireUrl);
+      }
+      pendingSaves.current.delete(questionnaireUrl);
+
+      const state = flows.get(questionnaireUrl);
+      if (!state || !encounterRef || !patientRef) {
+        return;
+      }
+
+      const completedResponse: QuestionnaireResponse = {
+        ...(state.response || response),
+        resourceType: 'QuestionnaireResponse',
+        questionnaire: `${questionnaireUrl}|${state.questionnaire?.version ?? ''}`,
+        status: 'completed',
+        subject: patientRef,
+        encounter: encounterRef,
+        authored: new Date().toISOString(),
+        source: authorRef,
+        item: response.item,
+      };
+
+      try {
+        const saved = completedResponse.id
+          ? await medplum.updateResource(completedResponse)
+          : await medplum.createResource(completedResponse);
+        setFlows((previous) => {
+          const next = new Map(previous);
+          next.set(questionnaireUrl, { ...state, response: saved });
+          return next;
+        });
+      } catch (err) {
+        showErrorNotification(err);
+      }
+    },
+    [authorRef, encounterRef, flows, medplum, patientRef]
+  );
+
   useEffect(() => {
     let cancelled = false;
     loadFlows().catch((err) => {
@@ -174,5 +217,5 @@ export function useDecisionFlows(
     };
   }, [loadFlows]);
 
-  return { flows, selectedFlowUrl, setSelectedFlowUrl, saveResponse };
+  return { flows, selectedFlowUrl, setSelectedFlowUrl, saveResponse, completeResponse };
 }

@@ -15,6 +15,7 @@ import type {
   Resource,
 } from '@medplum/fhirtypes';
 import { LOINC_CODES, UCUM_SYSTEM, UCUM_UNITS } from './loinc-codes';
+import { createVitalObservation } from './vitals';
 
 export interface ExtractedResources {
   observations: Observation[];
@@ -44,7 +45,26 @@ function toReference<T extends Resource>(
 }
 
 function findItem(response: QuestionnaireResponse, linkId: string): QuestionnaireResponseItem | undefined {
-  return response.item?.find((item) => item.linkId === linkId);
+  const findNestedItem = (items: QuestionnaireResponseItem[] | undefined): QuestionnaireResponseItem | undefined => {
+    for (const item of items ?? []) {
+      if (item.linkId === linkId) {
+        return item;
+      }
+      const nestedItem = findNestedItem(item.item);
+      if (nestedItem) {
+        return nestedItem;
+      }
+      for (const answer of item.answer ?? []) {
+        const nestedAnswerItem = findNestedItem(answer.item);
+        if (nestedAnswerItem) {
+          return nestedAnswerItem;
+        }
+      }
+    }
+    return undefined;
+  };
+
+  return findNestedItem(response.item);
 }
 
 function getAnswer(item: QuestionnaireResponseItem | undefined): QuestionnaireResponseItemAnswer | undefined {
@@ -109,32 +129,46 @@ export function extractSubjective(
     });
   }
 
-  const chiefComplaints = findItem(response, 'chief-complaint')?.answer ?? [];
-  for (const answer of chiefComplaints) {
-    const text = (answer as { valueString?: string; valueText?: string }).valueString ?? (answer as { valueString?: string; valueText?: string }).valueText;
-    if (!text) {
-      continue;
+  const complaintGroups = response.item?.filter((item) => item.linkId === 'complaint') ?? [];
+  if (complaintGroups.length > 0) {
+    for (const complaintGroup of complaintGroups) {
+      const text = stringAnswer(findItem({ resourceType: 'QuestionnaireResponse', status: response.status, item: complaintGroup.item }, 'complaint-text'));
+      if (text) {
+        result.conditions.push(buildComplaintCondition(text, dateAnswer(findItem({ resourceType: 'QuestionnaireResponse', status: response.status, item: complaintGroup.item }, 'complaint-onset')), patient, encounter));
+      }
     }
-    result.conditions.push({
-      resourceType: 'Condition',
-      clinicalStatus: { coding: [{ system: 'http://terminology.hl7.org/CodeSystem/condition-clinical', code: 'active' }] },
-      verificationStatus: {
-        coding: [{ system: 'http://terminology.hl7.org/CodeSystem/condition-ver-status', code: 'provisional' }],
-      },
-      category: [
-        {
-          coding: [
-            { system: 'http://terminology.hl7.org/CodeSystem/condition-category', code: 'problem-list-item', display: 'Problem List Item' },
-          ],
-        },
-      ],
-      code: { text },
-      subject: createReference(patient),
-      encounter: createReference(encounter),
-    });
+  } else {
+    const chiefComplaints = findItem(response, 'chief-complaint')?.answer ?? [];
+    for (const answer of chiefComplaints) {
+      const text = (answer as { valueString?: string; valueText?: string }).valueString ?? (answer as { valueString?: string; valueText?: string }).valueText;
+      if (text) {
+        result.conditions.push(buildComplaintCondition(text, undefined, patient, encounter));
+      }
+    }
   }
 
   return result;
+}
+
+function buildComplaintCondition(text: string, onsetDateTime: string | undefined, patient: Patient, encounter: Encounter): Condition {
+  return {
+    resourceType: 'Condition',
+    clinicalStatus: { coding: [{ system: 'http://terminology.hl7.org/CodeSystem/condition-clinical', code: 'active' }] },
+    verificationStatus: {
+      coding: [{ system: 'http://terminology.hl7.org/CodeSystem/condition-ver-status', code: 'provisional' }],
+    },
+    category: [
+      {
+        coding: [
+          { system: 'http://terminology.hl7.org/CodeSystem/condition-category', code: 'problem-list-item', display: 'Problem List Item' },
+        ],
+      },
+    ],
+    code: { text },
+    onsetDateTime,
+    subject: createReference(patient),
+    encounter: createReference(encounter),
+  };
 }
 
 export function extractReviewOfSystems(
@@ -145,6 +179,24 @@ export function extractReviewOfSystems(
   const result: ExtractedResources = { observations: [], conditions: [], carePlans: [] };
 
   for (const systemGroup of response.item ?? []) {
+    if (systemGroup.linkId === 'ros-unable-reason') {
+      const reason = stringAnswer(systemGroup);
+      if (reason) {
+        result.observations.push({
+          resourceType: 'Observation',
+          status: 'final',
+          category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'survey', display: 'Survey' }] }],
+          code: { coding: [LOINC_CODES.reviewOfSystems], text: 'Review of Systems - Unable to Obtain' },
+          subject: createReference(patient),
+          encounter: createReference(encounter),
+          performer: practitioner ? [toReference(practitioner) as Reference<Practitioner>] : undefined,
+          effectiveDateTime: new Date().toISOString(),
+          valueString: reason,
+        });
+      }
+      continue;
+    }
+
     if ((systemGroup as QuestionnaireResponseItem & { type?: string }).type !== 'group') {
       continue;
     }
@@ -159,6 +211,11 @@ export function extractReviewOfSystems(
         isNegative = true;
       } else if (answer) {
         findings.push(item.text || item.linkId);
+      } else {
+        const selectedValue = stringAnswer(item);
+        if (selectedValue && selectedValue !== 'no') {
+          findings.push(`${item.text || item.linkId}: ${selectedValue}`);
+        }
       }
     }
 
@@ -204,7 +261,38 @@ export function extractObjective(
   const { patient, encounter, practitioner } = context;
   const result: ExtractedResources = { observations: [], conditions: [], carePlans: [] };
 
-  const vitals: { linkId: string; coding: typeof LOINC_CODES.bodyTemperature; unit?: string; value?: number }[] = [
+  const unitVitals: {
+    unitLinkId: string;
+    alternatives: { linkId: string; unit: string }[];
+    coding: typeof LOINC_CODES.bodyTemperature;
+  }[] = [
+    {
+      unitLinkId: 'temperature-unit',
+      alternatives: [
+        { linkId: 'temperature-f', unit: UCUM_UNITS.fahrenheit },
+        { linkId: 'temperature-c', unit: UCUM_UNITS.celsius },
+      ],
+      coding: LOINC_CODES.bodyTemperature,
+    },
+    {
+      unitLinkId: 'weight-unit',
+      alternatives: [
+        { linkId: 'weight-lb', unit: UCUM_UNITS.lbs },
+        { linkId: 'weight-kg', unit: UCUM_UNITS.kilograms },
+      ],
+      coding: LOINC_CODES.bodyWeight,
+    },
+    {
+      unitLinkId: 'height-unit',
+      alternatives: [
+        { linkId: 'height-in', unit: UCUM_UNITS.inches },
+        { linkId: 'height-cm', unit: UCUM_UNITS.centimeters },
+      ],
+      coding: LOINC_CODES.bodyHeight,
+    },
+  ];
+
+  const vitals: { linkId: string; coding: typeof LOINC_CODES.bodyTemperature; unit: string }[] = [
     { linkId: 'temperature', coding: LOINC_CODES.bodyTemperature, unit: UCUM_UNITS.fahrenheit },
     { linkId: 'heart-rate', coding: LOINC_CODES.heartRate, unit: UCUM_UNITS.bpm },
     { linkId: 'respiratory-rate', coding: LOINC_CODES.respiratoryRate, unit: UCUM_UNITS.breathsPerMin },
@@ -213,7 +301,37 @@ export function extractObjective(
     { linkId: 'diastolic-bp', coding: LOINC_CODES.diastolicBloodPressure, unit: UCUM_UNITS.mmHg },
     { linkId: 'weight', coding: LOINC_CODES.bodyWeight, unit: UCUM_UNITS.lbs },
     { linkId: 'height', coding: LOINC_CODES.bodyHeight, unit: UCUM_UNITS.inches },
+    { linkId: 'blood-glucose', coding: LOINC_CODES.bloodGlucose, unit: UCUM_UNITS.milligramsPerDeciliter },
   ];
+
+  for (const vital of unitVitals) {
+    const answeredAlternatives = vital.alternatives.filter((alternative) => decimalAnswer(findItem(response, alternative.linkId)) !== undefined);
+    if (answeredAlternatives.length > 1) {
+      throw new Error(`Conflicting answers for ${vital.coding.display}`);
+    }
+
+    const alternative = answeredAlternatives[0];
+    const value = alternative ? decimalAnswer(findItem(response, alternative.linkId)) : undefined;
+    if (value === undefined || value === null) {
+      continue;
+    }
+
+    const selectedUnit = codingAnswer(findItem(response, vital.unitLinkId))?.code;
+    if (selectedUnit && selectedUnit !== alternative.unit) {
+      throw new Error(`Selected unit does not match ${vital.coding.display}`);
+    }
+
+    result.observations.push(
+      createVitalObservation({
+        patient,
+        encounter,
+        coding: vital.coding,
+        value,
+        unit: alternative.unit,
+        performer: toReference(practitioner) as Reference<Practitioner> | undefined,
+      })
+    );
+  }
 
   for (const vital of vitals) {
     const value = decimalAnswer(findItem(response, vital.linkId));
@@ -221,32 +339,16 @@ export function extractObjective(
       continue;
     }
 
-    result.observations.push({
-      resourceType: 'Observation',
-      status: 'final',
-      category: [
-        {
-          coding: [
-            {
-              system: 'http://terminology.hl7.org/CodeSystem/observation-category',
-              code: 'vital-signs',
-              display: 'Vital Signs',
-            },
-          ],
-        },
-      ],
-      code: { coding: [vital.coding] },
-      subject: createReference(patient),
-      encounter: createReference(encounter),
-      performer: practitioner ? [toReference(practitioner) as Reference<Practitioner>] : undefined,
-      effectiveDateTime: new Date().toISOString(),
-      valueQuantity: {
+    result.observations.push(
+      createVitalObservation({
+        patient,
+        encounter,
+        coding: vital.coding,
         value,
         unit: vital.unit,
-        system: UCUM_SYSTEM,
-        code: vital.unit,
-      },
-    });
+        performer: toReference(practitioner) as Reference<Practitioner> | undefined,
+      })
+    );
   }
 
   const physicalExam = stringAnswer(findItem(response, 'physical-exam'));
@@ -411,6 +513,9 @@ export function extractSoapResponse(
     case 'https://hiivehealth.com/questionnaire/soap-subjective':
       return extractSubjective(response, context);
     case 'https://hiivehealth.com/questionnaire/review-of-systems':
+    case 'https://hiivehealth.com/questionnaire/ros-brief-normal':
+    case 'https://hiivehealth.com/questionnaire/ros-extended-normal':
+    case 'https://hiivehealth.com/questionnaire/ros-unable-to-obtain':
       return extractReviewOfSystems(response, context);
     case 'https://hiivehealth.com/questionnaire/soap-objective':
       return extractObjective(response, context);

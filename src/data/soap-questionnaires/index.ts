@@ -7,13 +7,29 @@ export const SOAP_OBJECTIVE_URL = 'https://hiivehealth.com/questionnaire/soap-ob
 export const SOAP_ASSESSMENT_URL = 'https://hiivehealth.com/questionnaire/soap-assessment';
 export const SOAP_PLAN_URL = 'https://hiivehealth.com/questionnaire/soap-plan';
 export const REVIEW_OF_SYSTEMS_URL = 'https://hiivehealth.com/questionnaire/review-of-systems';
+export const ROS_BRIEF_NORMAL_URL = 'https://hiivehealth.com/questionnaire/ros-brief-normal';
+export const ROS_EXTENDED_NORMAL_URL = 'https://hiivehealth.com/questionnaire/ros-extended-normal';
+export const ROS_UNABLE_TO_OBTAIN_URL = 'https://hiivehealth.com/questionnaire/ros-unable-to-obtain';
+export const PHYSICAL_EXAM_ADULT_BRIEF_URL = 'https://hiivehealth.com/questionnaire/physical-exam-adult-brief';
+export const PHYSICAL_EXAM_PEDIATRIC_BRIEF_URL = 'https://hiivehealth.com/questionnaire/physical-exam-pediatric-brief';
+export const PHYSICAL_EXAM_ADULT_EXTENDED_URL = 'https://hiivehealth.com/questionnaire/physical-exam-adult-extended';
+export const PHYSICAL_EXAM_PEDIATRIC_EXTENDED_URL = 'https://hiivehealth.com/questionnaire/physical-exam-pediatric-extended';
+
+export const ROS_TEMPLATE_URLS = [ROS_BRIEF_NORMAL_URL, ROS_EXTENDED_NORMAL_URL, ROS_UNABLE_TO_OBTAIN_URL];
+export const PHYSICAL_EXAM_TEMPLATE_URLS = [
+  PHYSICAL_EXAM_ADULT_BRIEF_URL,
+  PHYSICAL_EXAM_ADULT_EXTENDED_URL,
+  PHYSICAL_EXAM_PEDIATRIC_BRIEF_URL,
+  PHYSICAL_EXAM_PEDIATRIC_EXTENDED_URL,
+];
 
 export const SOAP_QUESTIONNAIRE_URLS: string[] = [
   SOAP_SUBJECTIVE_URL,
   SOAP_OBJECTIVE_URL,
   SOAP_ASSESSMENT_URL,
   SOAP_PLAN_URL,
-  REVIEW_OF_SYSTEMS_URL,
+  ...ROS_TEMPLATE_URLS,
+  ...PHYSICAL_EXAM_TEMPLATE_URLS,
 ];
 
 export interface SoapQuestionnaireDefinition {

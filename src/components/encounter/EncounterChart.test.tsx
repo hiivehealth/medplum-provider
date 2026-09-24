@@ -3,13 +3,14 @@
 import { MantineProvider } from '@mantine/core';
 import type { WithId } from '@medplum/core';
 import { createReference } from '@medplum/core';
-import type { ClinicalImpression, Encounter, Practitioner, Provenance, Task } from '@medplum/fhirtypes';
+import type { ClinicalImpression, Encounter, Practitioner, Provenance, QuestionnaireResponse, Task } from '@medplum/fhirtypes';
 import { HomerSimpson, MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { SOAP_SUBJECTIVE_URL } from '../../data/soap-questionnaires';
 import { EncounterChart } from './EncounterChart';
 
 const mockPractitioner: WithId<Practitioner> = {
@@ -52,6 +53,23 @@ const mockTask: Task = {
   authoredOn: '2024-01-01T10:00:00Z',
 };
 
+const mockSubjectiveResponse: QuestionnaireResponse = {
+  resourceType: 'QuestionnaireResponse',
+  status: 'in-progress',
+  questionnaire: SOAP_SUBJECTIVE_URL,
+  subject: createReference(HomerSimpson),
+  encounter: createReference(mockEncounter),
+  item: [
+    {
+      linkId: 'complaint',
+      item: [
+        { linkId: 'complaint-text', answer: [{ valueString: 'Sore throat' }] },
+        { linkId: 'complaint-is-chief', answer: [{ valueBoolean: true }] },
+      ],
+    },
+  ],
+};
+
 describe('EncounterChart', () => {
   let medplum: MockClient;
 
@@ -60,6 +78,8 @@ describe('EncounterChart', () => {
     await medplum.createResource(mockPractitioner);
     await medplum.createResource(mockEncounter);
     await medplum.createResource(mockClinicalImpression);
+    await medplum.createResource({ resourceType: 'Questionnaire', status: 'active', url: SOAP_SUBJECTIVE_URL });
+    await medplum.createResource(mockSubjectiveResponse);
     vi.clearAllMocks();
   });
 
@@ -92,40 +112,6 @@ describe('EncounterChart', () => {
     });
   });
 
-  test('renders chart note textarea', async () => {
-    setup();
-
-    await waitFor(() => {
-      expect(screen.getByText('Fill chart note')).toBeInTheDocument();
-    });
-
-    const textarea = screen.getByRole('textbox', { name: /chart note/i });
-    expect(textarea).toBeInTheDocument();
-    expect(textarea).toHaveValue('Test clinical note');
-  });
-
-  test('updates chart note on change', async () => {
-    const user = userEvent.setup();
-    vi.spyOn(medplum, 'updateResource').mockResolvedValue(mockClinicalImpression as any);
-
-    setup();
-
-    await waitFor(() => {
-      expect(screen.getByText('Fill chart note')).toBeInTheDocument();
-    });
-
-    const textarea = screen.getByRole('textbox', { name: /chart note/i });
-    await user.clear(textarea);
-    await user.type(textarea, 'Updated note');
-
-    await waitFor(
-      () => {
-        expect(medplum.updateResource).toHaveBeenCalled();
-      },
-      { timeout: 3000 }
-    );
-  });
-
   test('displays tasks when available', async () => {
     await medplum.createResource(mockTask);
 
@@ -136,17 +122,14 @@ describe('EncounterChart', () => {
     });
   });
 
-  test('renders notes tab by default', async () => {
+  test('hides Room and Station for SOAP notes by default', async () => {
     setup();
 
     await waitFor(() => {
       expect(screen.getByText('Visit')).toBeInTheDocument();
     });
 
-    // The notes tab should be active by default
-    await waitFor(() => {
-      expect(screen.getByText('Fill chart note')).toBeInTheDocument();
-    });
+    expect(screen.queryByText('Room and Station')).not.toBeInTheDocument();
   });
 
   test('switches to details tab when clicked', async () => {
@@ -158,14 +141,14 @@ describe('EncounterChart', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Fill chart note')).toBeInTheDocument();
+      expect(screen.getByText('Subjective')).toBeInTheDocument();
     });
 
     const detailsTab = screen.getByText('Details & Billing');
     await user.click(detailsTab);
 
     await waitFor(() => {
-      expect(screen.queryByText('Fill chart note')).not.toBeInTheDocument();
+      expect(screen.queryByText('Room and Station')).not.toBeInTheDocument();
     });
   });
 
@@ -181,14 +164,14 @@ describe('EncounterChart', () => {
     await user.click(detailsTab);
 
     await waitFor(() => {
-      expect(screen.queryByText('Fill chart note')).not.toBeInTheDocument();
+      expect(screen.queryByText('Room and Station')).not.toBeInTheDocument();
     });
 
     const notesTab = screen.getByText('Note & Tasks');
     await user.click(notesTab);
 
     await waitFor(() => {
-      expect(screen.getByText('Fill chart note')).toBeInTheDocument();
+      expect(screen.getByText('Subjective')).toBeInTheDocument();
     });
   });
 
@@ -204,7 +187,7 @@ describe('EncounterChart', () => {
     await user.click(detailsTab);
 
     await waitFor(() => {
-      expect(screen.queryByText('Fill chart note')).not.toBeInTheDocument();
+      expect(screen.queryByText('Room and Station')).not.toBeInTheDocument();
     });
   });
 
@@ -219,30 +202,6 @@ describe('EncounterChart', () => {
         expect.stringContaining('target=Encounter/encounter-123')
       );
     });
-  });
-
-  test('chart note is enabled when not signed', async () => {
-    vi.spyOn(medplum, 'searchResources').mockImplementation((resourceType: string) => {
-      if (resourceType === 'Provenance') {
-        return [] as any;
-      }
-      if (resourceType === 'ClinicalImpression') {
-        return [mockClinicalImpression];
-      }
-      if (resourceType === 'Task') {
-        return [];
-      }
-      return [];
-    });
-
-    setup();
-
-    await waitFor(() => {
-      expect(screen.getByText('Fill chart note')).toBeInTheDocument();
-    });
-
-    const textarea = screen.getByRole('textbox', { name: /chart note/i });
-    expect(textarea).not.toBeDisabled();
   });
 
   test('handles encounter status change', async () => {
@@ -356,7 +315,7 @@ describe('EncounterChart', () => {
       setup({ encounter: finishedEncounter });
 
       await waitFor(() => {
-        expect(screen.getByText('Fill chart note')).toBeInTheDocument();
+        expect(screen.getByText('Subjective')).toBeInTheDocument();
       });
 
       await waitFor(() => {
@@ -384,19 +343,9 @@ describe('EncounterChart', () => {
         );
       });
 
-      // Wait for modal to close and component to update
-      // Textarea should still be enabled after signing without locking
-      await waitFor(
-        () => {
-          const chartNoteCard = screen.getByText('Fill chart note').closest('.mantine-Card-root');
-          const textarea = chartNoteCard?.querySelector('textarea');
-          expect(textarea).not.toBeDisabled();
-        },
-        { timeout: 3000 }
-      );
     });
 
-    test('signs with locking - textarea becomes disabled', async () => {
+    test('signs with locking', async () => {
       const user = userEvent.setup();
       const completedClinicalImpression: ClinicalImpression = {
         ...mockClinicalImpression,
@@ -441,7 +390,7 @@ describe('EncounterChart', () => {
       setup({ encounter: finishedEncounter });
 
       await waitFor(() => {
-        expect(screen.getByText('Fill chart note')).toBeInTheDocument();
+        expect(screen.getByText('Subjective')).toBeInTheDocument();
       });
 
       await waitFor(() => {
@@ -469,16 +418,6 @@ describe('EncounterChart', () => {
         );
       });
 
-      // Wait for modal to close and component to update
-      // Textarea should be disabled after signing with locking
-      await waitFor(
-        () => {
-          const chartNoteCard = screen.getByText('Fill chart note').closest('.mantine-Card-root');
-          const textarea = chartNoteCard?.querySelector('textarea');
-          expect(textarea).toBeDisabled();
-        },
-        { timeout: 3000 }
-      );
     });
 
     test('signs with locking - completes incomplete tasks', async () => {
@@ -536,7 +475,7 @@ describe('EncounterChart', () => {
       setup({ encounter: finishedEncounter });
 
       await waitFor(() => {
-        expect(screen.getByText('Fill chart note')).toBeInTheDocument();
+        expect(screen.getByText('Subjective')).toBeInTheDocument();
       });
 
       await waitFor(() => {
@@ -621,7 +560,7 @@ describe('EncounterChart', () => {
       setup({ encounter: finishedEncounter });
 
       await waitFor(() => {
-        expect(screen.getByText('Fill chart note')).toBeInTheDocument();
+        expect(screen.getByText('Subjective')).toBeInTheDocument();
       });
 
       await waitFor(() => {
@@ -653,83 +592,5 @@ describe('EncounterChart', () => {
       expect(taskUpdateCalls).toHaveLength(0);
     });
 
-    test('chart note is disabled when signed and locked', async () => {
-      const mockProvenance: Provenance = {
-        resourceType: 'Provenance',
-        id: 'provenance-1',
-        target: [createReference(finishedEncounter)],
-        recorded: new Date().toISOString(),
-        agent: [
-          {
-            who: createReference(mockPractitioner),
-          },
-        ],
-      };
-
-      const completedClinicalImpression: ClinicalImpression = {
-        ...mockClinicalImpression,
-        status: 'completed',
-      };
-
-      vi.spyOn(medplum, 'searchResources').mockImplementation((resourceType: string) => {
-        if (resourceType === 'Provenance') {
-          return [mockProvenance] as any;
-        }
-        if (resourceType === 'ClinicalImpression') {
-          return [completedClinicalImpression] as any;
-        }
-        return [] as any;
-      });
-
-      setup({ encounter: finishedEncounter });
-
-      await waitFor(() => {
-        expect(screen.getByText('Fill chart note')).toBeInTheDocument();
-      });
-
-      // Textarea should be disabled when signed and locked
-      await waitFor(() => {
-        const chartNoteCard = screen.getByText('Fill chart note').closest('.mantine-Card-root');
-        const textarea = chartNoteCard?.querySelector('textarea');
-        expect(textarea).toBeDisabled();
-      });
-    });
-
-    test('chart note is enabled when signed but not locked', async () => {
-      const mockProvenance: Provenance = {
-        resourceType: 'Provenance',
-        id: 'provenance-1',
-        target: [createReference(finishedEncounter)],
-        recorded: new Date().toISOString(),
-        agent: [
-          {
-            who: createReference(mockPractitioner),
-          },
-        ],
-      };
-
-      vi.spyOn(medplum, 'searchResources').mockImplementation((resourceType: string) => {
-        if (resourceType === 'Provenance') {
-          return [mockProvenance] as any;
-        }
-        if (resourceType === 'ClinicalImpression') {
-          return [mockClinicalImpression] as any;
-        }
-        return [] as any;
-      });
-
-      setup({ encounter: finishedEncounter });
-
-      await waitFor(() => {
-        expect(screen.getByText('Fill chart note')).toBeInTheDocument();
-      });
-
-      // Textarea should be enabled when signed but not locked
-      await waitFor(() => {
-        const chartNoteCard = screen.getByText('Fill chart note').closest('.mantine-Card-root');
-        const textarea = chartNoteCard?.querySelector('textarea');
-        expect(textarea).not.toBeDisabled();
-      });
-    });
   });
 });

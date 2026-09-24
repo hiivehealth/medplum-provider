@@ -35,6 +35,7 @@ import { DoseSpotNotificationsPage } from './pages/integrations/DoseSpotNotifica
 import { IntegrationsPage } from './pages/integrations/IntegrationsPage';
 import { ScriptSurePage } from './pages/integrations/ScriptSurePage';
 import { MessagesPage } from './pages/messages/MessagesPage';
+import { A01ScopeOfPracticePage } from './pages/documents/A01ScopeOfPracticePage';
 import { ExposureDashboardPage } from './pages/occupational/ExposureDashboardPage';
 import { ExposureIncidentIntakePage } from './pages/occupational/ExposureIncidentIntakePage';
 import { SupervisorSummaryPage } from './pages/occupational/SupervisorSummaryPage';
@@ -252,6 +253,7 @@ export function App(): JSX.Element | null {
         {hasDoseSpot && <Route path="/dosespot" element={<DoseSpotNotificationsPage />} />}
         {hasScriptSure && <Route path="/scriptsure" element={<ScriptSurePage />} />}
         <Route path="/integrations" element={<IntegrationsPage />} />
+        <Route path="/documents/adtmc/a01/scope-of-practice.html" element={<A01ScopeOfPracticePage />} />
         <Route path="/:resourceType" element={<SearchPage />} />
         <Route path="/:resourceType/new" element={<ResourceCreatePage />} />
         <Route path="/:resourceType/:id" element={<ResourcePage />}>
