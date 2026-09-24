@@ -9,33 +9,44 @@ export interface CuiPolicy {
   readonly projectId: string;
   readonly enabled: boolean;
   readonly canManage: boolean;
-  readonly configurationId: string;
+  readonly configurationId?: string;
 }
 
-/** All applications consume this server-derived decision, never the protected extension directly. */
+/** Reads the project-scoped configuration through the authenticated Medplum client. */
 export async function resolveCuiPolicy(medplum: MedplumClient, projectId: string): Promise<CuiPolicy> {
-  if (!medplum.getAccessToken()) throw new Error('Authentication required');
-  await medplum.refreshIfExpired();
-  const token = medplum.getAccessToken();
-  if (!token) throw new Error('Authentication required');
-  const response = await fetch('/api/cui-banner', {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-    credentials: 'omit',
-    redirect: 'error',
-  });
-  if (!response.ok) throw new Error('Unable to resolve CUI project policy');
-  const result = (await response.json()) as Partial<CuiPolicy>;
-  if (
-    result?.projectId !== projectId ||
-    typeof result.enabled !== 'boolean' ||
-    typeof result.canManage !== 'boolean' ||
-    typeof result.configurationId !== 'string' ||
-    !/^[A-Za-z0-9.-]{1,64}$/.test(result.configurationId)
-  ) {
-    throw new Error('Invalid CUI project policy response');
+  const configuration = await medplum.searchOne(
+    'Basic',
+    { _profile: CUI_CONFIGURATION_PROFILE_URL },
+    { cache: 'no-store' }
+  );
+  const canManage = medplum.getProjectMembership()?.admin === true;
+  if (!configuration) {
+    return { projectId, enabled: false, canManage };
   }
-  return result as CuiPolicy;
+  if (
+    configuration.meta?.project !== projectId ||
+    !configuration.meta?.profile?.includes(CUI_CONFIGURATION_PROFILE_URL)
+  ) {
+    throw new Error('Invalid CUI project configuration');
+  }
+  const values = configuration.extension?.filter((extension) => extension.url === CUI_ENABLED_URL) ?? [];
+  if (
+    values.length > 1 ||
+    values.some(
+      (extension) =>
+        typeof extension.valueBoolean !== 'boolean' ||
+        extension.extension ||
+        Object.keys(extension).some((key) => key.startsWith('value') && key !== 'valueBoolean')
+    )
+  ) {
+    throw new Error('Invalid CUI project configuration');
+  }
+  return {
+    projectId,
+    enabled: values[0]?.valueBoolean === true,
+    canManage,
+    configurationId: configuration.id,
+  };
 }
 
 export function setCuiEnabled(project: Basic, enabled: boolean): Basic {
@@ -45,5 +56,14 @@ export function setCuiEnabled(project: Basic, enabled: boolean): Basic {
       ...(project.extension?.filter((e) => e.url !== CUI_ENABLED_URL) ?? []),
       { url: CUI_ENABLED_URL, valueBoolean: enabled },
     ],
+  };
+}
+
+export function createCuiConfiguration(projectId: string): Basic {
+  return {
+    resourceType: 'Basic',
+    meta: { project: projectId, profile: [CUI_CONFIGURATION_PROFILE_URL] },
+    code: { text: 'CUI configuration' },
+    extension: [{ url: CUI_ENABLED_URL, valueBoolean: false }],
   };
 }

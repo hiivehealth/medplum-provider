@@ -12,6 +12,7 @@ import type { UserEvent } from '../test-utils/render';
 import { render, screen, userEvent } from '../test-utils/render';
 
 const fixture = vi.hoisted(() => ({
+  refresh: vi.fn(),
   state: {
     status: 'ready',
     policy: {
@@ -25,7 +26,7 @@ const fixture = vi.hoisted(() => ({
 
 vi.mock('../features/cui/CuiPolicyProvider', () => ({
   CuiPolicyProvider: ({ children }: { children: ReactNode }) => children,
-  useCuiPolicy: () => ({ state: fixture.state, refresh: vi.fn() }),
+  useCuiPolicy: () => ({ state: fixture.state, refresh: fixture.refresh }),
 }));
 
 vi.mock('@medplum/react', async (importOriginal) => {
@@ -96,6 +97,7 @@ function setup(path: string, authenticated = true): UserEvent {
 }
 
 beforeEach(() => {
+  fixture.refresh.mockReset();
   fixture.state = {
     status: 'ready',
     policy: {
@@ -126,6 +128,30 @@ test('does not show CUI when the project policy is disabled', () => {
 
   expect(screen.getByText('Provider dashboard')).toBeVisible();
   expect(screen.queryByRole('complementary', { name: 'CUI' })).not.toBeInTheDocument();
+});
+
+test('blocks authenticated Provider content when the CUI policy is unavailable', async () => {
+  fixture.state = {
+    status: 'error',
+    projectId: 'project-1',
+    error: 'Offline',
+  } as unknown as typeof fixture.state;
+  setup('/getstarted');
+
+  expect(screen.getByRole('heading', { name: 'Security configuration unavailable' })).toBeVisible();
+  await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  expect(fixture.refresh).toHaveBeenCalledOnce();
+  expect(screen.queryByTestId('provider-app-shell')).not.toBeInTheDocument();
+  expect(screen.queryByText('Provider dashboard')).not.toBeInTheDocument();
+});
+
+test('blocks authenticated Provider content while the CUI policy is loading', () => {
+  fixture.state = { status: 'loading', projectId: 'project-1' } as unknown as typeof fixture.state;
+  setup('/getstarted');
+
+  expect(screen.getByText('Loading security configuration')).toBeVisible();
+  expect(screen.queryByTestId('provider-app-shell')).not.toBeInTheDocument();
+  expect(screen.queryByText('Provider dashboard')).not.toBeInTheDocument();
 });
 
 test('does not show CUI on the sign-in route even when an authenticated profile and enabled policy are loaded', () => {

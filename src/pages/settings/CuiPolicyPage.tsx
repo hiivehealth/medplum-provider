@@ -6,14 +6,19 @@ import type { JSX } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { ResourceFormWithRequiredProfile } from '../../components/ResourceFormWithRequiredProfile';
 import { useCuiPolicy } from '../../features/cui/CuiPolicyProvider';
-import { CUI_CONFIGURATION_PROFILE_URL, CUI_ENABLED_URL, setCuiEnabled } from '../../features/cui/policy';
+import {
+  CUI_CONFIGURATION_PROFILE_URL,
+  CUI_ENABLED_URL,
+  createCuiConfiguration,
+  setCuiEnabled,
+} from '../../features/cui/policy';
 
 /** Profile-driven configuration editor. Server permissions remain authoritative for every save. */
 export function CuiPolicyPage(): JSX.Element {
   const { state } = useCuiPolicy();
   const identity =
     state.status === 'ready'
-      ? `${state.policy.projectId}/${state.policy.configurationId}/${state.policy.canManage}`
+      ? `${state.policy.projectId}/${state.policy.configurationId ?? 'new'}/${state.policy.canManage}`
       : state.status;
   return <CuiPolicyEditor key={identity} />;
 }
@@ -39,7 +44,11 @@ function CuiPolicyEditor(): JSX.Element {
   useEffect(() => {
     setProject(undefined);
     setError(undefined);
-    if (!projectId || !configurationId) {
+    if (!projectId) {
+      return;
+    }
+    if (!configurationId) {
+      setProject(createCuiConfiguration(projectId));
       return;
     }
     let cancelled = false;
@@ -68,9 +77,8 @@ function CuiPolicyEditor(): JSX.Element {
       saving.current ||
       !active.current ||
       resource.resourceType !== 'Basic' ||
-      resource.id !== configurationId ||
       resource.meta?.project !== projectId ||
-      !project?.meta?.versionId
+      (configurationId ? resource.id !== configurationId || !project?.meta?.versionId : Boolean(resource.id))
     ) {
       return;
     }
@@ -78,9 +86,11 @@ function CuiPolicyEditor(): JSX.Element {
     setOutcome(undefined);
     setSaved(false);
     try {
-      const updated = await medplum.updateResource(resource, {
-        headers: { 'If-Match': `W/"${project.meta.versionId}"` },
-      });
+      const updated = configurationId
+        ? await medplum.updateResource(resource, {
+            headers: { 'If-Match': `W/"${project?.meta?.versionId}"` },
+          })
+        : await medplum.createResource(resource);
       if (!active.current) return;
       setProject(updated);
       setSaved(true);
@@ -109,7 +119,7 @@ function CuiPolicyEditor(): JSX.Element {
         )}
         {error && <Alert color="red">{error}</Alert>}
         {projectId && !project && !error && <Loading />}
-        {projectId && project && project.id === configurationId && project.meta?.project === projectId && (
+        {projectId && project && project.meta?.project === projectId && (
           <ResourceFormWithRequiredProfile
             key={`${projectId}/${project.meta?.versionId}`}
             defaultValue={project}

@@ -11,9 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "cui:service": "node server/cui/service.mjs",
-    "cui:test-service": "node --test server/cui/__tests__/*.test.mjs",
-    "cui:test-live": "node server/cui/__tests__/integration/verify-policy.mjs"
+    "cui:provision": "node scripts/provision-cui.mjs"
   },
   "prettier": {
     "plugins": [
