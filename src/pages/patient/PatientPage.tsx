@@ -19,6 +19,7 @@ import { usePharmacyDialog } from '../../components/pharmacy/usePharmacyDialog';
 import { useDoseSpotAccess } from '../../hooks/useDoseSpotAccess';
 import { usePatient } from '../../hooks/usePatient';
 import { OrderLabsPage } from '../labs/OrderLabsPage';
+import { armyDemographicsSection, isArmyDemographicsPatient } from './ArmyDemographicsSection';
 import classes from './PatientPage.module.css';
 import { getPatientPageTabs, patientPathPrefix } from './PatientPage.utils';
 
@@ -46,11 +47,17 @@ export function PatientPage(): JSX.Element {
   }, []);
 
   const sections = useMemo(
-    () =>
-      getDefaultSections(() => setIsLabsModalOpen(true)).map((s) =>
+    () => {
+      const defaults = getDefaultSections(() => setIsLabsModalOpen(true)).map((s) =>
         s.key === 'pharmacies' ? createPharmaciesSection(PharmacyDialogComponent) : s
-      ),
-    [PharmacyDialogComponent]
+      );
+      if (patient && isArmyDemographicsPatient(patient)) {
+        const demographicsIndex = defaults.findIndex((section) => section.key === 'demographics');
+        defaults.splice(demographicsIndex, 1, armyDemographicsSection);
+      }
+      return defaults;
+    },
+    [PharmacyDialogComponent, patient]
   );
 
   if (outcome && !isOk(outcome)) {

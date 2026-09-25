@@ -113,7 +113,7 @@ export function DoseSpotAdvancedOptions({ patientId }: { patientId: string }): J
               <Text mb="sm">Medication History Sync</Text>
               <Text c="dimmed" mb="md">
                 Retrieves medication history from DoseSpot for this patient and adds MedicationRequest resources to
-                Medplum.
+                HiiveHealth.
               </Text>
               <Group align="flex-end">
                 <TextInput
@@ -135,9 +135,9 @@ export function DoseSpotAdvancedOptions({ patientId }: { patientId: string }): J
             <Box mt="md">
               <Text mb="sm">Patient Information Sync</Text>
               <Text c="dimmed" mb="md">
-                Syncs patient between Medplum and DoseSpot. It creates an identifier for the patient in Medplum to link
+                Syncs patient between HiiveHealth and DoseSpot. It creates an identifier for the patient in HiiveHealth to link
                 it to the patient's record in DoseSpot. It also adds MedicationRequest and AllergyIntolerance resources
-                from Medplum to that patient's record in DoseSpot.
+                from HiiveHealth to that patient's record in DoseSpot.
               </Text>
               <Button onClick={syncPatient}>Sync Patient</Button>
             </Box>
