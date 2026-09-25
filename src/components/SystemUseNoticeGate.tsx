@@ -19,7 +19,6 @@ export type SystemUseNoticeResponse =
 export interface SystemUseNoticeGateProps {
   readonly clientId?: string;
   readonly projectId?: string;
-  readonly skip?: boolean;
   readonly children: ReactNode;
 }
 
@@ -59,15 +58,12 @@ function isSystemUseNoticeResponse(value: unknown): value is SystemUseNoticeResp
  */
 export function SystemUseNoticeGate(props: SystemUseNoticeGateProps): JSX.Element {
   const medplum = useMedplum();
-  const [notice, setNotice] = useState<SystemUseNoticeResponse | undefined>(props.skip ? { enabled: false } : undefined);
+  const [notice, setNotice] = useState<SystemUseNoticeResponse | undefined>();
   const [noticeVersion, setNoticeVersion] = useState<string>();
   const [noticeError, setNoticeError] = useState(false);
   const [noticeRequest, setNoticeRequest] = useState(0);
 
   useEffect(() => {
-    if (props.skip) {
-      return;
-    }
     let active = true;
     setNotice(undefined);
     setNoticeError(false);
@@ -91,7 +87,7 @@ export function SystemUseNoticeGate(props: SystemUseNoticeGateProps): JSX.Elemen
     return () => {
       active = false;
     };
-  }, [medplum, noticeRequest, props.clientId, props.projectId, props.skip]);
+  }, [medplum, noticeRequest, props.clientId, props.projectId]);
 
   useEffect(() => {
     const originalStartLogin = medplum.startLogin.bind(medplum);

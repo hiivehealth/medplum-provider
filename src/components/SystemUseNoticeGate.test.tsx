@@ -42,10 +42,10 @@ function LoginProbe(): JSX.Element {
   );
 }
 
-function setup(client: MedplumClient, props: { skip?: boolean } = {}): void {
+function setup(client: MedplumClient): void {
   render(
     <MedplumProvider medplum={client}>
-      <SystemUseNoticeGate clientId="client-1" projectId="project-1" skip={props.skip}>
+      <SystemUseNoticeGate clientId="client-1" projectId="project-1">
         <div>Credentials form</div>
         <LoginProbe />
       </SystemUseNoticeGate>
@@ -99,13 +99,4 @@ describe('SystemUseNoticeGate', () => {
     expect(screen.queryByText('Credentials form')).not.toBeInTheDocument();
   });
 
-  test('Skips discovery when resuming an existing login', async () => {
-    const client = new MockClient({ profile: null });
-    const get = vi.spyOn(client, 'get');
-    setup(client, { skip: true });
-
-    expect(await screen.findByText('Credentials form')).toBeInTheDocument();
-    expect(get).not.toHaveBeenCalledWith(expect.stringContaining('auth/system-use-notice'), expect.anything());
-    expect(get.mock.calls.some(([url]) => String(url).includes('auth/system-use-notice'))).toBe(false);
-  });
 });

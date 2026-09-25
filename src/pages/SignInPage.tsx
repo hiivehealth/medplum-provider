@@ -11,10 +11,10 @@ export function SignInPage(): JSX.Element {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const clientId = getRuntimeConfig().medplumClientId || import.meta.env.MEDPLUM_CLIENT_ID;
-  const projectId = searchParams.get('project') || undefined;
+  const projectId = searchParams.get('project') || import.meta.env.MEDPLUM_PROJECT_ID || undefined;
 
   return (
-    <SystemUseNoticeGate clientId={clientId} projectId={projectId} skip={Boolean(searchParams.get('login'))}>
+    <SystemUseNoticeGate clientId={clientId} projectId={projectId}>
       <SignInForm
         // Configure according to your settings
         googleClientId={import.meta.env.GOOGLE_CLIENT_ID}
