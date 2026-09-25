@@ -68,7 +68,7 @@ describe('GetStartedPage', () => {
   describe('Page content', () => {
     test('Introduces the recommended first steps', () => {
       setup();
-      expect(screen.getByText('Get Started with Medplum Provider')).toBeInTheDocument();
+      expect(screen.getByText('Get Started with HiiveHealth Provider')).toBeInTheDocument();
       expect(screen.getByText('Import Sample Data')).toBeInTheDocument();
       expect(screen.getByText('Integrate Your Services')).toBeInTheDocument();
       expect(screen.getByText('View Our User Guide')).toBeInTheDocument();
@@ -93,7 +93,7 @@ describe('GetStartedPage', () => {
     test('Links out for integrations, docs, and support', () => {
       setup();
       expect(screen.getByRole('link', { name: /View All Integrations/ })).toHaveAttribute('href', '/integrations');
-      expect(screen.getByRole('link', { name: /Join Medplum Discord/ })).toHaveAttribute(
+      expect(screen.getByRole('link', { name: /Join community Discord/ })).toHaveAttribute(
         'href',
         'https://discord.gg/medplum'
       );

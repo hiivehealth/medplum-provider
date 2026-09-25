@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
 import { Title } from '@mantine/core';
-import { Logo, SignInForm } from '@medplum/react';
+import { SignInForm } from '@medplum/react';
 import type { JSX } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 
@@ -23,7 +23,7 @@ export function SignInPage(): JSX.Element {
       projectId={searchParams.get('project') || undefined}
       login={searchParams.get('login') || undefined}
     >
-      <Logo size={32} />
+      <Title order={2}>HiiveHealth</Title>
       <Title order={3} py="lg">
         Sign in to Provider
       </Title>

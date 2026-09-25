@@ -76,7 +76,7 @@ function HealthcareServiceSchedulingForm({ service }: HealthcareServiceSchedulin
       <Stack gap="md">
         <Title order={2}>{service.name} - Scheduling Configuration</Title>
         <ReleaseStageBanner stage="beta" bdrs="md">
-          Medplum Scheduling is in a Beta period and is subject to change.
+          Scheduling is in a Beta period and is subject to change.
         </ReleaseStageBanner>
         <CodingInput
           name="encounterClass"

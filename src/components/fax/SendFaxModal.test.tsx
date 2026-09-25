@@ -293,7 +293,7 @@ describe('SendFaxModal', () => {
       await typeFaxNumber('5551234567');
       await userEvent.click(screen.getByRole('button', { name: 'Send Fax' }));
 
-      expect(await screen.findByText('eFax integration not set up. Contact Medplum Support.')).toBeInTheDocument();
+      expect(await screen.findByText('eFax integration not set up. Contact support.')).toBeInTheDocument();
       expect(onFaxSent).not.toHaveBeenCalled();
       expect(onClose).not.toHaveBeenCalled();
     });

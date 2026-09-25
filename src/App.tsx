@@ -5,7 +5,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { getReferenceString } from '@medplum/core';
 import { useDoseSpotNotifications } from '@medplum/dosespot-react';
 import type { SpotlightLinkAction } from '@medplum/react';
-import { AppShell, Loading, Logo, useMedplum, useMedplumProfile } from '@medplum/react';
+import { AppShell, Loading, useMedplum, useMedplumProfile } from '@medplum/react';
 import {
   IconApps,
   IconBook2,
@@ -177,7 +177,7 @@ function AppContent(): JSX.Element | null {
 
   const appShellContent = (
     <AppShell
-      logo={<Logo size={24} />}
+      logo={<Text fw={700} size="lg">HiiveHealth</Text>}
       pathname={location.pathname}
       searchParams={searchParams}
       layoutVersion="v2"
