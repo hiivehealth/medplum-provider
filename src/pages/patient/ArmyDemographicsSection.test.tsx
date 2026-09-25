@@ -34,7 +34,7 @@ describe('Army demographics sidebar', () => {
           extension: [
             { url: 'affiliation', valueCoding: { code: 'active', display: 'Active Duty' } },
             { url: 'branch', valueCoding: { code: 'army', display: 'Army' } },
-            { url: 'grade', valueCoding: { code: 'E-5' } },
+            { url: 'grade', valueCoding: { code: 'E-5', display: 'Sergeant' } },
           ],
         },
         { url: `${namespace}/StructureDefinition/administrative-blood-type`, valueCoding: { code: 'A+', display: 'A positive' } },
@@ -61,6 +61,7 @@ describe('Army demographics sidebar', () => {
     expect(screen.getByText('Active Duty')).toBeInTheDocument();
     expect(screen.getByText('Army')).toBeInTheDocument();
     expect(screen.getByText('E-5')).toBeInTheDocument();
+    expect(screen.queryByText('Sergeant')).not.toBeInTheDocument();
     expect(screen.getByText('A+')).toBeInTheDocument();
     expect(screen.queryByText('A positive')).not.toBeInTheDocument();
     expect(screen.getByText('No')).toBeInTheDocument();

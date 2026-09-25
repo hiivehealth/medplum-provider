@@ -27,9 +27,9 @@ export function isArmyDemographicsPatient(patient: Patient): boolean {
 export function ArmyDemographics({ patient, layout = 'sidebar' }: { patient: Patient; layout?: 'sidebar' | 'details' }): JSX.Element {
   const dodId = patient.identifier?.find((identifier) => identifier.system === armyDodIdSystem)?.value;
   const military = patient.extension?.find((extension) => extension.url === militaryService);
-  const coding = (name: string): string | undefined => {
+  const coding = (name: string, preferCode = false): string | undefined => {
     const value = military?.extension?.find((extension) => extension.url === name)?.valueCoding;
-    return value?.display ?? value?.code;
+    return preferCode ? value?.code ?? value?.display : value?.display ?? value?.code;
   };
   const bloodType = patient.extension?.find(
     (extension) => extension.url === `${namespace}/StructureDefinition/administrative-blood-type`
@@ -50,7 +50,7 @@ export function ArmyDemographics({ patient, layout = 'sidebar' }: { patient: Pat
     ['Birthday', birthday],
     ['Affiliation', coding('affiliation') ?? 'Not recorded'],
     ['Branch', coding('branch') ?? 'Not recorded'],
-    ['Grade', coding('grade') ?? 'Not recorded'],
+    ['Grade', coding('grade', true) ?? 'Not recorded'],
     ['Blood Type', bloodType?.code ?? bloodType?.display ?? 'Not recorded'],
     ['VIP', vip === undefined ? 'Not recorded' : vip ? 'Yes' : 'No'],
   ];
