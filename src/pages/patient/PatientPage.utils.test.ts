@@ -5,7 +5,6 @@ import type { Patient } from '@medplum/fhirtypes';
 import { describe, expect, test } from 'vitest';
 import {
   formatPatientPageTabUrl,
-  getPatientPageTabs,
   getPatientPageTabOrThrow,
   PatientPageTabs,
   patientPathPrefix,
