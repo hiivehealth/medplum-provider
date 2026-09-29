@@ -91,12 +91,20 @@ export function SystemUseNoticeGate(props: SystemUseNoticeGateProps): JSX.Elemen
 
   useEffect(() => {
     const originalStartLogin = medplum.startLogin.bind(medplum);
-    medplum.startLogin = ((loginRequest, options) => {
+    const originalStartGoogleLogin = medplum.startGoogleLogin.bind(medplum);
+    const startLogin: MedplumClient['startLogin'] = (loginRequest, options) => {
       const next = noticeVersion ? { ...loginRequest, systemUseNoticeVersion: noticeVersion } : loginRequest;
       return originalStartLogin(next, options);
-    }) as MedplumClient['startLogin'];
+    };
+    const startGoogleLogin: MedplumClient['startGoogleLogin'] = (loginRequest, options) => {
+      const next = noticeVersion ? { ...loginRequest, systemUseNoticeVersion: noticeVersion } : loginRequest;
+      return originalStartGoogleLogin(next, options);
+    };
+    medplum.startLogin = startLogin;
+    medplum.startGoogleLogin = startGoogleLogin;
     return () => {
       medplum.startLogin = originalStartLogin;
+      medplum.startGoogleLogin = originalStartGoogleLogin;
     };
   }, [medplum, noticeVersion]);
 
