@@ -246,7 +246,7 @@ export function ScheduleSettingsPage(): JSX.Element {
         ))}
       </Title>
       <ReleaseStageBanner stage="beta" bdrs="md" mb="lg">
-        Medplum Scheduling is in a Beta period and is subject to change.
+        Scheduling is in a Beta period and is subject to change.
       </ReleaseStageBanner>
       {schedule ? <ScheduleSettings schedule={schedule} key={schedule.id} /> : <Loader />}
     </Document>

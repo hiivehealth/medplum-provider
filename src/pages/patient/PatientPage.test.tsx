@@ -4,7 +4,6 @@ import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { calculateAgeString } from '@medplum/core';
 import { HomerSimpson, MockClient } from '@medplum/mock';
-import * as medplumReact from '@medplum/react';
 import { MedplumProvider } from '@medplum/react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -124,7 +123,6 @@ describe('PatientPage', () => {
   });
 
   test('renders homer summary information in sidebar', async () => {
-    const patientSummarySpy = vi.spyOn(medplumReact, 'PatientSummary');
     setup(`/Patient/${HomerSimpson.id}`);
 
     if (!HomerSimpson.birthDate) {
@@ -133,11 +131,21 @@ describe('PatientPage', () => {
 
     const age = calculateAgeString(HomerSimpson.birthDate);
 
-    await waitFor(() => {
-      expect(patientSummarySpy).toHaveBeenCalled();
-    });
     expect(await screen.findByText('Male')).toBeInTheDocument();
     expect(await screen.findByText(`1956-05-12 (${age})`)).toBeInTheDocument();
+  });
+
+  test('replaces the default demographics section for Army patients', async () => {
+    const patient = await medplum.createResource({
+      resourceType: 'Patient',
+      meta: { profile: ['https://ehr.hiivehealth.net/fhir/StructureDefinition/hiive-army-demographics-patient'] },
+      identifier: [{ system: 'https://ehr.hiivehealth.net/fhir/identifier/dod-id', value: '1234567890' }],
+    });
+    setup(`/Patient/${patient.id}`);
+
+    expect(await screen.findByText('1234567890')).toBeInTheDocument();
+    expect(screen.getByText('DoD ID:')).toBeInTheDocument();
+    expect(screen.queryByText('Demographics')).not.toBeInTheDocument();
   });
 
   test('handles empty pathname correctly', async () => {

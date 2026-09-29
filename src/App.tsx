@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
+import { Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { getReferenceString } from '@medplum/core';
 import { useDoseSpotNotifications } from '@medplum/dosespot-react';
 import type { SpotlightLinkAction } from '@medplum/react';
-import { AppShell, Loading, Logo, useMedplum, useMedplumProfile } from '@medplum/react';
+import { AppShell, Loading, useMedplum, useMedplumProfile } from '@medplum/react';
 import {
   IconApps,
   IconBook2,
@@ -21,9 +22,13 @@ import {
 import type { JSX } from 'react';
 import { Suspense, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router';
+import { CuiBanner } from './components/CuiBanner/CuiBanner';
 import { hasScriptSureIdentifier } from './components/utils';
+import cuiShellClasses from './features/cui/CuiAppShell.module.css';
+import { CuiPolicyProvider, useCuiPolicy } from './features/cui/CuiPolicyProvider';
 import { useDoseSpotAccess } from './hooks/useDoseSpotAccess';
 import './index.css';
+import { CuiPolicyPage } from './pages/settings/CuiPolicyPage';
 import { ScriptSurePracticeProvider } from './scriptsure/ScriptSurePractice';
 
 const SETUP_DISMISSED_KEY = 'medplum-provider-setup-completed';
@@ -69,7 +74,16 @@ import { SmartLogo } from './pages/smart/SmartLogo';
 import { SpacesPage } from './pages/spaces/SpacesPage';
 import { TasksPage } from './pages/tasks/TasksPage';
 
-export function App(): JSX.Element | null {
+export function App(): JSX.Element {
+  return (
+    <CuiPolicyProvider>
+      <AppContent />
+    </CuiPolicyProvider>
+  );
+}
+
+function AppContent(): JSX.Element | null {
+  const { state: cuiPolicy } = useCuiPolicy();
   const medplum = useMedplum();
   const profile = useMedplumProfile();
   const doseSpotCount = useDoseSpotNotifications();
@@ -86,6 +100,13 @@ export function App(): JSX.Element | null {
   const membership = medplum.getProjectMembership();
   const hasScriptSure = hasScriptSureIdentifier(membership);
   const hasBilling = project?.features?.includes('billing') ?? false;
+  let cuiEnabled = false;
+  if (cuiPolicy.status === 'ready') {
+    cuiEnabled = cuiPolicy.policy.enabled;
+  } else if (cuiPolicy.status === 'error') {
+    cuiEnabled = cuiPolicy.lastKnown?.enabled === true;
+  }
+  const showCuiBanner = Boolean(profile) && cuiEnabled && !/^\/signin\/?$/i.test(location.pathname);
 
   const [shlOpened, shlHandlers] = useDisclosure(false);
 
@@ -136,7 +157,7 @@ export function App(): JSX.Element | null {
 
   const appShellContent = (
     <AppShell
-      logo={<Logo size={24} />}
+      logo={<Text fw={700} size="lg">HiiveHealth</Text>}
       pathname={location.pathname}
       searchParams={searchParams}
       layoutVersion="v2"
@@ -192,8 +213,11 @@ export function App(): JSX.Element | null {
                     : []),
                   { icon: <IconUserPlus />, label: 'New Patient', href: '/onboarding' },
                   { icon: <IconApps />, label: 'Integrations', href: '/integrations' },
+                  ...(cuiPolicy.status === 'ready' && cuiPolicy.policy.canManage
+                    ? [{ icon: <IconSettingsAutomation />, label: 'Project Security', href: '/Settings/Security' }]
+                    : []),
                   ...(hasBilling
-                    ? [{ icon: <IconReceipt2 />, label: 'Billing Settings', href: '/Settings/Billing' }]
+                    ? [{ icon: <IconReceipt2 />, label: 'Candid Billing Setup', href: '/Settings/Billing' }]
                     : []),
                   ...(hasDoseSpot
                     ? [
@@ -224,6 +248,11 @@ export function App(): JSX.Element | null {
       spotlightPatientsOnly={true}
       spotlightActions={spotlightActions}
     >
+      {showCuiBanner && (
+        <div className={cuiShellClasses.banner}>
+          <CuiBanner />
+        </div>
+      )}
       <Suspense fallback={<Loading />}>
         <Routes>
           {profile ? (
@@ -305,6 +334,7 @@ export function App(): JSX.Element | null {
               {hasScriptSure && <Route path="/scriptsure" element={<ScriptSurePage />} />}
               <Route path="/integrations" element={<IntegrationsPage />} />
               {/* Must precede the /:resourceType catch-alls below */}
+              <Route path="/Settings/Security" element={<CuiPolicyPage />} />
               {hasBilling && <Route path="/Settings/Billing/:tab?" element={<BillingSetupPage />} />}
               <Route path="/smart-health-link" element={<SmartHealthLinkImportPage />} />
               <Route path="/:resourceType" element={<SearchPage />} />

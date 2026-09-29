@@ -160,7 +160,7 @@ export function GetStartedPage(): JSX.Element {
         {/* Header */}
         <Box mb="6rem">
           <Title order={2} fw={800}>
-            Get Started with Medplum Provider
+            Get Started with HiiveHealth Provider
           </Title>
           <Text size="lg" mt=".25rem" className={classes.textSecondary}>
             Below are our recommended first steps to get set up and familiar with the available features and workflows
@@ -469,7 +469,7 @@ export function GetStartedPage(): JSX.Element {
                   View Our User Guide
                 </Text>
                 <Text size="sm" className={classes.textSecondary}>
-                  Follow step-by-step documentation to get the most out of Medplum Provider.
+                  Follow step-by-step documentation to get the most out of HiiveHealth Provider.
                 </Text>
               </Stack>
             </Group>
@@ -708,7 +708,7 @@ export function GetStartedPage(): JSX.Element {
                     fullWidth
                     rightSection={<IconExternalLink size={14} />}
                   >
-                    Join Medplum Discord
+                    Join community Discord
                   </Button>
                 </Paper>
               </Grid.Col>

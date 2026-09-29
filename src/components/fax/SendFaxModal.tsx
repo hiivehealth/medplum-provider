@@ -211,7 +211,7 @@ export function SendFaxModal({
             color: 'red',
             icon: <IconCircleOff />,
             title: 'Error',
-            message: 'eFax integration not set up. Contact Medplum Support.',
+            message: 'eFax integration not set up. Contact support.',
           });
           return;
         }

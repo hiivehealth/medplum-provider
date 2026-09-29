@@ -4,13 +4,28 @@ import react from '@vitejs/plugin-react';
 import dns from 'dns';
 import { copyFileSync, existsSync } from 'fs';
 import path from 'path';
-import { defineConfig } from 'vitest/config';
+import type { UserConfig } from 'vite';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 dns.setDefaultResultOrder('verbatim');
 
 if (!existsSync(path.join(import.meta.dirname, '.env'))) {
   copyFileSync(path.join(import.meta.dirname, '.env.defaults'), path.join(import.meta.dirname, '.env'));
 }
+
+// Resolve aliases to local packages when working within the monorepo
+const alias: NonNullable<UserConfig['resolve']>['alias'] = Object.fromEntries(
+  Object.entries({
+    '@medplum/core': path.resolve(import.meta.dirname, '../../packages/core/src'),
+    '@medplum/dosespot-react': path.resolve(import.meta.dirname, '../../packages/dosespot-react/src'),
+    '@medplum/scriptsure-react': path.resolve(import.meta.dirname, '../../packages/scriptsure-react/src'),
+    '@medplum/react': path.resolve(import.meta.dirname, '../../packages/react/src'),
+    '@medplum/react-scheduling': path.resolve(import.meta.dirname, '../../packages/react-scheduling/src'),
+    '@medplum/react-hooks': path.resolve(import.meta.dirname, '../../packages/react-hooks/src'),
+    '@medplum/health-gorilla-core': path.resolve(import.meta.dirname, '../../packages/health-gorilla-core/src'),
+    '@medplum/health-gorilla-react': path.resolve(import.meta.dirname, '../../packages/health-gorilla-react/src'),
+  }).filter(([, relPath]) => existsSync(relPath))
+);
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -19,22 +34,19 @@ export default defineConfig({
   server: {
     host: 'localhost',
     port: 3001,
+    proxy: { '/api/cui-banner': 'http://127.0.0.1:8105' },
+    fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/*.local', '**/*.local/**'] },
   },
   preview: {
     host: 'localhost',
     port: 3001,
+    proxy: { '/api/cui-banner': 'http://127.0.0.1:8105' },
   },
   resolve: {
-    dedupe: [
-      'react',
-      'react-dom',
-      '@mantine/core',
-      '@mantine/hooks',
-      '@mantine/notifications',
-      '@mantine/spotlight',
-    ],
+    alias,
   },
   test: {
+    exclude: [...configDefaults.exclude, 'server/**', '**/*.local/**'],
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test.setup.ts',

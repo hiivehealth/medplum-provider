@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
-import { HomerSimpson, MockClient } from '@medplum/mock';
+import type { Project } from '@medplum/fhirtypes';
+import { HomerSimpson, MockClient, TestProject } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -165,6 +166,35 @@ describe('ResourceCreatePage', () => {
       expect(medplum.createResource).toHaveBeenCalled();
       // Should show error notification
       expect(screen.getByText(/failed to create resource/i)).toBeInTheDocument();
+    });
+  });
+
+  test('Uses the project-level defaultProfile:Patient setting override when present', async () => {
+    const overrideUrl = 'https://ehr.example.com/fhir/StructureDefinition/some-other-tenant-patient';
+    const projectWithOverride: Project = {
+      ...TestProject,
+      setting: [{ name: 'defaultProfile:Patient', valueString: overrideUrl }],
+    };
+    const tenantMedplum = new MockClient({ project: projectWithOverride });
+    vi.spyOn(tenantMedplum, 'requestProfileSchema').mockResolvedValue(undefined);
+
+    await act(async () => {
+      render(
+        <MemoryRouter initialEntries={['/Patient/new']}>
+          <MedplumProvider medplum={tenantMedplum}>
+            <MantineProvider>
+              <Notifications />
+              <Routes>
+                <Route path="/:resourceType/new" element={<ResourceCreatePage />} />
+              </Routes>
+            </MantineProvider>
+          </MedplumProvider>
+        </MemoryRouter>
+      );
+    });
+
+    await waitFor(() => {
+      expect(tenantMedplum.requestProfileSchema).toHaveBeenCalledWith(overrideUrl, expect.anything());
     });
   });
 });

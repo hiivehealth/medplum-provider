@@ -42,7 +42,8 @@ describe('SignInPage', () => {
   });
 
   async function expectSigninPageRendered(): Promise<void> {
-    expect(await screen.findByText('Sign in to Provider')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'HiiveHealth' })).toBeInTheDocument();
+    expect(screen.getByText('Sign in to Provider')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
   }
 
@@ -106,7 +107,7 @@ describe('SignInPage', () => {
     });
 
     // After successful sign-in, user is redirected to /getstarted
-    expect(await screen.findByText('Get Started with Medplum Provider')).toBeInTheDocument();
+    expect(await screen.findByText('Get Started with HiiveHealth Provider')).toBeInTheDocument();
   });
 
   test('Shows system use notice before credentials', async () => {

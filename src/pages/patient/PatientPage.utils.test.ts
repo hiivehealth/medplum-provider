@@ -5,6 +5,7 @@ import type { Patient } from '@medplum/fhirtypes';
 import { describe, expect, test } from 'vitest';
 import {
   formatPatientPageTabUrl,
+  getPatientPageTabs,
   getPatientPageTabOrThrow,
   PatientPageTabs,
   patientPathPrefix,
@@ -227,5 +228,6 @@ describe('PatientPage.utils', () => {
       expect(tasksTab?.url).toBe('Task');
       expect(tasksTab?.label).toBe('Tasks');
     });
+
   });
 });
