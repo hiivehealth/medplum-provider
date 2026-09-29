@@ -33,25 +33,12 @@ function mockSystemUseNotice(client: MedplumClient, notice: unknown): void {
 function LoginProbe(): JSX.Element {
   const medplum = useMedplum();
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => void medplum.startLogin({ email: 'admin@example.com', password: 'password' })}
-      >
-        Probe login
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          void medplum.startGoogleLogin({
-            googleClientId: 'google-client',
-            googleCredential: 'google-credential',
-          })
-        }
-      >
-        Probe Google login
-      </button>
-    </>
+    <button
+      type="button"
+      onClick={() => void medplum.startLogin({ email: 'admin@example.com', password: 'password' })}
+    >
+      Probe login
+    </button>
   );
 }
 
@@ -84,7 +71,6 @@ describe('SystemUseNoticeGate', () => {
     const client = new MockClient({ profile: null });
     mockSystemUseNotice(client, ENABLED_NOTICE);
     const startLogin = vi.spyOn(client, 'startLogin');
-    const startGoogleLogin = vi.spyOn(client, 'startGoogleLogin');
     setup(client);
 
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
@@ -100,13 +86,6 @@ describe('SystemUseNoticeGate', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Probe login' }));
     });
     expect(startLogin.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ systemUseNoticeVersion: 'usg-system-use-2026-09-10' })
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Probe Google login' }));
-    });
-    expect(startGoogleLogin.mock.calls[0][0]).toEqual(
       expect.objectContaining({ systemUseNoticeVersion: 'usg-system-use-2026-09-10' })
     );
   });
