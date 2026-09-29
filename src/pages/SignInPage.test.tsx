@@ -8,9 +8,20 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { App } from '../App';
 import { act, fireEvent, render, screen } from '../test-utils/render';
 
+function mockSystemUseNotice(client: MedplumClient, notice: unknown = { enabled: false }): void {
+  const originalGet = client.get.bind(client);
+  vi.spyOn(client, 'get').mockImplementation((url, options) => {
+    if (String(url).includes('auth/system-use-notice')) {
+      return Promise.resolve(notice) as ReturnType<MedplumClient['get']>;
+    }
+    return originalGet(url, options);
+  });
+}
+
 describe('SignInPage', () => {
-  function setup(url = '/signin', medplumClient?: MedplumClient): MedplumClient {
+  function setup(url = '/signin', medplumClient?: MedplumClient, notice: unknown = { enabled: false }): MedplumClient {
     const client = medplumClient ?? new MockClient({ profile: null, clientId: 'my-client-id' });
+    mockSystemUseNotice(client, notice);
     render(
       <MemoryRouter initialEntries={[url]} initialIndex={0}>
         <MedplumProvider medplum={client}>
@@ -27,10 +38,11 @@ describe('SignInPage', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
-  function expectSigninPageRendered(): void {
-    expect(screen.getByRole('heading', { name: 'HiiveHealth' })).toBeInTheDocument();
+  async function expectSigninPageRendered(): Promise<void> {
+    expect(await screen.findByRole('heading', { name: 'HiiveHealth' })).toBeInTheDocument();
     expect(screen.getByText('Sign in to Provider')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
   }
@@ -38,7 +50,7 @@ describe('SignInPage', () => {
   test('Renders', async () => {
     setup();
 
-    expectSigninPageRendered();
+    await expectSigninPageRendered();
   });
 
   test('Shows register link when registration is enabled', async () => {
@@ -46,12 +58,13 @@ describe('SignInPage', () => {
 
     setup();
 
-    expect(screen.getByText('Register')).toBeInTheDocument();
+    expect(await screen.findByText('Register')).toBeInTheDocument();
   });
 
   test('Hides register link when registration is disabled by default', async () => {
     setup();
 
+    await expectSigninPageRendered();
     expect(screen.queryByText('Register')).not.toBeInTheDocument();
   });
 
@@ -59,6 +72,7 @@ describe('SignInPage', () => {
     vi.stubEnv('MEDPLUM_REGISTER_ENABLED', 'false');
     setup();
 
+    await expectSigninPageRendered();
     expect(screen.queryByText('Register')).not.toBeInTheDocument();
   });
 
@@ -69,6 +83,8 @@ describe('SignInPage', () => {
       (client as MockClient).mock.setProfile(DrAliceSmith);
       return DrAliceSmith;
     });
+
+    await expectSigninPageRendered();
 
     await act(async () => {
       fireEvent.change(screen.getByLabelText('Email *'), { target: { value: 'admin@example.com' } });
@@ -92,5 +108,25 @@ describe('SignInPage', () => {
 
     // After successful sign-in, user is redirected to /getstarted
     expect(await screen.findByText('Get Started with HiiveHealth Provider')).toBeInTheDocument();
+  });
+
+  test('Shows system use notice before credentials', async () => {
+    setup('/signin', undefined, {
+      enabled: true,
+      version: 'usg-system-use-2026-09-10',
+      title: 'U.S. Government System Use Acknowledgment',
+      body: 'Approved notice text',
+      actionLabel: 'OK',
+    });
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('Approved notice text')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'OK' }));
+    });
+
+    await expectSigninPageRendered();
   });
 });
