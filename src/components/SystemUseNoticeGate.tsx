@@ -47,8 +47,11 @@ function isSystemUseNoticeResponse(value: unknown): value is SystemUseNoticeResp
     typeof notice.version === 'string' &&
     notice.version.length > 0 &&
     typeof notice.title === 'string' &&
+    notice.title.trim().length > 0 &&
     typeof notice.body === 'string' &&
-    typeof notice.actionLabel === 'string'
+    notice.body.trim().length > 0 &&
+    typeof notice.actionLabel === 'string' &&
+    notice.actionLabel.trim().length > 0
   );
 }
 
