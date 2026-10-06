@@ -1,0 +1,42 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://hiivehealth.com/questionnaire/soap-plan",
+  "name": "HiiveSOAPPlan",
+  "title": "Plan",
+  "status": "active",
+  "description": "Plan section of the SOAP note: free-text plan, disposition, and follow-up instructions.",
+  "item": [
+    {
+      "linkId": "plan-free-text",
+      "type": "text",
+      "text": "Plan Free Text"
+    },
+    {
+      "linkId": "patient-disposition",
+      "type": "choice",
+      "text": "Patient Disposition",
+      "answerOption": [
+        { "valueCoding": { "system": "http://terminology.hl7.org/CodeSystem/discharge-disposition", "code": "home", "display": "Discharge to home" } },
+        { "valueCoding": { "system": "https://hiivehealth.com/fhir/soap/disposition", "code": "full-duty", "display": "Return to full duty" } },
+        { "valueCoding": { "system": "https://hiivehealth.com/fhir/soap/disposition", "code": "limited-duty", "display": "Limited duty profile" } },
+        { "valueCoding": { "system": "https://hiivehealth.com/fhir/soap/disposition", "code": "not-cleared", "display": "Not cleared for duty" } },
+        { "valueCoding": { "system": "https://hiivehealth.com/fhir/soap/disposition", "code": "referred", "display": "Referred / transfer" } }
+      ]
+    },
+    {
+      "linkId": "disposition-end-date",
+      "type": "date",
+      "text": "Disposition End Date"
+    },
+    {
+      "linkId": "follow-up-instructions",
+      "type": "text",
+      "text": "Follow-up instructions"
+    },
+    {
+      "linkId": "patient-education",
+      "type": "text",
+      "text": "Patient education / counseling"
+    }
+  ]
+}

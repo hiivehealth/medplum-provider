@@ -1,0 +1,52 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://hiivehealth.com/questionnaire/decision-flow/respiratory",
+  "name": "HiiveDecisionFlowRespiratory",
+  "title": "Respiratory Triage",
+  "status": "active",
+  "description": "Clinical decision flow for respiratory complaints in occupational health.",
+  "item": [
+    {
+      "linkId": "respiratory-cough-duration",
+      "type": "choice",
+      "text": "Cough duration",
+      "answerOption": [
+        { "valueCoding": { "code": "acute", "display": "Acute (< 3 weeks)" } },
+        { "valueCoding": { "code": "subacute", "display": "Subacute (3-8 weeks)" } },
+        { "valueCoding": { "code": "chronic", "display": "Chronic (> 8 weeks)" } }
+      ]
+    },
+    {
+      "linkId": "respiratory-fever",
+      "type": "boolean",
+      "text": "Fever"
+    },
+    {
+      "linkId": "respiratory-dyspnea",
+      "type": "boolean",
+      "text": "Dyspnea"
+    },
+    {
+      "linkId": "respiratory-spo2",
+      "type": "integer",
+      "text": "SpO₂ (%)"
+    },
+    {
+      "linkId": "respiratory-exposure",
+      "type": "choice",
+      "text": "Exposure history",
+      "repeats": true,
+      "answerOption": [
+        { "valueCoding": { "code": "covid", "display": "COVID-19" } },
+        { "valueCoding": { "code": "tb", "display": "Tuberculosis" } },
+        { "valueCoding": { "code": "influenza", "display": "Influenza" } },
+        { "valueCoding": { "code": "none", "display": "None" } }
+      ]
+    },
+    {
+      "linkId": "respiratory-recommendation",
+      "type": "text",
+      "text": "Clinical recommendation"
+    }
+  ]
+}

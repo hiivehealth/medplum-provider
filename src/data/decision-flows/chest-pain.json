@@ -1,0 +1,61 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://hiivehealth.com/questionnaire/decision-flow/chest-pain",
+  "name": "HiiveDecisionFlowChestPain",
+  "title": "Chest Pain Triage",
+  "status": "active",
+  "description": "Clinical decision flow for chest pain evaluation in occupational health.",
+  "item": [
+    {
+      "linkId": "chest-pain-onset",
+      "type": "choice",
+      "text": "Onset",
+      "answerOption": [
+        { "valueCoding": { "code": "sudden", "display": "Sudden" } },
+        { "valueCoding": { "code": "gradual", "display": "Gradual" } },
+        { "valueCoding": { "code": "post-exertion", "display": "Post-exertion" } }
+      ]
+    },
+    {
+      "linkId": "chest-pain-quality",
+      "type": "choice",
+      "text": "Quality",
+      "repeats": true,
+      "answerOption": [
+        { "valueCoding": { "code": "pressure", "display": "Pressure / squeezing" } },
+        { "valueCoding": { "code": "sharp", "display": "Sharp" } },
+        { "valueCoding": { "code": "burning", "display": "Burning" } },
+        { "valueCoding": { "code": "aching", "display": "Aching" } }
+      ]
+    },
+    {
+      "linkId": "chest-pain-radiation",
+      "type": "choice",
+      "text": "Radiation",
+      "repeats": true,
+      "answerOption": [
+        { "valueCoding": { "code": "arm", "display": "Arm" } },
+        { "valueCoding": { "code": "jaw", "display": "Jaw" } },
+        { "valueCoding": { "code": "back", "display": "Back" } },
+        { "valueCoding": { "code": "none", "display": "None" } }
+      ]
+    },
+    {
+      "linkId": "chest-pain-red-flags",
+      "type": "choice",
+      "text": "Red flags present",
+      "repeats": true,
+      "answerOption": [
+        { "valueCoding": { "code": "diaphoresis", "display": "Diaphoresis" } },
+        { "valueCoding": { "code": "dyspnea", "display": "Dyspnea" } },
+        { "valueCoding": { "code": "syncope", "display": "Syncope / near-syncope" } },
+        { "valueCoding": { "code": "hypotension", "display": "Hypotension" } }
+      ]
+    },
+    {
+      "linkId": "chest-pain-recommendation",
+      "type": "text",
+      "text": "Clinical recommendation"
+    }
+  ]
+}

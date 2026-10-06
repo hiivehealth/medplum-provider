@@ -1,0 +1,80 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://ehr.hiivehealth.net/fhir/Questionnaire/a01-sore-throat",
+  "version": "1.0.0",
+  "name": "HiiveDecisionFlowA01SoreThroat",
+  "title": "Sore Throat/Hoarseness, A-01",
+  "status": "active",
+  "description": "ADTMC A-01 decision flow for sore throat and hoarseness.",
+  "item": [
+    {
+      "linkId": "initial-escalation-screen",
+      "text": "Red flag screen",
+      "type": "group",
+      "item": [
+        { "linkId": "shortness-of-breath", "text": "Shortness of breath", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "stridor", "text": "Stridor", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "deviated-uvula", "text": "Deviated uvula", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "drooling-trouble-swallowing", "text": "Drooling (trouble swallowing)", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "stiff-neck", "text": "Stiff neck", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "red-flags-guidance", "text": "Any red flag requires immediate Provider Now disposition.", "type": "display" }
+      ]
+    },
+    {
+      "linkId": "dp1-screen",
+      "text": "Screening DP1",
+      "type": "group",
+      "enableWhen": [
+        { "question": "shortness-of-breath", "operator": "=", "answerCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false" } },
+        { "question": "stridor", "operator": "=", "answerCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false" } },
+        { "question": "deviated-uvula", "operator": "=", "answerCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false" } },
+        { "question": "drooling-trouble-swallowing", "operator": "=", "answerCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false" } },
+        { "question": "stiff-neck", "operator": "=", "answerCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false" } }
+      ],
+      "enableBehavior": "all",
+      "item": [
+        { "linkId": "symptoms-more-than-10-days", "text": "Symptoms greater than 10 days", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "immunosuppression", "text": "Immunosuppression", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "inhaled-steroid", "text": "Inhaled steroid", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "fever", "text": "Fever", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "dp1-guidance", "text": "Symptoms greater than 10 days, immunosuppression, or inhaled steroid use require Provider Now. Hoarseness longer than 2 weeks requires a full laryngeal exam.", "type": "display" }
+      ]
+    },
+    {
+      "linkId": "dp2-screen",
+      "text": "Screening DP2",
+      "type": "group",
+      "enableWhen": [
+        { "question": "symptoms-more-than-10-days", "operator": "=", "answerCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false" } },
+        { "question": "immunosuppression", "operator": "=", "answerCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false" } },
+        { "question": "inhaled-steroid", "operator": "=", "answerCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false" } },
+        { "question": "fever", "operator": "=", "answerCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false" } }
+      ],
+      "enableBehavior": "all",
+      "item": [
+        { "linkId": "dp2-fever", "text": "Fever", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "no-cough", "text": "No cough", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "tonsillar-exudate", "text": "Tonsillar exudate", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "swollen-anterior-cervical-nodes", "text": "Swollen anterior cervical nodes", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] }
+      ]
+    },
+    {
+      "linkId": "strep-test",
+      "text": "Perform rapid strep +/- culture test",
+      "type": "group",
+      "item": [
+        { "linkId": "rapid-strep-culture-result", "text": "Rapid strep/culture test result", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "code": "positive", "display": "Positive" } }, { "valueCoding": { "code": "negative", "display": "Negative" } }] }
+      ]
+    },
+    {
+      "linkId": "additional-screen",
+      "text": "Screen cold, skin, ear pain if present",
+      "type": "group",
+      "item": [
+        { "linkId": "cold-present", "text": "Cold present", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "skin-condition-present", "text": "Skin condition present", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] },
+        { "linkId": "ear-pain-present", "text": "Ear pain present", "type": "choice", "required": true, "answerOption": [{ "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "true", "display": "Yes" } }, { "valueCoding": { "system": "urn:hiivehealth:adtmc-boolean", "code": "false", "display": "No" } }] }
+      ]
+    }
+  ]
+}

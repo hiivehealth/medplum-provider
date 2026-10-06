@@ -56,6 +56,7 @@ import { PatientSearchPage } from './pages/patient/PatientSearchPage';
 import { ScriptSureTab } from './pages/patient/ScriptSureTab';
 import { TasksTab } from './pages/patient/TasksTab';
 import { TimelineTab } from './pages/patient/TimelineTab';
+import { A01ScopeOfPracticePage } from './pages/documents/A01ScopeOfPracticePage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ResourceCreatePage } from './pages/resource/ResourceCreatePage';
 import { ResourceDetailPage } from './pages/resource/ResourceDetailPage';
@@ -177,7 +178,7 @@ function AppContent(): JSX.Element | null {
 
   const appShellContent = (
     <AppShell
-      logo={<Text fw={700} size="lg">HiiveHealth</Text>}
+      logo={<img src="/Hiive%20Icon_Yellow.png" alt="Hiive Health" width={24} height={24} />}
       pathname={location.pathname}
       searchParams={searchParams}
       layoutVersion="v2"
@@ -353,6 +354,7 @@ function AppContent(): JSX.Element | null {
               {hasDoseSpot && <Route path="/dosespot" element={<DoseSpotNotificationsPage />} />}
               {hasScriptSure && <Route path="/scriptsure" element={<ScriptSurePage />} />}
               <Route path="/integrations" element={<IntegrationsPage />} />
+              <Route path="/documents/adtmc/a01/scope-of-practice.html" element={<A01ScopeOfPracticePage />} />
               {/* Must precede the /:resourceType catch-alls below */}
               <Route path="/Settings/Security" element={<CuiPolicyPage />} />
               {hasBilling && <Route path="/Settings/Billing/:tab?" element={<BillingSetupPage />} />}

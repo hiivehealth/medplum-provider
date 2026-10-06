@@ -1,23 +1,45 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Box, Card, Stack, Textarea, Title } from '@mantine/core';
-import { useDebouncedCallback } from '@mantine/hooks';
+import { Box, Stack } from '@mantine/core';
 import type { WithId } from '@medplum/core';
 import { createReference, getReferenceString } from '@medplum/core';
-import type { Encounter, Practitioner, Provenance, Reference, Task } from '@medplum/fhirtypes';
+import type { Encounter, Practitioner, Provenance, QuestionnaireResponse, Reference, Task } from '@medplum/fhirtypes';
 import { Loading, useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { SAVE_TIMEOUT_MS } from '../../config/constants';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  SOAP_ASSESSMENT_URL,
+  SOAP_OBJECTIVE_URL,
+  SOAP_PLAN_URL,
+  SOAP_SUBJECTIVE_URL,
+  ROS_BRIEF_NORMAL_URL,
+  ROS_EXTENDED_NORMAL_URL,
+  ROS_UNABLE_TO_OBTAIN_URL,
+  PHYSICAL_EXAM_ADULT_BRIEF_URL,
+  PHYSICAL_EXAM_ADULT_EXTENDED_URL,
+  PHYSICAL_EXAM_PEDIATRIC_BRIEF_URL,
+  PHYSICAL_EXAM_PEDIATRIC_EXTENDED_URL,
+} from '../../data/soap-questionnaires';
+import { useAdtmcA01Result } from '../../hooks/useAdtmcA01Result';
+import { useDecisionFlows } from '../../hooks/useDecisionFlows';
 import { useEncounterChart } from '../../hooks/useEncounterChart';
+import { useSoapQuestionnaires } from '../../hooks/useSoapQuestionnaires';
 import { ChartNoteStatus } from '../../types/encounter';
 import { updateEncounterStatus } from '../../utils/encounter';
 import { showErrorNotification } from '../../utils/notifications';
+import { buildSoapComposition } from '../../utils/soap-composition';
 import { TaskDetailsModal } from '../tasks/TaskDetailsModal';
+import { AdtmcA01DecisionSupport } from './AdtmcA01DecisionSupport';
 import { TaskPanel } from '../tasks/encounter/TaskPanel';
 import { BillingTab } from './BillingTab';
+import { DecisionFlowsPanel } from './DecisionFlowsPanel/DecisionFlowsPanel';
 import { EncounterHeader } from './EncounterHeader';
+import { SoapObjectiveCard } from './SoapObjectiveCard';
+import { SoapPhysicalExamCard } from './SoapPhysicalExamCard';
+import { SoapRosCard } from './SoapRosCard';
+import { hasExactlyOneChiefComplaint, hasNonEmptyComplaint, SoapSubjectiveCard } from './SoapSubjectiveCard';
 import { SignAddendum } from './SignAddendum';
+import { SoapSectionCard } from './SoapSectionCard/SoapSectionCard';
 
 const FHIR_ACT_REASON_SYSTEM = 'http://terminology.hl7.org/CodeSystem/v3-ActReason';
 const FHIR_PROVENANCE_PARTICIPANT_TYPE_SYSTEM = 'http://terminology.hl7.org/CodeSystem/provenance-participant-type';
@@ -55,9 +77,16 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
     setClinicalImpression,
   } = useEncounterChart(encounterProp);
 
-  const [chartNote, setChartNote] = useState(clinicalImpression?.note?.[0]?.text);
   const [provenances, setProvenances] = useState<Provenance[]>([]);
   const [chartNoteStatus, setChartNoteStatus] = useState(ChartNoteStatus.Unsigned);
+  const soapQuestionnaires = useSoapQuestionnaires(encounter, patientResource);
+  const decisionFlows = useDecisionFlows(encounter, patientResource);
+  const adtmcA01Result = useAdtmcA01Result(encounter);
+  const subjectiveDraftRef = useRef<QuestionnaireResponse | undefined>(undefined);
+
+  useEffect(() => {
+    subjectiveDraftRef.current = soapQuestionnaires.questionnaires.get(SOAP_SUBJECTIVE_URL)?.response;
+  }, [soapQuestionnaires.questionnaires]);
 
   useEffect(() => {
     if (!encounter) {
@@ -107,42 +136,16 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
     setActiveTab(tab);
   };
 
-  // Whether the server copy currently has a note; `clinicalImpression` state is not refreshed on
-  // note saves, so this decides between add and remove when the note is cleared.
-  const noteOnServerRef = useRef<boolean | undefined>(undefined);
-
-  const debouncedPatchChartNote = useDebouncedCallback(async (note: string): Promise<void> => {
-    if (!clinicalImpression) {
-      return;
-    }
-
-    try {
-      if (note) {
-        await medplum.patchResource('ClinicalImpression', clinicalImpression.id, [
-          { op: 'add', path: '/note', value: [{ text: note }] },
-        ]);
-        noteOnServerRef.current = true;
-      } else if (noteOnServerRef.current ?? Boolean(clinicalImpression.note)) {
-        await medplum.patchResource('ClinicalImpression', clinicalImpression.id, [{ op: 'remove', path: '/note' }]);
-        noteOnServerRef.current = false;
-      }
-    } catch (err) {
-      showErrorNotification(err);
-    }
-  }, SAVE_TIMEOUT_MS);
-
-  const handleChartNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
-    setChartNote(e.target.value);
-
-    if (!clinicalImpression) {
-      return;
-    }
-
-    debouncedPatchChartNote(e.target.value);
-  };
-
   const handleSign = async (practitioner: Reference<Practitioner>, lock: boolean): Promise<void> => {
-    if (!encounter) {
+    if (!encounter || !patientResource) {
+      return;
+    }
+    if (!hasNonEmptyComplaint(subjectiveDraftRef.current)) {
+      showErrorNotification(new Error('Add at least one complaint before signing this SOAP note.'));
+      return;
+    }
+    if (!hasExactlyOneChiefComplaint(subjectiveDraftRef.current)) {
+      showErrorNotification(new Error('Select one chief complaint before signing this SOAP note.'));
       return;
     }
 
@@ -217,6 +220,25 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
 
     setProvenances([...provenances, newProvenance]);
 
+    try {
+      const { observations, conditions, carePlans, questionnaireResponses } = await soapQuestionnaires.persistAll();
+      const composition = buildSoapComposition({
+        patient: patientResource,
+        encounter,
+        practitioner,
+        clinicalImpression,
+        adtmcA01ClinicalImpression: adtmcA01Result.clinicalImpression,
+        adtmcA01QuestionnaireResponse: adtmcA01Result.questionnaireResponse,
+        observations,
+        conditions,
+        carePlans,
+        questionnaireResponses,
+      });
+      await medplum.createResource(composition);
+    } catch (err) {
+      showErrorNotification(err);
+    }
+
     if (lock) {
       setChartNoteStatus(ChartNoteStatus.SignedAndLocked);
     } else {
@@ -244,20 +266,79 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
             <Stack gap="md">
               <SignAddendum encounter={encounter} provenances={provenances} chartNoteStatus={chartNoteStatus} />
 
-              {clinicalImpression && (
-                <Card withBorder shadow="sm" mt="md">
-                  <Title>Fill chart note</Title>
-                  <Textarea
-                    defaultValue={clinicalImpression.note?.[0]?.text}
-                    value={chartNote}
-                    onChange={handleChartNoteChange}
-                    autosize
-                    minRows={4}
-                    maxRows={8}
-                    disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
-                  />
-                </Card>
-              )}
+              <SoapSubjectiveCard
+                questionnaireResponse={soapQuestionnaires.questionnaires.get(SOAP_SUBJECTIVE_URL)?.response}
+                loading={soapQuestionnaires.questionnaires.get(SOAP_SUBJECTIVE_URL)?.loading}
+                error={soapQuestionnaires.questionnaires.get(SOAP_SUBJECTIVE_URL)?.error}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                onChange={(response) => soapQuestionnaires.saveResponse(SOAP_SUBJECTIVE_URL, response)}
+                onDraftChange={(response) => {
+                  subjectiveDraftRef.current = response;
+                }}
+              />
+              <DecisionFlowsPanel
+                decisionFlows={decisionFlows}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                onA01Completed={adtmcA01Result.refresh}
+              />
+              <SoapRosCard
+                templates={[
+                  { url: ROS_BRIEF_NORMAL_URL, label: 'ROS Brief - Normal', ...soapQuestionnaires.questionnaires.get(ROS_BRIEF_NORMAL_URL) },
+                  { url: ROS_EXTENDED_NORMAL_URL, label: 'ROS Extended - Normal', ...soapQuestionnaires.questionnaires.get(ROS_EXTENDED_NORMAL_URL) },
+                  { url: ROS_UNABLE_TO_OBTAIN_URL, label: 'ROS Unable to Obtain', ...soapQuestionnaires.questionnaires.get(ROS_UNABLE_TO_OBTAIN_URL) },
+                ]}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                onChange={soapQuestionnaires.saveResponse}
+                onRemove={soapQuestionnaires.removeResponse}
+              />
+              <SoapObjectiveCard
+                patient={patientResource}
+                encounter={encounter}
+                practitioner={practitioner}
+                questionnaireResponse={soapQuestionnaires.questionnaires.get(SOAP_OBJECTIVE_URL)?.response}
+                loading={soapQuestionnaires.questionnaires.get(SOAP_OBJECTIVE_URL)?.loading}
+                error={soapQuestionnaires.questionnaires.get(SOAP_OBJECTIVE_URL)?.error}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                onChange={(response) => soapQuestionnaires.saveResponse(SOAP_OBJECTIVE_URL, response)}
+              />
+              <SoapPhysicalExamCard
+                templates={[
+                  { url: PHYSICAL_EXAM_ADULT_BRIEF_URL, label: 'Physical Exam - Adult Brief', ...soapQuestionnaires.questionnaires.get(PHYSICAL_EXAM_ADULT_BRIEF_URL) },
+                  { url: PHYSICAL_EXAM_ADULT_EXTENDED_URL, label: 'Physical Exam - Adult Extended', ...soapQuestionnaires.questionnaires.get(PHYSICAL_EXAM_ADULT_EXTENDED_URL) },
+                  { url: PHYSICAL_EXAM_PEDIATRIC_BRIEF_URL, label: 'Physical Exam - Pediatric Brief', ...soapQuestionnaires.questionnaires.get(PHYSICAL_EXAM_PEDIATRIC_BRIEF_URL) },
+                  { url: PHYSICAL_EXAM_PEDIATRIC_EXTENDED_URL, label: 'Physical Exam - Pediatric Extended', ...soapQuestionnaires.questionnaires.get(PHYSICAL_EXAM_PEDIATRIC_EXTENDED_URL) },
+                ]}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                onChange={soapQuestionnaires.saveResponse}
+                onRemove={soapQuestionnaires.removeResponse}
+              />
+              {(['Assessment', 'Plan'] as const).map((title) => {
+                const questionnaireUrl = title === 'Assessment' ? SOAP_ASSESSMENT_URL : SOAP_PLAN_URL;
+                const state = soapQuestionnaires.questionnaires.get(questionnaireUrl);
+                return (
+                  <Fragment key={questionnaireUrl}>
+                    <SoapSectionCard
+                      title={title}
+                      questionnaire={state?.questionnaire}
+                      questionnaireResponse={state?.response}
+                      loading={state?.loading}
+                      error={state?.error}
+                      disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                      onChange={(response) => soapQuestionnaires.saveResponse(questionnaireUrl, response)}
+                    />
+                    {adtmcA01Result.clinicalImpression && adtmcA01Result.questionnaireResponse && (
+                      <AdtmcA01DecisionSupport
+                        section={title.toLowerCase() as 'assessment' | 'plan'}
+                        clinicalImpression={adtmcA01Result.clinicalImpression}
+                        questionnaireResponse={adtmcA01Result.questionnaireResponse}
+                        soapResponse={state?.response}
+                        disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                        onDraft={(response) => soapQuestionnaires.saveResponse(questionnaireUrl, response)}
+                      />
+                    )}
+                  </Fragment>
+                );
+              })}
               {tasks.map((task) => (
                 <TaskPanel
                   key={task.id}

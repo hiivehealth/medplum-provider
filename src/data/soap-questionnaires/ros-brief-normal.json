@@ -1,0 +1,23 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://hiivehealth.com/questionnaire/ros-brief-normal",
+  "name": "HiiveRosBriefNormal",
+  "title": "ROS Brief - Normal",
+  "status": "active",
+  "description": "Brief ROS template from the ROS Medplum workbook. Clinical labels require owner approval.",
+  "item": [
+    {
+      "linkId": "ros-brief-fields",
+      "type": "group",
+      "item": [
+        { "linkId": "ros-brief-01", "type": "choice", "text": "Constitutional: Fever", "answerOption": [{ "valueString": "no", "initialSelected": true }, { "valueString": "mild" }, { "valueString": "moderate" }, { "valueString": "severe" }] },
+        { "linkId": "ros-brief-02", "type": "choice", "text": "Constitutional: Chills", "answerOption": [{ "valueString": "no", "initialSelected": true }, { "valueString": "mild" }, { "valueString": "moderate" }, { "valueString": "severe" }] },
+        { "linkId": "ros-brief-03", "type": "choice", "text": "Constitutional: Sweats", "answerOption": [{ "valueString": "no", "initialSelected": true }, { "valueString": "mild" }, { "valueString": "moderate" }, { "valueString": "severe" }] },
+        { "linkId": "ros-brief-04", "type": "choice", "text": "Constitutional: Weakness", "answerOption": [{ "valueString": "no", "initialSelected": true }, { "valueString": "mild" }, { "valueString": "moderate" }, { "valueString": "severe" }] },
+        { "linkId": "ros-brief-05", "type": "choice", "text": "Respiratory: Shortness of breath", "answerOption": [{ "valueString": "no", "initialSelected": true }, { "valueString": "mild" }, { "valueString": "moderate" }, { "valueString": "severe" }] },
+        { "linkId": "ros-brief-06", "type": "choice", "text": "Respiratory: Cough", "answerOption": [{ "valueString": "no", "initialSelected": true }, { "valueString": "mild" }, { "valueString": "moderate" }, { "valueString": "severe" }] },
+        { "linkId": "ros-brief-07", "type": "choice", "text": "Cardiovascular: Chest pain", "answerOption": [{ "valueString": "no", "initialSelected": true }, { "valueString": "mild" }, { "valueString": "moderate" }, { "valueString": "severe" }] }
+      ]
+    }
+  ]
+}

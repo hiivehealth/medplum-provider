@@ -1,0 +1,56 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://hiivehealth.com/questionnaire/physical-exam-adult-brief",
+  "version": "1.0.0",
+  "name": "HiivePhysicalExamAdultBrief",
+  "title": "Physical Exam - Adult Brief",
+  "status": "active",
+  "description": "Adult brief physical examination template transcribed from Physical Exam Templates.xlsx. Clinical labels and choices require owner approval.",
+  "item": [
+    {
+      "linkId": "pe-adult-brief-general",
+      "type": "group",
+      "text": "General",
+      "item": [
+        { "linkId": "pe-adult-brief-alertness", "type": "choice", "text": "Alertness", "answerOption": [{ "valueString": "alert" }, { "valueString": "not alert" }] },
+        { "linkId": "pe-adult-brief-distress", "type": "choice", "text": "Distress", "answerOption": [{ "valueString": "no acute distress" }, { "valueString": "mild distress" }, { "valueString": "moderate distress" }, { "valueString": "severe distress" }] }
+      ]
+    },
+    {
+      "linkId": "pe-adult-brief-cardiovascular",
+      "type": "group",
+      "text": "Cardiovascular",
+      "item": [
+        { "linkId": "pe-adult-brief-rate-rhythm", "type": "choice", "text": "Rate and rhythm", "answerOption": [{ "valueString": "regular" }, { "valueString": "irregular" }, { "valueString": "irregularly-irregular" }] },
+        { "linkId": "pe-adult-brief-peripheral-perfusion", "type": "choice", "text": "Peripheral perfusion", "answerOption": [{ "valueString": "normal" }, { "valueString": "decreased" }] }
+      ]
+    },
+    {
+      "linkId": "pe-adult-brief-respiratory",
+      "type": "group",
+      "text": "Respiratory",
+      "item": [
+        { "linkId": "pe-adult-brief-lungs", "type": "choice", "text": "Lung sounds", "answerOption": [{ "valueString": "CTA" }, { "valueString": "basilar rales" }, { "valueString": "rhonchi" }, { "valueString": "expiratory wheezes" }] },
+        { "linkId": "pe-adult-brief-respirations", "type": "choice", "text": "Respirations", "answerOption": [{ "valueString": "non labored" }, { "valueString": "labored" }] }
+      ]
+    },
+    {
+      "linkId": "pe-adult-brief-extremities",
+      "type": "group",
+      "text": "Extremities",
+      "item": [
+        { "linkId": "pe-adult-brief-deformity", "type": "choice", "text": "Deformity", "answerOption": [{ "valueString": "no" }, { "valueString": "mild" }, { "valueString": "moderate" }, { "valueString": "severe" }] },
+        { "linkId": "pe-adult-brief-trauma", "type": "choice", "text": "Trauma", "answerOption": [{ "valueString": "no" }, { "valueString": "mild" }, { "valueString": "moderate" }, { "valueString": "severe" }] }
+      ]
+    },
+    {
+      "linkId": "pe-adult-brief-neurologic",
+      "type": "group",
+      "text": "Neurologic",
+      "item": [
+        { "linkId": "pe-adult-brief-orientation", "type": "choice", "text": "Orientation", "answerOption": [{ "valueString": "x 4" }, { "valueString": "x 3" }, { "valueString": "x 2" }, { "valueString": "x 1" }] },
+        { "linkId": "pe-adult-brief-level-of-consciousness", "type": "choice", "text": "Level of consciousness", "answerOption": [{ "valueString": "appropriate for age" }, { "valueString": "slow" }, { "valueString": "confused" }, { "valueString": "arousable" }, { "valueString": "stuporous" }, { "valueString": "unresponsive" }, { "valueString": "uncooperative" }] }
+      ]
+    }
+  ]
+}
