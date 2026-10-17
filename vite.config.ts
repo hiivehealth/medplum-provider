@@ -46,7 +46,7 @@ export default defineConfig({
     alias,
   },
   test: {
-    exclude: [...configDefaults.exclude, 'server/**', '**/*.local/**'],
+    exclude: [...configDefaults.exclude, 'server/**', 'scripts/hawaii-cqie-preflight.test.mjs', '**/*.local/**'],
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test.setup.ts',

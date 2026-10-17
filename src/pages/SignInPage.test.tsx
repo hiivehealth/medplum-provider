@@ -41,6 +41,27 @@ describe('SignInPage', () => {
     expectSigninPageRendered();
   });
 
+  test.each([
+    ['configured Hawaii fallback', '/signin', 'hawaii-project', 'hawaii-project'],
+    ['explicit project override', '/signin?project=another-project', 'hawaii-project', 'another-project'],
+    ['normal unscoped provider', '/signin', '', undefined],
+  ])('authenticates with the %s', async (_scenario, url, configuredProject, expectedProject) => {
+    vi.stubEnv('MEDPLUM_HAWAII_PROJECT_ID', configuredProject as string);
+    const client = setup(url);
+    const start = vi.spyOn(client, 'startLogin').mockRejectedValue(new Error('Test authentication stopped'));
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Email *'), { target: { value: 'clinician@example.com' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    });
+    const password = await screen.findByLabelText('Password *');
+    await act(async () => {
+      fireEvent.change(password, { target: { value: 'test-password' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
+    });
+    expect(start).toHaveBeenCalled();
+    expect(start.mock.calls[0][0].projectId).toBe(expectedProject);
+  });
+
   test('Shows register link when registration is enabled', async () => {
     vi.stubEnv('MEDPLUM_REGISTER_ENABLED', 'true');
 

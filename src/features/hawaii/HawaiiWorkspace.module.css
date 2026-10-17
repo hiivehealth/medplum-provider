@@ -1,0 +1,27 @@
+@media (max-width: 600px) {
+  .clinicalRecords thead {
+    display: none;
+  }
+
+  .clinicalRecords tbody {
+    display: block;
+  }
+
+  .clinicalRecords tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--mantine-color-default-border);
+  }
+
+  .clinicalRecords tbody td {
+    padding: 0;
+    border: 0;
+  }
+
+  .clinicalRecords tbody td:first-child,
+  .clinicalRecords tbody td:last-child {
+    color: var(--mantine-color-dimmed);
+  }
+}

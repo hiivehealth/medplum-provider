@@ -26,6 +26,8 @@ import { CuiBanner } from './components/CuiBanner/CuiBanner';
 import { hasScriptSureIdentifier } from './components/utils';
 import cuiShellClasses from './features/cui/CuiAppShell.module.css';
 import { CuiPolicyProvider, useCuiPolicy } from './features/cui/CuiPolicyProvider';
+import { getHawaiiDemoConfig } from './features/hawaii/config';
+import { HawaiiApp } from './features/hawaii/HawaiiApp';
 import { useDoseSpotAccess } from './hooks/useDoseSpotAccess';
 import './index.css';
 import { CuiPolicyPage } from './pages/settings/CuiPolicyPage';
@@ -75,9 +77,11 @@ import { SpacesPage } from './pages/spaces/SpacesPage';
 import { TasksPage } from './pages/tasks/TasksPage';
 
 export function App(): JSX.Element {
+  const medplum = useMedplum();
+  const hawaii = getHawaiiDemoConfig(medplum.getProject());
   return (
     <CuiPolicyProvider>
-      <AppContent />
+      {hawaii.enabled ? <HawaiiApp /> : <AppContent />}
     </CuiPolicyProvider>
   );
 }

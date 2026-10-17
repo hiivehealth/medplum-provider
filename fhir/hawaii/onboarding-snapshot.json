@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "siteName": "Demo Hawaii Rural Hospital",
+  "observedAt": "2026-10-16T18:00:00Z",
+  "reportingMonth": "2026-10",
+  "stages": [
+    { "code": "assessment", "status": "completed" },
+    { "code": "connectivity", "status": "completed" },
+    { "code": "mapping", "status": "completed" },
+    { "code": "validation", "status": "in-progress" },
+    { "code": "cutover", "status": "not-started" },
+    { "code": "monitoring", "status": "not-started" }
+  ],
+  "records": [
+    { "id": "SYNTH-ADT-001", "receivedAt": "2026-10-15T10:00:00Z", "result": "accepted" },
+    { "id": "SYNTH-ADT-002", "receivedAt": "2026-10-15T11:00:00Z", "result": "rejected" }
+  ],
+  "issues": [
+    {
+      "id": "VAL-001",
+      "recordId": "SYNTH-ADT-002",
+      "field": "Encounter.class",
+      "code": "required-field-missing",
+      "status": "open",
+      "detectedAt": "2026-10-15T11:00:01Z",
+      "description": "Encounter class missing from synthetic discharge."
+    }
+  ],
+  "assistance": [
+    {
+      "id": "TA-001",
+      "occurredAt": "2026-10-15T12:00:00Z",
+      "category": "mapping-review",
+      "summary": "Reviewed synthetic ADT class mapping."
+    }
+  ]
+}
