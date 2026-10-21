@@ -27,4 +27,4 @@ This repository contains the Hiive provider application. Keep application change
 
 ## Copilot Customizations
 
-Migrated skills and the FHIR Reviewer remain disabled pending human security review and isolated runtime acceptance. Keep `user-invocable: false` and `disable-model-invocation: true` until those gates are explicitly completed.
+On 2026-10-21, the user confirmed completion of human security review and isolated runtime acceptance and approved manual skill activation. Skills use `user-invocable: true` and `disable-model-invocation: true`. The separate FHIR Reviewer remains disabled; its activation is not part of this approval.
