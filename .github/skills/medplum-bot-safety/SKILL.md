@@ -1,7 +1,7 @@
 ---
 name: medplum-bot-safety
-description: "Use when designing or reviewing Medplum Bot handlers, Subscription triggers, concurrency, idempotency, retries, partial failure, or external-effect safety. Does not authorize deployment. Disabled pending security acceptance."
-user-invocable: false
+description: "Use when designing or reviewing Medplum Bot handlers, Subscription triggers, concurrency, idempotency, retries, partial failure, or external-effect safety. Does not authorize deployment."
+user-invocable: true
 disable-model-invocation: true
 ---
 # Medplum Bot Safety
