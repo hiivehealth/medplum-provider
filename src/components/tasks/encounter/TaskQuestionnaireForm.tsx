@@ -12,23 +12,36 @@ import {
 } from '@medplum/react';
 import type { JSX } from 'react';
 import { useEffect, useState } from 'react';
+import { A01_QUESTIONNAIRE_URL, hasArmyAccess, isAdtmcTask } from '../../../utils/adtmc';
 import { showErrorNotification } from '../../../utils/notifications';
+import { A01CompactQuestionnaire } from './A01CompactQuestionnaire';
 
 interface TaskQuestionnaireFormProps {
   task: Task;
   onChangeResponse?: (response: QuestionnaireResponse) => void;
+  onSubmitResponse?: (response: QuestionnaireResponse) => void;
+  autoSave?: boolean;
 }
 
-export const TaskQuestionnaireForm = ({ task, onChangeResponse }: TaskQuestionnaireFormProps): JSX.Element => {
+export const TaskQuestionnaireForm = ({
+  task, onChangeResponse, onSubmitResponse, autoSave = true,
+}: TaskQuestionnaireFormProps): JSX.Element | null => {
   const medplum = useMedplum();
   const author = useMedplumProfile();
   const [questionnaire, setQuestionnaire] = useState<Questionnaire | undefined>(undefined);
   const [questionnaireResponse, setQuestionnaireResponse] = useState<QuestionnaireResponse | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [outcome, setOutcome] = useState<OperationOutcome | undefined>(undefined);
+  const projectId = task.meta?.project ?? medplum.getProject()?.id;
+  const armyAccess = hasArmyAccess(medplum, projectId);
+  const adtmc = isAdtmcTask(task) || questionnaire?.url === A01_QUESTIONNAIRE_URL ||
+    questionnaireResponse?.questionnaire?.split('|')[0] === A01_QUESTIONNAIRE_URL;
 
   useEffect(() => {
     const updateQuestionnaireResponse = async (): Promise<void> => {
+      if (adtmc && !hasArmyAccess(medplum, projectId)) {
+        return;
+      }
       if (questionnaireResponse && task.status === 'completed' && questionnaireResponse?.status !== 'completed') {
         const updatedResponse: QuestionnaireResponse = {
           ...questionnaireResponse,
@@ -38,9 +51,12 @@ export const TaskQuestionnaireForm = ({ task, onChangeResponse }: TaskQuestionna
       }
     };
     updateQuestionnaireResponse().catch(showErrorNotification);
-  }, [task, questionnaireResponse, medplum]);
+  }, [task, questionnaireResponse, medplum, adtmc, projectId]);
 
   const onChange = (response: QuestionnaireResponse): void => {
+    if (adtmc && !hasArmyAccess(medplum, projectId)) {
+      return;
+    }
     const baseResponse = questionnaireResponse || response;
     const updatedResponse: QuestionnaireResponse = {
       ...baseResponse,
@@ -51,33 +67,80 @@ export const TaskQuestionnaireForm = ({ task, onChangeResponse }: TaskQuestionna
       encounter: task.encounter,
     };
 
-    onChangeResponse?.(updatedResponse);
+    if (autoSave) {
+      onChangeResponse?.(updatedResponse);
+    }
+  };
+
+  const onSubmit = (response: QuestionnaireResponse): void => {
+    if (adtmc && !hasArmyAccess(medplum, projectId)) {
+      return;
+    }
+    onSubmitResponse?.({
+      ...response, subject: task.for, encounter: task.encounter, source: author && createReference(author),
+    });
   };
 
   useEffect(() => {
+    let cancelled = false;
+    const currentProject = (): boolean => !cancelled && medplum.getProject()?.id === projectId;
     const fetchResources = async (): Promise<void> => {
+      let military = isAdtmcTask(task);
+      let loadedQuestionnaire: Questionnaire | undefined;
+      if (military && !hasArmyAccess(medplum, projectId)) {
+        return;
+      }
       const questionnaireReference = task.input?.[0]?.valueReference as Reference<Questionnaire>;
       const questionnaireResponseReference = task.output?.[0]?.valueReference as Reference<QuestionnaireResponse>;
 
+      if (questionnaireReference) {
+        const resource = await medplum.readReference(questionnaireReference);
+        if (!currentProject()) {
+          return;
+        }
+        military ||= resource.url === A01_QUESTIONNAIRE_URL;
+        if (military && (!hasArmyAccess(medplum, projectId) || resource.meta?.project !== projectId)) {
+          return;
+        }
+        loadedQuestionnaire = resource;
+        if (!military) {
+          setQuestionnaire(resource);
+        }
+      }
       if (questionnaireResponseReference) {
         const response = await medplum.readReference(questionnaireResponseReference);
+        military ||= response.questionnaire?.split('|')[0] === A01_QUESTIONNAIRE_URL;
+        if (!currentProject() || (military && (!hasArmyAccess(medplum, projectId) || response.meta?.project !== projectId))) {
+          return;
+        }
         setQuestionnaireResponse(response);
       }
-
-      if (questionnaireReference) {
-        const questionnaireResponse = await medplum.readReference(questionnaireReference);
-        setQuestionnaire(questionnaireResponse);
+      if (military) {
+        setQuestionnaire(loadedQuestionnaire);
       }
     };
 
+    setQuestionnaire(undefined);
+    setQuestionnaireResponse(undefined);
     setOutcome(undefined);
     setLoading(true);
     fetchResources()
       .catch((err) => {
-        setOutcome(normalizeOperationOutcome(err));
+        if (currentProject()) {
+          setOutcome(normalizeOperationOutcome(err));
+        }
       })
-      .finally(() => setLoading(false));
-  }, [medplum, task]);
+      .finally(() => {
+        if (currentProject()) {
+          setLoading(false);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [medplum, task, armyAccess, projectId]);
+
+  if (adtmc && !armyAccess) {
+    return null;
+  }
 
   if (loading) {
     return <QuestionnaireSkeleton />;
@@ -85,12 +148,20 @@ export const TaskQuestionnaireForm = ({ task, onChangeResponse }: TaskQuestionna
 
   return (
     <Box p={0}>
-      {task.status !== 'completed' && questionnaire && (
+      {task.status !== 'completed' && questionnaire?.url === A01_QUESTIONNAIRE_URL && (
+        <A01CompactQuestionnaire
+          questionnaire={questionnaire}
+          questionnaireResponse={questionnaireResponse}
+          onSubmit={onSubmit}
+        />
+      )}
+      {task.status !== 'completed' && questionnaire && questionnaire.url !== A01_QUESTIONNAIRE_URL && (
         <QuestionnaireForm
           questionnaire={questionnaire}
           questionnaireResponse={questionnaireResponse}
-          excludeButtons={true}
+          excludeButtons={autoSave}
           onChange={onChange}
+          onSubmit={onSubmit}
         />
       )}
       {task.status === 'completed' && questionnaireResponse && (

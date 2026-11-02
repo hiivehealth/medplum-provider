@@ -73,6 +73,7 @@ import { SmartHealthLinkImportPage } from './pages/smart/SmartHealthLinkImportPa
 import { SmartLogo } from './pages/smart/SmartLogo';
 import { SpacesPage } from './pages/spaces/SpacesPage';
 import { TasksPage } from './pages/tasks/TasksPage';
+import { AdtmcDocumentPage } from './pages/adtmc/AdtmcDocumentPage';
 
 export function App(): JSX.Element {
   return (
@@ -334,6 +335,7 @@ function AppContent(): JSX.Element | null {
               {hasScriptSure && <Route path="/scriptsure" element={<ScriptSurePage />} />}
               <Route path="/integrations" element={<IntegrationsPage />} />
               {/* Must precede the /:resourceType catch-alls below */}
+              <Route path="/adtmc/a01/documents/:documentKey" element={<AdtmcDocumentPage />} />
               <Route path="/Settings/Security" element={<CuiPolicyPage />} />
               {hasBilling && <Route path="/Settings/Billing/:tab?" element={<BillingSetupPage />} />}
               <Route path="/smart-health-link" element={<SmartHealthLinkImportPage />} />
