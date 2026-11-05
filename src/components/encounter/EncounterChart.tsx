@@ -16,12 +16,14 @@ import { showErrorNotification } from '../../utils/notifications';
 import { TaskDetailsModal } from '../tasks/TaskDetailsModal';
 import { TaskPanel } from '../tasks/encounter/TaskPanel';
 import { BillingTab } from './BillingTab';
+import { AdtmcA01Launch } from './AdtmcA01Launch';
 import { EncounterHeader } from './EncounterHeader';
 import { SignAddendum } from './SignAddendum';
 
 const FHIR_ACT_REASON_SYSTEM = 'http://terminology.hl7.org/CodeSystem/v3-ActReason';
 const FHIR_PROVENANCE_PARTICIPANT_TYPE_SYSTEM = 'http://terminology.hl7.org/CodeSystem/provenance-participant-type';
 const FHIR_DOCUMENT_COMPLETION_SYSTEM = 'http://terminology.hl7.org/CodeSystem/v3-DocumentCompletion';
+const A01_TASK_CODE = 'ADTMC A-01 Sore Throat/Hoarseness';
 
 const TASK_COMPLETED_STATUSES = new Set<Task['status']>([
   'completed',
@@ -84,6 +86,10 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
       setTasks((prevTasks) => prevTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task)));
     },
     [setTasks]
+  );
+
+  const hasOpenA01Task = tasks.some(
+    (task) => task.code?.text === A01_TASK_CODE && !TASK_COMPLETED_STATUSES.has(task.status)
   );
 
   const handleEncounterStatusChange = useCallback(
@@ -258,6 +264,12 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
                   />
                 </Card>
               )}
+              <AdtmcA01Launch
+                patient={patientResource}
+                encounter={encounter}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked || hasOpenA01Task}
+                onTaskCreated={(task) => setTasks((currentTasks) => [task, ...currentTasks])}
+              />
               {tasks.map((task) => (
                 <TaskPanel
                   key={task.id}

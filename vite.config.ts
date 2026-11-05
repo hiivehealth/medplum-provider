@@ -6,6 +6,7 @@ import { copyFileSync, existsSync } from 'fs';
 import path from 'path';
 import type { UserConfig } from 'vite';
 import { configDefaults, defineConfig } from 'vitest/config';
+import { privateAdtmcDocuments } from './scripts/adtmc-assets';
 
 dns.setDefaultResultOrder('verbatim');
 
@@ -30,7 +31,7 @@ const alias: NonNullable<UserConfig['resolve']>['alias'] = Object.fromEntries(
 // https://vitejs.dev/config/
 export default defineConfig({
   envPrefix: ['MEDPLUM_', 'GOOGLE_', 'RECAPTCHA_'],
-  plugins: [react()],
+  plugins: [react(), privateAdtmcDocuments()],
   server: {
     host: 'localhost',
     port: 3001,

@@ -5,6 +5,7 @@ import type { WithId } from '@medplum/core';
 import type {
   Encounter,
   Practitioner,
+  Project,
   Questionnaire,
   QuestionnaireResponse,
   Reference,
@@ -17,6 +18,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { TaskQuestionnaireForm } from './TaskQuestionnaireForm';
+
+const armyFeatures = ['army'] as unknown as Project['features'];
 
 const mockQuestionnaire: Questionnaire = {
   resourceType: 'Questionnaire',
@@ -137,6 +140,71 @@ describe('TaskQuestionnaireForm', () => {
       </MemoryRouter>
     );
   };
+
+  test('does not fetch an identified ADTMC task or its completed response without Army access', async () => {
+    const read = vi.spyOn(medplum, 'readReference');
+    await act(async () => {
+      setup({ ...mockCompletedTask, code: { text: 'ADTMC A-01 Sore Throat/Hoarseness' } });
+    });
+
+    expect(read).not.toHaveBeenCalled();
+    expect(screen.queryByText('Initial answer')).not.toBeInTheDocument();
+  });
+
+  test('does not fetch a response after identifying its questionnaire as A-01 outside Army', async () => {
+    const read = vi.spyOn(medplum, 'readReference').mockResolvedValue({
+      ...mockQuestionnaire,
+      id: 'questionnaire-123',
+      url: 'https://ehr.hiivehealth.net/fhir/Questionnaire/a01-sore-throat',
+    });
+    await act(async () => { setup(mockCompletedTask); });
+
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(read).toHaveBeenCalledWith({ reference: 'Questionnaire/questionnaire-123' });
+    expect(screen.queryByText('Initial answer')).not.toBeInTheDocument();
+  });
+
+  test.each(['allowed', 'foreign-questionnaire', 'unverified-questionnaire', 'foreign-response', 'unverified-response'])(
+    'displays and completes A-01 resources only in the verified Army project: %s', async (scenario) => {
+      vi.spyOn(medplum, 'getProject').mockReturnValue({ resourceType: 'Project', id: 'army-project', features: armyFeatures });
+      vi.spyOn(medplum, 'getProfile').mockReturnValue({ ...mockPractitioner, id: 'practitioner-123' });
+      vi.spyOn(medplum, 'getProjectMembership').mockReturnValue({
+        resourceType: 'ProjectMembership', id: 'membership-1', active: true, admin: false,
+        project: { reference: 'Project/army-project' }, user: { reference: 'User/user-1' },
+        profile: { reference: 'Practitioner/practitioner-123' },
+      });
+      const deniedMeta = scenario.startsWith('foreign') ? { project: 'other-project' } : undefined;
+      const questionnaire: WithId<Questionnaire> = {
+        ...mockQuestionnaire,
+        id: 'questionnaire-123',
+        url: 'https://ehr.hiivehealth.net/fhir/Questionnaire/a01-sore-throat',
+        meta: scenario.endsWith('questionnaire') ? deniedMeta : { project: 'army-project' },
+      };
+      const response: WithId<QuestionnaireResponse> = {
+        ...mockQuestionnaireResponse,
+        id: 'response-123',
+        questionnaire: `${questionnaire.url}|1.0.0`,
+        meta: scenario.endsWith('response') ? deniedMeta : { project: 'army-project' },
+      };
+      const read = vi.spyOn(medplum, 'readReference').mockResolvedValueOnce(questionnaire).mockResolvedValueOnce(response);
+      const update = vi.spyOn(medplum, 'updateResource').mockResolvedValue(response);
+
+      await act(async () => {
+        setup({ ...mockCompletedTask, meta: { project: 'army-project' }, code: { text: 'ADTMC A-01 Sore Throat/Hoarseness' } });
+      });
+
+      if (scenario === 'allowed') {
+        expect(screen.getByText('Initial answer')).toBeInTheDocument();
+        expect(update).toHaveBeenCalledWith(expect.objectContaining({
+          id: 'response-123', status: 'completed', meta: { project: 'army-project' },
+        }));
+      } else {
+        expect(screen.queryByText('Initial answer')).not.toBeInTheDocument();
+        expect(update).not.toHaveBeenCalled();
+      }
+      expect(read).toHaveBeenCalledTimes(scenario.endsWith('questionnaire') ? 1 : 2);
+    }
+  );
 
   test('fetches and displays questionnaire form when task is not completed', async () => {
     await medplum.createResource(mockQuestionnaire);

@@ -14,6 +14,7 @@ import {
 import type { JSX } from 'react';
 import { useEffect, useState } from 'react';
 import { showErrorNotification } from '../../utils/notifications';
+import { hasArmyAccess, isAdtmcTask } from '../../utils/adtmc';
 import { usePharmacyDialog } from '../pharmacy/usePharmacyDialog';
 import { ScriptSureMessageTaskActions } from './ScriptSureMessageTaskActions';
 import { isScriptSureMessageTask } from './ScriptSureMessageTaskActions.utils';
@@ -42,7 +43,13 @@ export function TaskDetailPanel(props: TaskDetailPanelProps): JSX.Element | null
   }, [resolvedTask]);
 
   const patientRef = task?.for as Reference<Patient>;
-  const selectedPatient = useResource<Patient>(patientRef);
+  const projectId = task?.meta?.project ?? medplum.getProject()?.id;
+  const denied = !!task && isAdtmcTask(task) && !hasArmyAccess(medplum, projectId);
+  const selectedPatient = useResource<Patient>(denied ? undefined : patientRef);
+
+  if (denied) {
+    return null;
+  }
 
   if (!task) {
     return (
@@ -53,7 +60,13 @@ export function TaskDetailPanel(props: TaskDetailPanelProps): JSX.Element | null
   }
 
   const handleTaskChange = async (updatedTask: Task): Promise<void> => {
+    if ((isAdtmcTask(task) || isAdtmcTask(updatedTask)) && !hasArmyAccess(medplum, projectId)) {
+      return;
+    }
     await medplum.updateResource(updatedTask);
+    if (isAdtmcTask(task) && !hasArmyAccess(medplum, projectId)) {
+      return;
+    }
     setTask(updatedTask);
     onTaskChange?.(updatedTask);
   };
@@ -64,6 +77,9 @@ export function TaskDetailPanel(props: TaskDetailPanelProps): JSX.Element | null
   };
 
   const handleDeleteTask = async (deletedTask: Task): Promise<void> => {
+    if ((isAdtmcTask(task) || isAdtmcTask(deletedTask)) && !hasArmyAccess(medplum, projectId)) {
+      return;
+    }
     try {
       await medplum.deleteResource('Task', deletedTask.id as string);
       onDeleteTask?.(deletedTask);
@@ -146,6 +162,9 @@ export function TaskDetailPanel(props: TaskDetailPanelProps): JSX.Element | null
                 <ResourceTimeline
                   value={task}
                   loadTimelineResources={async (medplum: MedplumClient, _resourceType: ResourceType, id: string) => {
+                    if (isAdtmcTask(task) && !hasArmyAccess(medplum, projectId)) {
+                      return [];
+                    }
                     return Promise.allSettled([medplum.readHistory('Task', id)]);
                   }}
                 />
