@@ -134,10 +134,21 @@ describe('PatientPage', () => {
 
     const age = calculateAgeString(HomerSimpson.birthDate);
 
-    await waitFor(() => {
-      expect(screen.getByText('Male')).toBeInTheDocument();
-      expect(screen.getByText(`1956-05-12 (${age})`)).toBeInTheDocument();
+    expect(await screen.findByText('Male')).toBeInTheDocument();
+    expect(await screen.findByText(`1956-05-12 (${age})`)).toBeInTheDocument();
+  });
+
+  test('replaces the default demographics section for Army patients', async () => {
+    const patient = await medplum.createResource({
+      resourceType: 'Patient',
+      meta: { profile: ['https://ehr.hiivehealth.net/fhir/StructureDefinition/hiive-army-demographics-patient'] },
+      identifier: [{ system: 'https://ehr.hiivehealth.net/fhir/identifier/dod-id', value: '1234567890' }],
     });
+    setup(`/Patient/${patient.id}`);
+
+    expect(await screen.findByText('1234567890')).toBeInTheDocument();
+    expect(screen.getByText('DoD ID:')).toBeInTheDocument();
+    expect(screen.queryByText('Demographics')).not.toBeInTheDocument();
   });
 
   test('handles empty pathname correctly', async () => {

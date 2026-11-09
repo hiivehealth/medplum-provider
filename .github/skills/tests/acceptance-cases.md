@@ -1,0 +1,38 @@
+# Customization Acceptance Status
+
+This checklist applies only to the provider skills listed in
+[the local catalog](../README.md) and the offline FHIR Reviewer. It replaces the
+retiring monorepo's workspace-specific test harness; no automated customization
+tests were migrated or run here.
+
+## Current status
+
+- Skills: on 2026-10-21, the user confirmed human security review and isolated
+  runtime acceptance were complete and explicitly approved manual activation.
+  This records the user's confirmation, not independently inspected trial logs.
+- Invocation: skills use `user-invocable: true` and
+  `disable-model-invocation: true`; automatic invocation remains disabled.
+- The separate FHIR Reviewer is not covered by this activation and retains
+  both invocation paths disabled pending its own acceptance and approval.
+
+## Required acceptance cases
+
+1. Parse every frontmatter block; verify skill folder/name consistency, valid
+   local links, manual-only skill flags, and both disabled Reviewer flags.
+2. Review instructions and examples for provider code ownership, synthetic-only
+   fixtures, idempotency, least privilege, and no implicit deployment or live
+   authorization.
+3. Use a synthetic-only, isolated workspace with no patient data, credentials,
+   host secrets, live MCP servers, or production network access. Test each
+   enabled-in-copy skill against a positive case and adversarial untrusted
+   resource text.
+4. Test the FHIR Reviewer separately. Its effective tools must be exactly
+   built-in read/search, with no delegation, shell, network, MCP, or write
+   capability. Stop if the harness expands those tools.
+5. Independently review attempted calls and outputs. A static check, scenario
+   rehearsal, model assertion, or successful unit test does not establish
+   runtime safety or authorize activation.
+
+Any change to a definition or referenced guidance requires re-review. Do not
+enable either invocation path until every applicable gate and explicit human
+approval are recorded outside these files.

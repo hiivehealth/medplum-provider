@@ -3,7 +3,7 @@
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import type { WithId } from '@medplum/core';
-import type { Questionnaire, QuestionnaireResponse, ServiceRequest, Task } from '@medplum/fhirtypes';
+import type { Project, Questionnaire, QuestionnaireResponse, ServiceRequest, Task } from '@medplum/fhirtypes';
 import { MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { act, render, screen, waitFor } from '@testing-library/react';
@@ -12,6 +12,19 @@ import * as reactRouter from 'react-router';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { TaskPanel } from './TaskPanel';
+import { TaskQuestionnaireForm } from './TaskQuestionnaireForm';
+
+const armyFeatures = ['army'] as unknown as Project['features'];
+
+vi.mock('react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof reactRouter>();
+  return { ...actual, useNavigate: vi.fn() };
+});
+
+vi.mock('./TaskQuestionnaireForm', async (importOriginal) => {
+  const actual = await importOriginal<{ TaskQuestionnaireForm: typeof TaskQuestionnaireForm }>();
+  return { ...actual, TaskQuestionnaireForm: vi.fn(actual.TaskQuestionnaireForm) };
+});
 
 describe('TaskPanel', () => {
   let medplum: MockClient;
@@ -60,6 +73,190 @@ describe('TaskPanel', () => {
     code: { text: 'Test Task Code' },
     description: 'Test Task Description',
   };
+
+  const setupA01Submission = async (taskOverrides: Partial<Task> = {}, enabled = true): Promise<{
+    task: WithId<Task>;
+    response: QuestionnaireResponse;
+    completedResponse: WithId<QuestionnaireResponse>;
+    onUpdateTask: ReturnType<typeof vi.fn>;
+    submit: (response: QuestionnaireResponse) => void;
+  }> => {
+    vi.spyOn(medplum, 'getProject').mockReturnValue({ resourceType: 'Project', id: 'army-project', features: armyFeatures });
+    vi.spyOn(medplum, 'getProfile').mockReturnValue({ resourceType: 'Practitioner', id: 'provider-1' });
+    vi.spyOn(medplum, 'getProjectMembership').mockReturnValue({
+      resourceType: 'ProjectMembership', id: 'membership-1',
+      project: { reference: 'Project/army-project' }, user: { reference: 'User/user-1' },
+      profile: { reference: 'Practitioner/provider-1' },
+    });
+    const task: WithId<Task> = {
+      ...mockTask,
+      meta: { project: 'army-project', versionId: '1' },
+      code: { text: 'ADTMC A-01 Sore Throat/Hoarseness' },
+      focus: { reference: 'Questionnaire/a01' },
+      input: [{ type: { text: 'Questionnaire' }, valueReference: { reference: 'Questionnaire/a01' } }],
+      ...taskOverrides,
+    };
+    vi.spyOn(medplum, 'readReference').mockResolvedValue({
+      resourceType: 'Questionnaire', id: 'a01', status: 'active', meta: { project: 'army-project' },
+    });
+    const response: QuestionnaireResponse = {
+      resourceType: 'QuestionnaireResponse', status: 'completed',
+      questionnaire: 'https://ehr.hiivehealth.net/fhir/Questionnaire/a01-sore-throat|1.0.0',
+    };
+    const completedResponse: WithId<QuestionnaireResponse> = {
+      ...response, id: 'response-1', meta: { project: 'army-project' },
+    };
+    const onUpdateTask = vi.fn();
+    await setup(task, onUpdateTask, enabled);
+    const submit = vi.mocked(TaskQuestionnaireForm).mock.lastCall?.[0].onSubmitResponse;
+    if (!submit) {
+      throw new Error('Expected the A-01 submission callback');
+    }
+    return { task, response, completedResponse, onUpdateTask, submit };
+  };
+
+  test('retries A-01 Task completion using the same conditional response identity', async () => {
+    const { task, response, completedResponse, onUpdateTask, submit } = await setupA01Submission();
+    const conditionalCreate = vi.spyOn(medplum, 'createResourceIfNoneExist').mockResolvedValue(completedResponse);
+    const create = vi.spyOn(medplum, 'createResource').mockResolvedValue(completedResponse);
+    const update = vi.spyOn(medplum, 'updateResource')
+      .mockRejectedValueOnce(new Error('Synthetic Task update failure'))
+      .mockResolvedValueOnce({ ...task, status: 'completed' });
+
+    await act(async () => { await submit(response); });
+    expect(onUpdateTask).not.toHaveBeenCalled();
+    await act(async () => { await submit(response); });
+
+    const identifier = { system: 'urn:hiivehealth:adtmc-task-response', value: 'army-project/task-123' };
+    expect(conditionalCreate).toHaveBeenCalledTimes(2);
+    expect(conditionalCreate).toHaveBeenNthCalledWith(1,
+      expect.objectContaining({ identifier, status: 'completed' }),
+      new URLSearchParams({ identifier: `${identifier.system}|${identifier.value}` }).toString()
+    );
+    expect(conditionalCreate.mock.calls[1]).toEqual(conditionalCreate.mock.calls[0]);
+    expect(create).not.toHaveBeenCalled();
+    expect(update).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: 'completed', output: [{ type: { text: 'QuestionnaireResponse' }, valueReference: { reference: 'QuestionnaireResponse/response-1' } }] }),
+      { headers: { 'If-Match': 'W/"1"' } }
+    );
+    expect(onUpdateTask).toHaveBeenCalledTimes(1);
+  });
+
+  test('recovers an ambiguous A-01 response save without changing its conditional identity', async () => {
+    const { task, response, completedResponse, onUpdateTask, submit } = await setupA01Submission();
+    const conditionalCreate = vi.spyOn(medplum, 'createResourceIfNoneExist')
+      .mockRejectedValueOnce(new Error('Synthetic timeout after response commit'))
+      .mockResolvedValueOnce(completedResponse);
+    const update = vi.spyOn(medplum, 'updateResource').mockResolvedValue({ ...task, status: 'completed' });
+
+    await act(async () => { await submit(response); });
+    expect(update).not.toHaveBeenCalled();
+    await act(async () => { await submit(response); });
+
+    expect(conditionalCreate).toHaveBeenCalledTimes(2);
+    expect(conditionalCreate.mock.calls[1]).toEqual(conditionalCreate.mock.calls[0]);
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(onUpdateTask).toHaveBeenCalledTimes(1);
+  });
+
+  test('coalesces overlapping A-01 submissions', async () => {
+    const { task, response, completedResponse, onUpdateTask, submit } = await setupA01Submission();
+    let finishResponse: (saved: WithId<QuestionnaireResponse>) => void = () => undefined;
+    const pendingResponse = new Promise<WithId<QuestionnaireResponse>>((resolve) => { finishResponse = resolve; });
+    const conditionalCreate = vi.spyOn(medplum, 'createResourceIfNoneExist').mockReturnValue(pendingResponse);
+    const update = vi.spyOn(medplum, 'updateResource').mockResolvedValue({ ...task, status: 'completed' });
+
+    await act(async () => {
+      const firstSubmission = submit(response);
+      const secondSubmission = submit(response);
+      expect(conditionalCreate).toHaveBeenCalledTimes(1);
+      finishResponse(completedResponse);
+      await Promise.all([firstSubmission, secondSubmission]);
+    });
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(onUpdateTask).toHaveBeenCalledTimes(1);
+  });
+
+  test.each([
+    { name: 'foreign project', changed: { meta: { project: 'other-project' } } },
+    { name: 'different answers', changed: { item: [{ linkId: 'screen', answer: [{ valueString: 'different' }] }] } },
+    { name: 'incomplete response', changed: { status: 'in-progress' as const } },
+    { name: 'different patient', changed: { subject: { reference: 'Patient/other-patient' } } },
+  ])('does not complete an A-01 Task from a recovered response with $name', async ({ changed }) => {
+    const { response, completedResponse, onUpdateTask, submit } = await setupA01Submission();
+    vi.spyOn(medplum, 'createResourceIfNoneExist').mockResolvedValue({ ...completedResponse, ...changed });
+    const update = vi.spyOn(medplum, 'updateResource');
+
+    await act(async () => { await submit(response); });
+
+    expect(update).not.toHaveBeenCalled();
+    expect(onUpdateTask).not.toHaveBeenCalled();
+  });
+
+  test('does not overwrite a competing Task version after an A-01 response save', async () => {
+    const { response, completedResponse, onUpdateTask, submit } = await setupA01Submission();
+    vi.spyOn(medplum, 'createResourceIfNoneExist').mockResolvedValue(completedResponse);
+    const update = vi.spyOn(medplum, 'updateResource').mockRejectedValue(new Error('Synthetic version conflict'));
+
+    await act(async () => { await submit(response); });
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update.mock.calls[0][1]).toEqual({ headers: { 'If-Match': 'W/"1"' } });
+    expect(onUpdateTask).not.toHaveBeenCalled();
+  });
+
+  test.each(['missing version', 'locked'])('does not persist an A-01 submission when the Task is %s', async (kind) => {
+    const overrides = kind === 'missing version' ? { meta: { project: 'army-project' } } : {};
+    const { response, submit } = await setupA01Submission(overrides, kind !== 'locked');
+    const conditionalCreate = vi.spyOn(medplum, 'createResourceIfNoneExist');
+    const update = vi.spyOn(medplum, 'updateResource');
+
+    await act(async () => { await submit(response); });
+
+    expect(conditionalCreate).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  test('does not complete an A-01 Task after its session switches projects', async () => {
+    const { response, completedResponse, onUpdateTask, submit } = await setupA01Submission();
+    vi.spyOn(medplum, 'createResourceIfNoneExist').mockImplementation(async () => {
+      vi.mocked(medplum.getProject).mockReturnValue({ resourceType: 'Project', id: 'other-project' });
+      return completedResponse;
+    });
+    const update = vi.spyOn(medplum, 'updateResource');
+
+    await act(async () => { await submit(response); });
+
+    expect(update).not.toHaveBeenCalled();
+    expect(onUpdateTask).not.toHaveBeenCalled();
+  });
+
+  test.each(['launch', 'handoff', 'foreign-project'])('hides an ADTMC %s task without Army eligibility', async (kind) => {
+    if (kind === 'foreign-project') {
+      vi.spyOn(medplum, 'getProject').mockReturnValue({ resourceType: 'Project', id: 'army-project', features: armyFeatures });
+      vi.spyOn(medplum, 'getProfile').mockReturnValue({ resourceType: 'Practitioner', id: 'provider-1' });
+      vi.spyOn(medplum, 'getProjectMembership').mockReturnValue({
+        resourceType: 'ProjectMembership', id: 'membership-1', active: true,
+        project: { reference: 'Project/army-project' }, user: { reference: 'User/user-1' },
+        profile: { reference: 'Practitioner/provider-1' },
+      });
+    }
+    const read = vi.spyOn(medplum, 'readReference');
+    await setup({
+      ...mockTask,
+      meta: kind === 'foreign-project' ? { project: 'other-project' } : undefined,
+      code: { text: kind !== 'handoff' ? 'ADTMC A-01 Sore Throat/Hoarseness' : 'Clinical handoff' },
+      extension: kind === 'handoff' ? [{
+        url: 'https://ehr.hiivehealth.net/fhir/StructureDefinition/adtmc-algorithm-id', valueString: 'A-01',
+      }] : undefined,
+      focus: { reference: 'Questionnaire/a01' },
+      input: [{ type: { text: 'Questionnaire' }, valueReference: { reference: 'Questionnaire/a01' } }],
+    }, vi.fn());
+
+    expect(screen.queryByText('Task Status:')).not.toBeInTheDocument();
+    expect(read).not.toHaveBeenCalled();
+  });
 
   test('renders TaskQuestionnaireForm when focus is Questionnaire', async () => {
     const questionnaireId = `q-${Date.now()}`;

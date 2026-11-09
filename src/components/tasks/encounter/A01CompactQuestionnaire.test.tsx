@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
+// SPDX-License-Identifier: Apache-2.0
 import { MantineProvider } from '@mantine/core';
 import type { Questionnaire, QuestionnaireResponse } from '@medplum/fhirtypes';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -163,7 +165,7 @@ describe('A01CompactQuestionnaire', () => {
     const algorithmLink = await screen.findByRole('link', { name: 'A-1 Sore Throat/Hoarseness' });
     expect(algorithmLink).toHaveAttribute(
       'href',
-      '/documents/adtmc/a01/scope-of-practice.html?document=a01-sore-throat-hoarseness'
+      '/adtmc/a01/documents/a01-sore-throat-hoarseness'
     );
     expect(screen.getAllByRole('link')).toHaveLength(5);
     screen.getAllByRole('link').forEach((link) => expect(link).toHaveAttribute('target', '_blank'));

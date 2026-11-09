@@ -9,16 +9,7 @@ import type { JSX } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ResourceFormWithRequiredProfile } from '../../components/ResourceFormWithRequiredProfile';
-import { RESOURCE_PROFILE_URLS } from '../resource/utils';
-
-const missingProfileMessage = RESOURCE_PROFILE_URLS.Patient ? (
-  <>
-    Could not find the{' '}
-    <Anchor href={RESOURCE_PROFILE_URLS.Patient} target="_blank">
-      US Core Patient Profile
-    </Anchor>
-  </>
-) : undefined;
+import { getDefaultProfileUrl } from '../resource/utils';
 
 export function EditTab(): JSX.Element | null {
   const medplum = useMedplum();
@@ -26,6 +17,15 @@ export function EditTab(): JSX.Element | null {
   const [value, setValue] = useState<Resource | undefined>();
   const navigate = useNavigate();
   const [outcome, setOutcome] = useState<OperationOutcome | undefined>();
+  const profileUrl = getDefaultProfileUrl('Patient', medplum.getProject());
+  const missingProfileMessage = profileUrl ? (
+    <>
+      Could not find the required Patient profile{' '}
+      <Anchor href={profileUrl} target="_blank">
+        {profileUrl}
+      </Anchor>
+    </>
+  ) : undefined;
 
   useEffect(() => {
     medplum
@@ -65,7 +65,7 @@ export function EditTab(): JSX.Element | null {
         defaultValue={value}
         onSubmit={handleSubmit}
         outcome={outcome}
-        profileUrl={RESOURCE_PROFILE_URLS.Patient}
+        profileUrl={profileUrl}
       />
     </Document>
   );

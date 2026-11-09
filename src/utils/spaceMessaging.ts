@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
 import type { MedplumClient } from '@medplum/core';
-import { getReferenceString, isNotFound, OperationOutcomeError } from '@medplum/core';
-import type { Bundle, Communication, Identifier, Resource, ResourceType } from '@medplum/fhirtypes';
+import { getDisplayString, getReferenceString, isNotFound, OperationOutcomeError } from '@medplum/core';
+import type { Bundle, Communication, Identifier, Patient, Reference, Resource, ResourceType } from '@medplum/fhirtypes';
 import type { useMedplum } from '@medplum/react';
 import type { Message } from '../types/spaces';
+import type { ReasoningEffort } from './spaceModels';
 import { createConversationTopic, saveMessage } from './spacePersistence';
 
 const fhirRequestToolsId: Identifier = {
@@ -224,13 +225,15 @@ export async function sendToBot(
   medplum: ReturnType<typeof useMedplum>,
   botId: Identifier,
   messages: Message[],
-  model: string
+  model: string,
+  reasoningEffort: ReasoningEffort
 ): Promise<{ content?: string; toolCalls?: ToolCall[]; visualize?: boolean }> {
   const response = await medplum.executeBot(botId, {
     resourceType: 'Parameters',
     parameter: [
       { name: 'messages', valueString: JSON.stringify(toApiMessages(messages)) },
       { name: 'model', valueString: model },
+      { name: 'reasoning_effort', valueString: reasoningEffort },
     ],
   });
 
@@ -252,6 +255,7 @@ export async function sendToBotStreaming(
   botId: Identifier,
   messages: Message[],
   model: string,
+  reasoningEffort: ReasoningEffort,
   onChunk: (chunk: string) => void,
   additionalParams?: { name: string; valueString: string }[]
 ): Promise<StreamingResult> {
@@ -271,6 +275,7 @@ export async function sendToBotStreaming(
       parameter: [
         { name: 'messages', valueString: JSON.stringify(toApiMessages(messages)) },
         { name: 'model', valueString: model },
+        { name: 'reasoning_effort', valueString: reasoningEffort },
         ...(additionalParams || []),
       ],
     }),
@@ -350,13 +355,16 @@ export interface ProcessMessageParams {
   currentMessages: Message[];
   currentTopicId: string | undefined;
   selectedModel: string;
+  selectedReasoningEffort: ReasoningEffort;
   isFirstMessage: boolean;
   setCurrentTopicId: (id: string | undefined) => void;
   setRefreshKey: React.Dispatch<React.SetStateAction<number>>;
   setCurrentFhirRequest: (request: string | undefined) => void;
   onNewTopic: (topic: Communication) => void;
   onStreamChunk?: (chunk: string) => void;
+  onComponentStart?: () => void;
   onComponentStreamChunk?: (chunk: string) => void;
+  selectedPatients?: (Patient | Reference<Patient>)[];
 }
 
 export interface ProcessMessageResult {
@@ -373,13 +381,16 @@ export async function processMessage(params: ProcessMessageParams): Promise<Proc
     currentMessages,
     currentTopicId,
     selectedModel,
+    selectedReasoningEffort,
     isFirstMessage,
     setCurrentTopicId,
     setRefreshKey,
     setCurrentFhirRequest,
     onNewTopic,
     onStreamChunk,
+    onComponentStart,
     onComponentStreamChunk,
+    selectedPatients,
   } = params;
 
   // Create topic on first message
@@ -397,6 +408,18 @@ export async function processMessage(params: ProcessMessageParams): Promise<Proc
     await saveMessage(medplum, activeTopicId, userMessage, currentMessages.length - 1);
   }
 
+  if (selectedPatients && selectedPatients.length > 0) {
+    const patientLines = selectedPatients.map((p) => {
+      const displayName = 'resourceType' in p ? getDisplayString(p) : (p.display ?? 'Unknown');
+      return `- ${displayName} (${getReferenceString(p)})`;
+    });
+    const patientContext: Message = {
+      role: 'system',
+      content: `The user has pre-selected the following patient(s) for this request. Use these patient references when the request involves a patient and do not ask which patient:\n${patientLines.join('\n')}`,
+    };
+    currentMessages.push(patientContext);
+  }
+
   const MAX_AGENT_ITERATIONS = 10;
   const allResourceRefs: string[] = [];
   let visualize = false;
@@ -404,7 +427,13 @@ export async function processMessage(params: ProcessMessageParams): Promise<Proc
   let loopCompleted = false;
 
   for (let iteration = 0; iteration < MAX_AGENT_ITERATIONS; iteration++) {
-    const translatorResponse = await sendToBot(medplum, fhirRequestToolsId, currentMessages, selectedModel);
+    const translatorResponse = await sendToBot(
+      medplum,
+      fhirRequestToolsId,
+      currentMessages,
+      selectedModel,
+      selectedReasoningEffort
+    );
 
     // No tool calls = bot is done, has final answer
     if (!translatorResponse.toolCalls || translatorResponse.toolCalls.length === 0) {
@@ -453,11 +482,18 @@ export async function processMessage(params: ProcessMessageParams): Promise<Proc
         resourceSummaryBotSseId,
         currentMessages,
         selectedModel,
+        selectedReasoningEffort,
         onStreamChunk
       );
       content = result.content;
     } else {
-      const summaryResponse = await sendToBot(medplum, resourceSummaryBotId, currentMessages, selectedModel);
+      const summaryResponse = await sendToBot(
+        medplum,
+        resourceSummaryBotId,
+        currentMessages,
+        selectedModel,
+        selectedReasoningEffort
+      );
       content = summaryResponse.content;
     }
   }
@@ -472,6 +508,10 @@ export async function processMessage(params: ProcessMessageParams): Promise<Proc
 
   let componentCode: string | undefined;
   if (visualize && allResourceRefs.length > 0) {
+    // Signal that component generation has begun so the UI can show feedback
+    // while we fetch FHIR data and wait for the bot's first streamed chunk.
+    onComponentStart?.();
+
     const fhirData = await collectFhirData(medplum, allResourceRefs);
 
     const componentChunkCallback = onComponentStreamChunk ?? onStreamChunk;
@@ -481,12 +521,13 @@ export async function processMessage(params: ProcessMessageParams): Promise<Proc
         componentGeneratorBotSseId,
         currentMessages,
         selectedModel,
+        selectedReasoningEffort,
         componentChunkCallback,
         [{ name: 'fhirData', valueString: JSON.stringify(fhirData) }]
       );
       componentCode = result.code;
     } else {
-      await sendToBot(medplum, componentGeneratorBotSseId, currentMessages, selectedModel);
+      await sendToBot(medplum, componentGeneratorBotSseId, currentMessages, selectedModel, selectedReasoningEffort);
     }
   }
 

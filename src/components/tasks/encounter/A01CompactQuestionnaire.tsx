@@ -1,8 +1,11 @@
+// SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Accordion, Alert, Anchor, Button, Group, Modal, Paper, Radio, Stack, Text, Title } from '@mantine/core';
 import type { Questionnaire, QuestionnaireItem, QuestionnaireResponse, QuestionnaireResponseItem } from '@medplum/fhirtypes';
 import { IconExternalLink, IconFileText } from '@tabler/icons-react';
 import type { JSX } from 'react';
 import { useState } from 'react';
+import { A01_DOCUMENTS } from '../../../utils/adtmc';
 
 interface A01CompactQuestionnaireProps {
   questionnaire: Questionnaire;
@@ -10,23 +13,11 @@ interface A01CompactQuestionnaireProps {
   onSubmit: (response: QuestionnaireResponse) => void;
 }
 
-interface A01Answer {
-  linkId: string;
-  value: string;
-}
-
 const BOOLEAN_SYSTEM = 'urn:hiivehealth:adtmc-boolean';
 const RED_FLAG_IDS = ['shortness-of-breath', 'stridor', 'deviated-uvula', 'drooling-trouble-swallowing', 'stiff-neck'];
 const DP1_IDS = ['symptoms-more-than-10-days', 'immunosuppression', 'inhaled-steroid', 'fever'];
 const STREP_CRITERIA_IDS = ['dp2-fever', 'no-cough', 'tonsillar-exudate', 'swollen-anterior-cervical-nodes'];
 const PROVIDER_NOW_IDS = [...RED_FLAG_IDS, ...DP1_IDS];
-const SCOPE_OF_PRACTICE_DOCUMENTS = [
-  { title: 'A-1 Sore Throat/Hoarseness', href: '/documents/adtmc/a01/scope-of-practice.html?document=a01-sore-throat-hoarseness' },
-  { title: 'Policy Guide', href: '/documents/adtmc/a01/scope-of-practice.html?document=policy-guide' },
-  { title: 'Obtain a Throat Culture', href: '/documents/adtmc/a01/scope-of-practice.html?document=obtain-a-throat-culture' },
-  { title: 'Perform an HEENT Exam', href: '/documents/adtmc/a01/scope-of-practice.html?document=perform-an-heent-exam' },
-  { title: 'Care for Common Throat Infections', href: '/documents/adtmc/a01/scope-of-practice.html?document=care-for-common-throat-infections' },
-] as const;
 
 export function A01CompactQuestionnaire({
   questionnaire,
@@ -118,8 +109,8 @@ export function A01CompactQuestionnaire({
           <Accordion.Control icon={<IconFileText size={18} />}>Scope of Practice</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="xs">
-              {SCOPE_OF_PRACTICE_DOCUMENTS.map((document) => (
-                <Anchor key={document.href} href={document.href} target="_blank" rel="noreferrer" underline="hover">
+              {A01_DOCUMENTS.map((document) => (
+                <Anchor key={document.key} href={`/adtmc/a01/documents/${document.key}`} target="_blank" rel="noreferrer" underline="hover">
                   <Group justify="space-between" wrap="nowrap">
                     <Text size="sm">{document.title}</Text>
                     <IconExternalLink size={16} aria-hidden />

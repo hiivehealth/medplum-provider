@@ -6,9 +6,9 @@ import { createReference } from '@medplum/core';
 import type { Patient, Schedule } from '@medplum/fhirtypes';
 import { DrAliceSmith, HomerSimpson, MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
+import type { DateTimeRange } from '@medplum/react-scheduling';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { SlotInfo } from 'react-big-calendar';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { CreateVisit } from './CreateVisit';
@@ -16,7 +16,7 @@ import { CreateVisit } from './CreateVisit';
 describe('CreateVisit', () => {
   let medplum: MockClient;
   let mockPatient: Patient;
-  let mockSlotInfo: SlotInfo;
+  let range: DateTimeRange;
 
   beforeEach(async () => {
     medplum = new MockClient();
@@ -30,11 +30,9 @@ describe('CreateVisit', () => {
 
     const startDate = new Date('2024-01-15T10:00:00Z');
     const endDate = new Date('2024-01-15T10:30:00Z');
-    mockSlotInfo = {
+    range = {
       start: startDate,
       end: endDate,
-      slots: [],
-      action: 'select',
     };
 
     await medplum.createResource(mockPatient);
@@ -45,7 +43,7 @@ describe('CreateVisit', () => {
     });
   });
 
-  const setup = (appointmentSlot?: SlotInfo, schedule?: Schedule): ReturnType<typeof render> => {
+  const setup = (appointmentSlot?: DateTimeRange, schedule?: Schedule): ReturnType<typeof render> => {
     return render(
       <MemoryRouter>
         <MedplumProvider medplum={medplum}>
@@ -65,7 +63,7 @@ describe('CreateVisit', () => {
   describe('Rendering', () => {
     test('renders form with all required fields', async () => {
       await act(async () => {
-        setup(mockSlotInfo);
+        setup(range);
       });
 
       await waitFor(() => {
@@ -96,7 +94,7 @@ describe('CreateVisit', () => {
         actor: [{ reference: 'Practitioner/practitioner-1' }],
       };
       await act(async () => {
-        setup(mockSlotInfo, schedule);
+        setup(range, schedule);
       });
 
       await waitFor(() => {
@@ -110,7 +108,7 @@ describe('CreateVisit', () => {
     test('shows error notification when submitting with missing required fields', async () => {
       const user = userEvent.setup();
       await act(async () => {
-        setup(mockSlotInfo);
+        setup(range);
       });
 
       await waitFor(() => {
@@ -128,7 +126,7 @@ describe('CreateVisit', () => {
     test('does not proceed with submission when required fields are missing', async () => {
       const user = userEvent.setup();
       await act(async () => {
-        setup(mockSlotInfo);
+        setup(range);
       });
 
       await waitFor(() => {
@@ -150,7 +148,7 @@ describe('CreateVisit', () => {
   describe('PlanDefinition Actions', () => {
     test('does not display included tasks card initially', async () => {
       await act(async () => {
-        setup(mockSlotInfo);
+        setup(range);
       });
 
       await waitFor(() => {
@@ -162,18 +160,16 @@ describe('CreateVisit', () => {
   describe('Date/Time Formatting', () => {
     test('updates formatted date/time when appointmentSlot changes', async () => {
       const { rerender } = await act(async () => {
-        return setup(mockSlotInfo);
+        return setup(range);
       });
 
       await waitFor(() => {
         expect(screen.getByText(/Jan.*15.*2024/i)).toBeInTheDocument();
       });
 
-      const newSlotInfo: SlotInfo = {
+      const newSlot: DateTimeRange = {
         start: new Date('2024-02-20T14:00:00Z'),
         end: new Date('2024-02-20T14:30:00Z'),
-        slots: [],
-        action: 'select',
       };
 
       await act(async () => {
@@ -182,7 +178,7 @@ describe('CreateVisit', () => {
             <MedplumProvider medplum={medplum}>
               <MantineProvider>
                 <Notifications />
-                <CreateVisit appointmentSlot={newSlotInfo} practitioner={createReference(DrAliceSmith)} />
+                <CreateVisit appointmentSlot={newSlot} practitioner={createReference(DrAliceSmith)} />
               </MantineProvider>
             </MedplumProvider>
           </MemoryRouter>
@@ -198,7 +194,7 @@ describe('CreateVisit', () => {
   describe('Button State', () => {
     test('submit button is initially enabled', async () => {
       await act(async () => {
-        setup(mockSlotInfo);
+        setup(range);
       });
 
       await waitFor(() => {
@@ -212,7 +208,7 @@ describe('CreateVisit', () => {
   describe('Form Field Changes', () => {
     test('updates patient when patient is selected', async () => {
       await act(async () => {
-        setup(mockSlotInfo);
+        setup(range);
       });
 
       const patientInput = await screen.findByLabelText(/Patient/i);
@@ -224,7 +220,7 @@ describe('CreateVisit', () => {
       const searchResourcesSpy = vi.spyOn(medplum, 'searchResources');
 
       await act(async () => {
-        setup(mockSlotInfo);
+        setup(range);
       });
 
       const patientInput = await screen.findByLabelText(/Patient/i);
@@ -246,7 +242,7 @@ describe('CreateVisit', () => {
     test('updates start time when changed', async () => {
       const user = userEvent.setup();
       await act(async () => {
-        setup(mockSlotInfo);
+        setup(range);
       });
 
       await waitFor(() => {
@@ -265,7 +261,7 @@ describe('CreateVisit', () => {
     test('updates end time when changed', async () => {
       const user = userEvent.setup();
       await act(async () => {
-        setup(mockSlotInfo);
+        setup(range);
       });
 
       const endInput = await screen.findByLabelText(/End Time/i);
@@ -280,7 +276,7 @@ describe('CreateVisit', () => {
     test('updates class when class is selected', async () => {
       const user = userEvent.setup();
       await act(async () => {
-        setup(mockSlotInfo);
+        setup(range);
       });
 
       const classInput = await screen.findByLabelText(/Class/i);
@@ -291,7 +287,7 @@ describe('CreateVisit', () => {
 
     test('updates care template when template is selected', async () => {
       await act(async () => {
-        setup(mockSlotInfo);
+        setup(range);
       });
 
       const templateInput = await screen.findByLabelText(/Care template/i);
@@ -313,7 +309,7 @@ describe('CreateVisit', () => {
       await medplum.createResource(planDefinition);
 
       await act(async () => {
-        setup(mockSlotInfo);
+        setup(range);
       });
 
       const templateInput = await screen.findByLabelText(/Care template/i);

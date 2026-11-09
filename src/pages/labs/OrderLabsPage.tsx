@@ -4,7 +4,16 @@ import { Button, Container, Group, Input, Radio, Stack, TextInput } from '@manti
 import { showNotification } from '@mantine/notifications';
 import type { MedplumClient } from '@medplum/core';
 import { ContentType, createReference } from '@medplum/core';
-import type { Encounter, Patient, Practitioner, Reference, ServiceRequest, Task } from '@medplum/fhirtypes';
+import type {
+  Coding,
+  Encounter,
+  Patient,
+  Practitioner,
+  Reference,
+  ServiceRequest,
+  Task,
+  ValueSetExpansionContains,
+} from '@medplum/fhirtypes';
 import type {
   BillingInformation,
   DiagnosisCodeableConcept,
@@ -23,7 +32,6 @@ import {
   useMedplum,
   useResource,
   ValueSetAutocomplete,
-  valueSetElementToCoding,
 } from '@medplum/react';
 import type { JSX } from 'react';
 import { useEffect, useRef, useState } from 'react';
@@ -31,6 +39,7 @@ import { useParams } from 'react-router';
 import { PerformingLabInput } from '../../components/PerformingLabInput';
 import { CoverageInput } from '../../components/labs/CoverageInput';
 import { TestMetadataCardInput } from '../../components/labs/TestMetadataCardInput';
+import { addDiagnosesToEncounter } from '../../utils/encounter';
 import { showErrorNotification } from '../../utils/notifications';
 
 async function sendLabOrderToHealthGorilla(medplum: MedplumClient, labOrder: ServiceRequest): Promise<void> {
@@ -75,6 +84,7 @@ export function OrderLabsPage(props: OrderLabsPageProps): JSX.Element {
     updateBillingInformation,
     setSpecimenCollectedDateTime,
     setOrderNotes,
+    setPerformingLabAccountNumber,
     createOrderBundle,
   } = labOrderReturn;
 
@@ -119,6 +129,15 @@ export function OrderLabsPage(props: OrderLabsPageProps): JSX.Element {
           ...serviceRequest,
           encounter: createReference(encounterResource),
         };
+        if (state.diagnoses.length > 0) {
+          // Surface diagnoses on the encounter so they flow into billing, but don't
+          // fail the already-created lab order if the sync errors.
+          try {
+            await addDiagnosesToEncounter(medplum, encounterResource, state.diagnoses);
+          } catch (error) {
+            showErrorNotification(error);
+          }
+        }
       }
       if (taskResource) {
         await medplum.updateResource({
@@ -176,6 +195,13 @@ export function OrderLabsPage(props: OrderLabsPageProps): JSX.Element {
               patient={patient}
               performingLab={performingLab}
               error={createError?.validation?.performingLab}
+            />
+            <TextInput
+              label="Performing lab account number"
+              description="Overrides the practice-level account number for this order"
+              disabled={!state.performingLab}
+              value={state.performingLabAccountNumber ?? ''}
+              onChange={(e) => setPerformingLabAccountNumber(e.currentTarget.value || undefined)}
             />
             <div>
               <AsyncAutocomplete<TestCoding>
@@ -256,6 +282,19 @@ export function OrderLabsPage(props: OrderLabsPageProps): JSX.Element {
       </Container>
     </HealthGorillaLabOrderProvider>
   );
+}
+
+/**
+ * Local copy — not all published `@medplum/react` bundles export this helper in `.d.ts`.
+ * @param element - A row from ValueSet expansion.
+ * @returns A FHIR Coding for the expansion element.
+ */
+function valueSetElementToCoding(element: ValueSetExpansionContains): Coding {
+  return {
+    system: element.system,
+    code: element.code,
+    display: element.display,
+  };
 }
 
 function TestCodingToOption(element: TestCoding): AsyncAutocompleteOption<TestCoding> {

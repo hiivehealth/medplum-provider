@@ -18,11 +18,17 @@ export function SignInPage(): JSX.Element {
     <SignInForm
       googleClientId={MEDPLUM_GOOGLE_CLIENT_ID}
       onSuccess={() => navigate('/')?.catch(console.error)}
+      onRegister={
+        import.meta.env.MEDPLUM_REGISTER_ENABLED === 'true'
+          ? () => navigate('/register')?.catch(console.error)
+          : undefined
+      }
       projectId={projectId}
       clientId={clientId}
       scope={MEDPLUM_LOGIN_SCOPE}
       login={searchParams.get('login') || undefined}
     >
+      <Title order={2}>HiiveHealth</Title>
       <Title order={3} py="lg">
         Sign in to Provider
       </Title>

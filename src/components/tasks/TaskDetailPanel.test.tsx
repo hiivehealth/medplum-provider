@@ -65,6 +65,17 @@ describe('TaskDetailPanel', () => {
     expect(screen.queryByText('Properties')).not.toBeInTheDocument();
   });
 
+  test('hides direct ADTMC task details without reading the patient outside Army', async () => {
+    const read = vi.spyOn(medplum, 'readResource');
+    await act(async () => {
+      setup({ task: { ...mockTask, code: { text: 'ADTMC A-01 Sore Throat/Hoarseness' } } });
+    });
+
+    expect(screen.queryByText('Properties')).not.toBeInTheDocument();
+    expect(screen.queryByText('Activity Log')).not.toBeInTheDocument();
+    expect(read.mock.calls.some(([resourceType]) => resourceType === 'Patient')).toBe(false);
+  });
+
   test('renders task detail with task object', async () => {
     setup();
 

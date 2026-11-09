@@ -1,0 +1,5 @@
+.armyPatientForm :global([data-testid='slice-birthsex']),
+.armyPatientForm :global([data-testid='slice-sex']),
+.armyPatientForm :global([data-testid='slice-genderIdentity']) {
+  display: none;
+}

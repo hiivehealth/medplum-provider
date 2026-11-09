@@ -11,7 +11,7 @@ import { useNavigate, useParams } from 'react-router';
 import { ResourceFormWithRequiredProfile } from '../../components/ResourceFormWithRequiredProfile';
 import { usePatient } from '../../hooks/usePatient';
 import { prependPatientPath } from '../patient/PatientPage.utils';
-import { RESOURCE_PROFILE_URLS } from './utils';
+import { getDefaultProfileUrl } from './utils';
 
 const PatientReferencesElements: Partial<Record<ResourceType, string[]>> = {
   Task: ['for'],
@@ -68,7 +68,7 @@ export function ResourceCreatePage(): JSX.Element {
     }
     return getDefaultValue(resourceType, patient);
   });
-  const profileUrl = resourceType && RESOURCE_PROFILE_URLS[resourceType];
+  const profileUrl = resourceType && getDefaultProfileUrl(resourceType, medplum.getProject());
 
   useEffect(() => {
     if (patient && resourceType) {

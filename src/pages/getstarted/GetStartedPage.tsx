@@ -18,6 +18,7 @@ import { showNotification } from '@mantine/notifications';
 import { convertToTransactionBundle } from '@medplum/core';
 import type { Bundle, BundleEntry, PlanDefinition, Questionnaire } from '@medplum/fhirtypes';
 import { MedplumLink, useMedplum } from '@medplum/react';
+import { useSyncOrderSet } from '@medplum/react-hooks';
 import {
   IconApps,
   IconArrowUpRight,
@@ -35,6 +36,7 @@ import {
 } from '@tabler/icons-react';
 import type { JSX } from 'react';
 import { useCallback, useState } from 'react';
+import orderSetBundleData from '../../data/order-set-example-bundle.json';
 import patientBundleData from '../../data/patient-david-james-williams.json';
 import visitBundleData from '../../data/simple-initial-visit-bundle.json';
 import a01SoreThroatPlanDefinitionData from '../../data/decision-flows/a01-sore-throat-plan-definition.json';
@@ -52,13 +54,16 @@ import soapSubjectiveData from '../../data/soap-questionnaires/soap-subjective.j
 import soapNotePlanDefinitionData from '../../data/soap-template/soap-note-plan-definition.json';
 import { showErrorNotification } from '../../utils/notifications';
 import classes from './GetStartedPage.module.css';
+import { buildOrderSetImportNotification } from './orderSetImportNotification';
 
 export function GetStartedPage(): JSX.Element {
   const medplum = useMedplum();
+  const syncOrderSet = useSyncOrderSet();
   const [importingPatient, setImportingPatient] = useState(false);
   const [importingVisit, setImportingVisit] = useState(false);
   const [importingIcd10, setImportingIcd10] = useState(false);
   const [importingSoapTemplate, setImportingSoapTemplate] = useState(false);
+  const [importingOrderSet, setImportingOrderSet] = useState(false);
 
   const handleImportPatient = useCallback(async () => {
     setImportingPatient(true);
@@ -167,6 +172,28 @@ export function GetStartedPage(): JSX.Element {
     }
   }, [medplum]);
 
+  const handleImportOrderSet = useCallback(async () => {
+    setImportingOrderSet(true);
+    try {
+      const transactionBundle = convertToTransactionBundle(orderSetBundleData as Bundle);
+      const result = await medplum.executeBatch(transactionBundle);
+
+      const resourceCount =
+        result.entry?.filter((entry: BundleEntry) => entry.response?.status?.startsWith('2')).length || 0;
+
+      const pdLocation = result.entry?.find((e) => e.response?.location?.startsWith('PlanDefinition/'))?.response
+        ?.location;
+      const pdId = pdLocation?.split('/')[1];
+      const syncResult = pdId ? await syncOrderSet(pdId) : undefined;
+
+      showNotification({ ...buildOrderSetImportNotification(resourceCount, syncResult) });
+    } catch (error) {
+      showErrorNotification(error);
+    } finally {
+      setImportingOrderSet(false);
+    }
+  }, [medplum, syncOrderSet]);
+
   const integrations = [
     { src: '/img/integrations/labcorp.png', alt: 'Labcorp', left: 20, top: 20, zIndex: 1, rotation: -2 },
     { src: '/img/integrations/quest.png', alt: 'Quest Diagnostics', left: 70, top: 0, zIndex: 2, rotation: 2 },
@@ -182,7 +209,7 @@ export function GetStartedPage(): JSX.Element {
         {/* Header */}
         <Box mb="6rem">
           <Title order={2} fw={800}>
-            Get Started with Hiive Provider
+            Get Started with HiiveHealth Provider
           </Title>
           <Text size="lg" mt=".25rem" className={classes.textSecondary}>
             Below are our recommended first steps to get set up and familiar with the available features and workflows
@@ -304,7 +331,8 @@ export function GetStartedPage(): JSX.Element {
                     A simple note template for a first patient visit that includes tasks and questionnaires.
                   </Text>
                   <Text size="xs" c="dimmed" mb="sm">
-                    Note: a Care Template (aka PlanDefinition FHIR resource) is required for creating visits.
+                    Note: a Care Template (aka PlanDefinition FHIR resource) is optional, but tasks from it will be
+                    automatically added to a visit if one is selected.
                   </Text>
                 </Stack>
                 <Button
@@ -349,6 +377,37 @@ export function GetStartedPage(): JSX.Element {
                   mt="sm"
                 >
                   {importingIcd10 ? 'Importing...' : 'Import ValueSet'}
+                </Button>
+              </Paper>
+              <Paper radius="md" withBorder p="lg" shadow="sm" className={classes.card}>
+                <Stack gap="md" className={classes.flexOne}>
+                  <Group gap="sm" align="center">
+                    <IconMedicalCross size={24} color="var(--icon-secondary)" />
+                    <Stack gap={0}>
+                      <Text size="11px" fw={500} className={classes.textLabel}>
+                        Sample Order Set
+                      </Text>
+                      <Text fw={600} size="lg">
+                        Geriatric T2DM Starter
+                      </Text>
+                    </Stack>
+                  </Group>
+                  <Divider />
+                  <Text size="md" className={classes.textSecondary} mb="sm" style={{ flex: 1 }}>
+                    A sample order set with medication templates for geriatric type 2 diabetes management.
+                  </Text>
+                </Stack>
+                <Button
+                  variant="filled"
+                  size="sm"
+                  fullWidth
+                  onClick={handleImportOrderSet}
+                  loading={importingOrderSet}
+                  disabled={importingOrderSet}
+                  leftSection={<IconDownload size={14} />}
+                  mt="sm"
+                >
+                  {importingOrderSet ? 'Importing...' : 'Import Order Set'}
                 </Button>
               </Paper>
               <Paper radius="md" withBorder p="lg" shadow="sm" className={classes.card}>
@@ -490,7 +549,7 @@ export function GetStartedPage(): JSX.Element {
                   View Our User Guide
                 </Text>
                 <Text size="sm" className={classes.textSecondary}>
-                  Follow step-by-step documentation to get the most out of Medplum Provider.
+                  Follow step-by-step documentation to get the most out of HiiveHealth Provider.
                 </Text>
               </Stack>
             </Group>
@@ -729,7 +788,7 @@ export function GetStartedPage(): JSX.Element {
                     fullWidth
                     rightSection={<IconExternalLink size={14} />}
                   >
-                    Join Medplum Discord
+                    Join community Discord
                   </Button>
                 </Paper>
               </Grid.Col>

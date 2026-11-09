@@ -5,6 +5,7 @@ import type { Patient } from '@medplum/fhirtypes';
 import { describe, expect, test } from 'vitest';
 import {
   formatPatientPageTabUrl,
+  getPatientPageTabs,
   getPatientPageTabOrThrow,
   PatientPageTabs,
   patientPathPrefix,
@@ -107,13 +108,18 @@ describe('PatientPage.utils', () => {
     });
 
     test('handles complex query string with patient.id placeholder', () => {
-      const tab = PatientPageTabs.find((t) => t.id === 'encounter');
+      const tab = PatientPageTabs.find((t) => t.id === 'meds');
       if (tab) {
         const result = formatPatientPageTabUrl('patient-123', tab);
-        expect(result).toContain('/Patient/patient-123/Encounter');
+        expect(result).toContain('/Patient/patient-123/MedicationRequest');
         expect(result).toContain('patient=patient-123');
         expect(result).not.toContain('%patient.id');
       }
+    });
+
+    test('encounter tab links to the visits board without a query string', () => {
+      const tab = getPatientPageTabOrThrow('encounter');
+      expect(formatPatientPageTabUrl('patient-123', tab)).toBe('/Patient/patient-123/Encounter');
     });
   });
 
@@ -151,7 +157,7 @@ describe('PatientPage.utils', () => {
         'encounter',
         'tasks',
         'meds',
-        'labs',
+        'orders',
         'devices',
         'documentreference',
         'careplan',
@@ -183,7 +189,7 @@ describe('PatientPage.utils', () => {
       expect(tabIds).toContain('encounter');
       expect(tabIds).toContain('tasks');
       expect(tabIds).toContain('meds');
-      expect(tabIds).toContain('labs');
+      expect(tabIds).toContain('orders');
       expect(tabIds).toContain('devices');
       expect(tabIds).toContain('documentreference');
       expect(tabIds).toContain('careplan');
@@ -224,5 +230,6 @@ describe('PatientPage.utils', () => {
       expect(tasksTab?.url).toBe('Task');
       expect(tasksTab?.label).toBe('Tasks');
     });
+
   });
 });

@@ -14,17 +14,17 @@ import {
   ResourceInput,
   useMedplum,
 } from '@medplum/react';
+import type { DateTimeRange } from '@medplum/react-scheduling';
 import { IconAlertSquareRounded, IconCircleCheck, IconCirclePlus } from '@tabler/icons-react';
 import type { JSX } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import type { Range } from '../../types/scheduling';
 import { createAppointment, createEncounter } from '../../utils/encounter';
 import { showErrorNotification } from '../../utils/notifications';
 import { PlanDefinitionSummary } from '../plandefinition/PlanDefinitionSummary';
 
 interface CreateVisitProps {
-  appointmentSlot: Range | undefined;
+  appointmentSlot: DateTimeRange | undefined;
   practitioner: Reference<Practitioner>;
   schedule?: Schedule;
 }
@@ -88,7 +88,7 @@ export function CreateVisit(props: CreateVisitProps): JSX.Element {
   }, [appointmentSlot]);
 
   async function handleSubmit(): Promise<void> {
-    if (!patient || !planDefinitionData || !encounterClass || !start || !end) {
+    if (!patient || !encounterClass || !start || !end) {
       showNotification({
         color: 'yellow',
         icon: <IconAlertSquareRounded />,
@@ -176,7 +176,7 @@ export function CreateVisit(props: CreateVisitProps): JSX.Element {
             binding="http://terminology.hl7.org/ValueSet/v3-ActEncounterCode"
             required={true}
             onChange={setEncounterClass}
-            path="Encounter.type"
+            path="Encounter.class"
           />
 
           <ResourceInput
@@ -187,7 +187,6 @@ export function CreateVisit(props: CreateVisitProps): JSX.Element {
             onChange={(value) => {
               setPlanDefinitionData(value as PlanDefinition);
             }}
-            required={true}
           />
         </Stack>
 

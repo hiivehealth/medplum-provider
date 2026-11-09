@@ -2,46 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
-import { loadDataType } from '@medplum/core';
-import type { StructureDefinition } from '@medplum/fhirtypes';
-import { HomerSimpson, MockClient } from '@medplum/mock';
+import type { Project } from '@medplum/fhirtypes';
+import { HomerSimpson, MockClient, TestProject } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as reactRouter from 'react-router';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { EditTab } from './EditTab';
 
 describe('EditTab', () => {
   let medplum: MockClient;
   let navigateSpy: ReturnType<typeof vi.fn>;
-
-  beforeAll(() => {
-    // Load a minimal US Core Patient profile schema for tests
-    const usCorePatientProfile: StructureDefinition = {
-      resourceType: 'StructureDefinition',
-      id: 'us-core-patient',
-      url: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient',
-      name: 'USCorePatientProfile',
-      status: 'active',
-      kind: 'resource',
-      abstract: false,
-      type: 'Patient',
-      baseDefinition: 'http://hl7.org/fhir/StructureDefinition/Patient',
-      derivation: 'constraint',
-      snapshot: {
-        element: [
-          {
-            id: 'Patient',
-            path: 'Patient',
-            definition: 'US Core Patient Profile',
-          },
-        ],
-      },
-    };
-    loadDataType(usCorePatientProfile);
-  });
 
   beforeEach(async () => {
     medplum = new MockClient();
@@ -135,6 +108,34 @@ describe('EditTab', () => {
     await waitFor(() => {
       expect(medplum.readResource).toHaveBeenCalled();
       expect(screen.getByText(/patient not found/i)).toBeInTheDocument();
+    });
+  });
+
+  test('Uses the project-level defaultProfile:Patient setting override when present', async () => {
+    const overrideUrl = 'https://ehr.example.com/fhir/StructureDefinition/some-other-tenant-patient';
+    const projectWithOverride: Project = {
+      ...TestProject,
+      setting: [{ name: 'defaultProfile:Patient', valueString: overrideUrl }],
+    };
+    const tenantMedplum = new MockClient({ project: projectWithOverride });
+    vi.spyOn(tenantMedplum, 'requestProfileSchema').mockResolvedValue(undefined);
+    vi.spyOn(tenantMedplum, 'readResource').mockResolvedValue(HomerSimpson as any);
+
+    render(
+      <MemoryRouter initialEntries={[`/Patient/${HomerSimpson.id}/edit`]}>
+        <MedplumProvider medplum={tenantMedplum}>
+          <MantineProvider>
+            <Notifications />
+            <Routes>
+              <Route path="/Patient/:patientId/edit" element={<EditTab />} />
+            </Routes>
+          </MantineProvider>
+        </MedplumProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(tenantMedplum.requestProfileSchema).toHaveBeenCalledWith(overrideUrl, expect.anything());
     });
   });
 });

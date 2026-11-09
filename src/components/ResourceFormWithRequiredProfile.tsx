@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Alert } from '@mantine/core';
+import { Alert, Box } from '@mantine/core';
 import type { InternalTypeSchema } from '@medplum/core';
 import { addProfileToResource, normalizeErrorString, tryGetProfile } from '@medplum/core';
 import type { Resource } from '@medplum/fhirtypes';
@@ -9,6 +9,7 @@ import { Loading, ResourceForm, useMedplum } from '@medplum/react';
 import { IconAlertCircle } from '@tabler/icons-react';
 import type { JSX, ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
+import classes from './ResourceFormWithRequiredProfile.module.css';
 
 interface ResourceFormWithRequiredProfileProps extends ResourceFormProps {
   /** (optional) If specified, an error is shown in place of `ResourceForm` if the profile cannot be loaded.  */
@@ -78,5 +79,10 @@ export function ResourceFormWithRequiredProfile(props: ResourceFormWithRequiredP
     );
   }
 
-  return <ResourceForm onSubmit={handleSubmit} {...resourceFormProps} />;
+  const form = <ResourceForm onSubmit={handleSubmit} {...resourceFormProps} />;
+  return profileUrl === 'https://ehr.hiivehealth.net/fhir/StructureDefinition/hiive-army-demographics-patient' ? (
+    <Box className={classes.armyPatientForm}>{form}</Box>
+  ) : (
+    form
+  );
 }

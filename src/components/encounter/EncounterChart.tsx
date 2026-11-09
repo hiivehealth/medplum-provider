@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Box, Card, Stack, Title } from '@mantine/core';
+import { Box, Card, Stack, Textarea, Title } from '@mantine/core';
+import { useDebouncedCallback } from '@mantine/hooks';
 import type { WithId } from '@medplum/core';
 import { createReference, getReferenceString } from '@medplum/core';
 import type { ClinicalImpression, Encounter, Practitioner, Provenance, QuestionnaireResponse, Reference, Task } from '@medplum/fhirtypes';
@@ -22,16 +23,19 @@ import {
 } from '../../data/soap-questionnaires';
 import { useDecisionFlows } from '../../hooks/useDecisionFlows';
 import { useAdtmcA01Result } from '../../hooks/useAdtmcA01Result';
+import { SAVE_TIMEOUT_MS } from '../../config/constants';
 import { useEncounterChart } from '../../hooks/useEncounterChart';
 import { useSoapQuestionnaires } from '../../hooks/useSoapQuestionnaires';
 import { ChartNoteStatus } from '../../types/encounter';
 import { updateEncounterStatus } from '../../utils/encounter';
 import { buildSoapComposition } from '../../utils/soap-composition';
 import { showErrorNotification } from '../../utils/notifications';
+import { TaskDetailsModal } from '../tasks/TaskDetailsModal';
 import { TaskPanel } from '../tasks/encounter/TaskPanel';
 import { AdtmcA01DecisionSupport } from './AdtmcA01DecisionSupport';
 import { BillingTab } from './BillingTab';
 import { DecisionFlowsPanel } from './DecisionFlowsPanel/DecisionFlowsPanel';
+import { AdtmcA01Launch } from './AdtmcA01Launch';
 import { EncounterHeader } from './EncounterHeader';
 import { LocationSelector } from './LocationSelector';
 import { OccupationalReturnToWorkPanel } from './OccupationalReturnToWorkPanel';
@@ -48,6 +52,7 @@ const FHIR_PROVENANCE_PARTICIPANT_TYPE_SYSTEM = 'http://terminology.hl7.org/Code
 const FHIR_DOCUMENT_COMPLETION_SYSTEM = 'http://terminology.hl7.org/CodeSystem/v3-DocumentCompletion';
 const CARE_TEMPLATE_EXTENSION_URL = 'https://hiivehealth.com/fhir/StructureDefinition/encounter-care-template';
 const SOAP_PLAN_DEFINITION_URL = 'https://hiivehealth.com/plandefinition/soap-note';
+const A01_TASK_CODE = 'ADTMC A-01 Sore Throat/Hoarseness';
 
 const TASK_COMPLETED_STATUSES = new Set<Task['status']>([
   'completed',
@@ -68,30 +73,29 @@ function isSoapNoteEncounter(encounter: Encounter): boolean {
 
 export interface EncounterChartProps {
   encounter: WithId<Encounter> | Reference<Encounter>;
+  task?: WithId<Task> | Reference<Task>;
+  onEncounterChange?: (encounter: WithId<Encounter>) => void;
 }
 
 export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
-  const { encounter: encounterProp } = props;
+  const { encounter: encounterProp, task: taskProp, onEncounterChange } = props;
   const medplum = useMedplum();
 
   const [activeTab, setActiveTab] = useState('notes');
   const {
     encounter,
     patient: patientResource,
-    claim,
     practitioner,
     tasks,
     clinicalImpression,
-    chargeItems,
     appointment,
     setEncounter,
-    setClaim,
     setPractitioner,
     setTasks,
     setClinicalImpression,
-    setChargeItems,
   } = useEncounterChart(encounterProp);
 
+  const [chartNote, setChartNote] = useState(clinicalImpression?.note?.[0]?.text);
   const [provenances, setProvenances] = useState<Provenance[]>([]);
   const [chartNoteStatus, setChartNoteStatus] = useState(ChartNoteStatus.Unsigned);
 
@@ -131,6 +135,10 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
     [setTasks]
   );
 
+  const hasOpenA01Task = tasks.some(
+    (task) => task.code?.text === A01_TASK_CODE && !TASK_COMPLETED_STATUSES.has(task.status)
+  );
+
   const handleEncounterStatusChange = useCallback(
     async (newStatus: Encounter['status']): Promise<void> => {
       if (!encounter) {
@@ -140,15 +148,50 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
       try {
         const updatedEncounter = await updateEncounterStatus(medplum, encounter, appointment, newStatus);
         setEncounter(updatedEncounter);
+        onEncounterChange?.(updatedEncounter);
       } catch (err) {
         showErrorNotification(err);
       }
     },
-    [encounter, medplum, setEncounter, appointment]
+    [encounter, medplum, setEncounter, onEncounterChange, appointment]
   );
 
   const handleTabChange = (tab: string): void => {
     setActiveTab(tab);
+  };
+
+  // Whether the server copy currently has a note; `clinicalImpression` state is not refreshed on
+  // note saves, so this decides between add and remove when the note is cleared.
+  const noteOnServerRef = useRef<boolean | undefined>(undefined);
+
+  const debouncedPatchChartNote = useDebouncedCallback(async (note: string): Promise<void> => {
+    if (!clinicalImpression) {
+      return;
+    }
+
+    try {
+      if (note) {
+        await medplum.patchResource('ClinicalImpression', clinicalImpression.id, [
+          { op: 'add', path: '/note', value: [{ text: note }] },
+        ]);
+        noteOnServerRef.current = true;
+      } else if (noteOnServerRef.current ?? Boolean(clinicalImpression.note)) {
+        await medplum.patchResource('ClinicalImpression', clinicalImpression.id, [{ op: 'remove', path: '/note' }]);
+        noteOnServerRef.current = false;
+      }
+    } catch (err) {
+      showErrorNotification(err);
+    }
+  }, SAVE_TIMEOUT_MS);
+
+  const handleChartNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+    setChartNote(e.target.value);
+
+    if (!clinicalImpression) {
+      return;
+    }
+
+    debouncedPatchChartNote(e.target.value);
   };
 
   const handleSign = async (practitionerRef: Reference<Practitioner>, lock: boolean): Promise<void> => {
@@ -169,10 +212,7 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
       const tasksToUpdate = tasks.filter((task) => !TASK_COMPLETED_STATUSES.has(task.status));
       const updatedTasks = await Promise.all(
         tasksToUpdate.map((task) =>
-          medplum.updateResource({
-            ...task,
-            status: 'completed',
-          })
+          medplum.patchResource('Task', task.id, [{ op: 'replace', path: '/status', value: 'completed' }])
         )
       );
 
@@ -185,7 +225,9 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
 
       // Mark clinical impression as completed
       if (clinicalImpression) {
-        const updatedImpression = await medplum.updateResource({ ...clinicalImpression, status: 'completed' });
+        const updatedImpression = await medplum.patchResource('ClinicalImpression', clinicalImpression.id, [
+          { op: 'replace', path: '/status', value: 'completed' },
+        ]);
         setClinicalImpression(updatedImpression);
       }
     }
@@ -299,6 +341,22 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
           {activeTab === 'notes' && (
             <Stack gap="md">
               <SignAddendum encounter={encounter} provenances={provenances} chartNoteStatus={chartNoteStatus} />
+
+              {!isSoapNoteEncounter(encounter) && clinicalImpression && (
+                <Card withBorder shadow="sm" mt="md">
+                  <Title>Fill chart note</Title>
+                  <Textarea
+                    aria-label="Chart note"
+                    defaultValue={clinicalImpression.note?.[0]?.text}
+                    value={chartNote}
+                    onChange={handleChartNoteChange}
+                    autosize
+                    minRows={4}
+                    maxRows={8}
+                    disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked}
+                  />
+                </Card>
+              )}
 
               {!isSoapNoteEncounter(encounter) && (
                 <Card withBorder shadow="sm" mt="md">
@@ -422,6 +480,12 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
                 onUpdateTask={updateTaskList}
                 enabled={chartNoteStatus !== ChartNoteStatus.SignedAndLocked}
               />
+              <AdtmcA01Launch
+                patient={patientResource}
+                encounter={encounter}
+                disabled={chartNoteStatus === ChartNoteStatus.SignedAndLocked || hasOpenA01Task}
+                onTaskCreated={(task) => setTasks((currentTasks) => [task, ...currentTasks])}
+              />
               {tasks.map((task) => (
                 <TaskPanel
                   key={task.id}
@@ -436,18 +500,18 @@ export const EncounterChart = (props: EncounterChartProps): JSX.Element => {
             <BillingTab
               encounter={encounter}
               setEncounter={setEncounter}
-              claim={claim}
+              onEncounterSaved={onEncounterChange}
               patient={patientResource}
               practitioner={practitioner}
               setPractitioner={setPractitioner}
-              chargeItems={chargeItems}
-              setChargeItems={setChargeItems}
-              setClaim={setClaim}
               chartNoteStatus={chartNoteStatus}
             />
           )}
         </Box>
       </Stack>
+      {taskProp && (
+        <TaskDetailsModal key={getReferenceString(taskProp)} task={taskProp} onUpdateTask={updateTaskList} />
+      )}
     </>
   );
 };

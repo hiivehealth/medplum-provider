@@ -51,7 +51,7 @@ export function getPatientPageTabs(
 ): PatientPageTabInfo[] {
   const hasDoseSpot = options?.hasDoseSpotAccess ?? hasDoseSpotIdentifier(membership);
   const hasScriptSure = hasScriptSureIdentifier(membership);
-  return PatientPageTabs.filter((tab) => {
+  const tabs = PatientPageTabs.filter((tab) => {
     if (tab.id === 'dosespot') {
       return hasDoseSpot;
     }
@@ -60,6 +60,7 @@ export function getPatientPageTabs(
     }
     return true;
   });
+  return tabs;
 }
 
 export const PatientPageTabs: PatientPageTabInfo[] = [
@@ -68,7 +69,7 @@ export const PatientPageTabs: PatientPageTabInfo[] = [
   { id: 'edit', url: 'edit', label: 'Edit' },
   {
     id: 'encounter',
-    url: 'Encounter?_count=20&_fields=_lastUpdated,period,status,serviceType&_sort=-_lastUpdated&patient=%patient.id',
+    url: 'Encounter',
     label: 'Visits',
   },
   {
@@ -84,9 +85,9 @@ export const PatientPageTabs: PatientPageTabInfo[] = [
   { id: 'dosespot', url: 'dosespot', label: 'DoseSpot' },
   { id: 'scriptsure', url: 'scriptsure', label: 'ScriptSure' },
   {
-    id: 'labs',
-    url: 'ServiceRequest',
-    label: 'Labs',
+    id: 'orders',
+    url: 'DiagnosticReport',
+    label: 'Orders',
   },
   {
     id: 'devices',
@@ -95,7 +96,7 @@ export const PatientPageTabs: PatientPageTabInfo[] = [
   },
   {
     id: 'documentreference',
-    url: 'DocumentReference?subject=%patient.id',
+    url: 'DocumentReference',
     label: 'Documents',
   },
   {

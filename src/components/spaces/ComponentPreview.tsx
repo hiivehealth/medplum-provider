@@ -93,8 +93,10 @@ export function ComponentPreview({ code, resources, onResourceClick }: Component
 
   const scope = useMemo(
     () => ({
-      ...Mantine,
       ...(chartScope ?? {}),
+      ...Mantine,
+      ...(chartScope ? { Tooltip: chartScope.Tooltip, ChartTooltip: chartScope.Tooltip } : {}),
+      MantineTooltip: Mantine.Tooltip,
     }),
     [chartScope]
   );
