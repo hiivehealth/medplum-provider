@@ -77,7 +77,7 @@ export function EncounterVitalsHistory(props: EncounterVitalsHistoryProps): JSX.
   }, [encounter, medplum]);
 
   useEffect(() => {
-    void loadVitals();
+    loadVitals().catch(showErrorNotification);
   }, [loadVitals, refreshKey]);
 
   const handleDelete = async (): Promise<void> => {
@@ -142,7 +142,7 @@ export function EncounterVitalsHistory(props: EncounterVitalsHistoryProps): JSX.
           </Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setPendingDelete(undefined)} disabled={deleting}>Cancel</Button>
-            <Button color="red" onClick={() => void handleDelete()} loading={deleting}>Delete</Button>
+            <Button color="red" onClick={handleDelete} loading={deleting}>Delete</Button>
           </Group>
         </Stack>
       </Modal>

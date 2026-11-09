@@ -29,7 +29,7 @@ const SAVE_DEBOUNCE_MS = 750;
 const SYMPTOM_SEVERITY_SYSTEM = 'https://hiivehealth.com/fhir/soap/symptom-severity';
 
 function answerString(item: QuestionnaireResponseItem | undefined): string {
-  return item?.answer?.[0]?.valueString ?? item?.answer?.[0]?.valueText ?? '';
+  return item?.answer?.[0]?.valueString ?? '';
 }
 
 function answerDateTime(item: QuestionnaireResponseItem | undefined): string {
@@ -60,7 +60,7 @@ export function getSubjectiveValues(response: QuestionnaireResponse | undefined)
         isChiefComplaint: findItem(group.item, 'complaint-is-chief')?.answer?.[0]?.valueBoolean === true,
       }))
     : (findItem(response?.item, 'chief-complaint')?.answer ?? []).map((answer) => ({
-        text: answer.valueString ?? answer.valueText ?? '',
+        text: answer.valueString ?? '',
         onset: '',
           severity: '',
         isChiefComplaint: false,
@@ -105,7 +105,7 @@ export function buildSubjectiveResponse(
           { linkId: 'complaint-is-chief', answer: [{ valueBoolean: index === chiefComplaintIndex }] },
         ],
       })),
-      { linkId: 'hpi', answer: values.hpi ? [{ valueText: values.hpi }] : [] },
+      { linkId: 'hpi', answer: values.hpi ? [{ valueString: values.hpi }] : [] },
     ],
   };
 }

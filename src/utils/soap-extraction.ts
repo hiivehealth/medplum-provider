@@ -14,7 +14,7 @@ import type {
   Reference,
   Resource,
 } from '@medplum/fhirtypes';
-import { LOINC_CODES, UCUM_SYSTEM, UCUM_UNITS } from './loinc-codes';
+import { LOINC_CODES, UCUM_UNITS } from './loinc-codes';
 import { createVitalObservation } from './vitals';
 import { hasArmySecurity, withArmySecurity } from './adtmc';
 
@@ -329,7 +329,7 @@ export function extractObjective(
         coding: vital.coding,
         value,
         unit: alternative.unit,
-        performer: toReference(practitioner) as Reference<Practitioner> | undefined,
+        performer: toReference(practitioner),
       })
     );
   }
@@ -347,7 +347,7 @@ export function extractObjective(
         coding: vital.coding,
         value,
         unit: vital.unit,
-        performer: toReference(practitioner) as Reference<Practitioner> | undefined,
+        performer: toReference(practitioner),
       })
     );
   }

@@ -1,4 +1,5 @@
-import { getReferenceString, normalizeErrorString, type WithId } from '@medplum/core';
+import { getReferenceString, normalizeErrorString  } from '@medplum/core';
+import type {WithId} from '@medplum/core';
 import type { ClinicalImpression, Encounter, QuestionnaireResponse, Reference } from '@medplum/fhirtypes';
 import { useMedplum, useMedplumProfile } from '@medplum/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -86,7 +87,7 @@ export function useAdtmcA01Result(encounter: Encounter | undefined): AdtmcA01Res
         if (!cancelled) {
           setResult({
             clinicalImpression: clinicalImpression as WithId<ClinicalImpression>,
-            questionnaireResponse: questionnaireResponse as WithId<QuestionnaireResponse>,
+            questionnaireResponse: questionnaireResponse,
             loading: false,
             error: undefined,
             refresh,

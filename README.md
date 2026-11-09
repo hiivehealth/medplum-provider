@@ -164,6 +164,32 @@ it, and ordinary AccessPolicies deny prohibited read/write operations through di
 Also verify generic templates remain usable. Record server-backed evidence with the ticket;
 no deployment or live verification is performed by these local changes.
 
+#### Local acceptance evidence (2026-11-10)
+
+The authorized disposable stack `medplum-encounter-acceptance-20261109` was tested
+with Provider base `634189e` and Core base `7d5d51af8`, plus uncommitted blocker
+repairs. The full Provider suite passed: 163 files, 1,844 tests; production build
+passed. Core session/project/Bot suites passed 86 tests, A-01 suites passed 23,
+and template-scope checks passed 13. Patient `main` passed all 25 tests and its
+build; a synthetic Patient signed in without the notice-availability blocker.
+
+Army and General browser sessions retained generic SOAP and decision flows, with
+A-01 visible only to Army. A real A-01 Bot execution created labelled results and
+an idempotent handoff Task. Browser-confirmed Assessment/Plan copies persisted
+Army-labelled responses and extracted resources. The existing Composition builder
+was exercised with those saved responses and its labelled output persisted through
+the API; the signing UI was not part of this check.
+
+The final direct API matrix passed 57 checks across nine restricted resources:
+Army reads allowed, ordinary read-only writes denied, cross-project reads/searches/
+writes denied, generic reads/writes allowed, and non-Army labelled writes denied.
+Core's existing SOAP work-slices document records fixture IDs and eligibility evidence.
+This is local acceptance evidence, not hosted deployment or clinical approval.
+
+Provider lint remains a deferred gate: 11 `header/header` attribution errors and
+65 warnings. The user explicitly requested separate attribution review; no headers
+were invented and no enforcement rule was disabled. Other lint errors were resolved.
+
 ### About Medplum
 
 [Medplum](https://www.medplum.com/) is an open-source, API-first EHR. Medplum makes it easy to build healthcare apps quickly with less code.

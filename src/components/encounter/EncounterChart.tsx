@@ -4,7 +4,7 @@ import { Box, Card, Stack, Textarea, Title } from '@mantine/core';
 import { useDebouncedCallback } from '@mantine/hooks';
 import type { WithId } from '@medplum/core';
 import { createReference, getReferenceString } from '@medplum/core';
-import type { ClinicalImpression, Encounter, Practitioner, Provenance, QuestionnaireResponse, Reference, Task } from '@medplum/fhirtypes';
+import type { Encounter, Practitioner, Provenance, QuestionnaireResponse, Reference, Task } from '@medplum/fhirtypes';
 import { Loading, useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';

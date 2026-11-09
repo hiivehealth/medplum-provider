@@ -7,8 +7,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export interface RosTemplateState {
   url: string;
   label: string;
-  questionnaire: Questionnaire | undefined;
-  response: QuestionnaireResponse | undefined;
+  questionnaire?: Questionnaire;
+  response?: QuestionnaireResponse;
   loading?: boolean;
   error?: string;
 }
@@ -27,7 +27,7 @@ export function SoapRosCard(props: SoapRosCardProps): JSX.Element {
   const { templates, disabled, onChange, onRemove } = props;
   const existingTemplate = templates.find((template) => template.response);
   const [selectedUrl, setSelectedUrl] = useState<string | null>(existingTemplate?.url ?? null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const selectedTemplate = templates.find((template) => template.url === selectedUrl);
 
   useEffect(() => {

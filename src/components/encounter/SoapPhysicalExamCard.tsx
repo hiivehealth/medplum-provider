@@ -8,7 +8,7 @@ export interface PhysicalExamTemplateState {
   url: string;
   label: string;
   questionnaire?: Questionnaire;
-  response: QuestionnaireResponse | undefined;
+  response?: QuestionnaireResponse;
   loading?: boolean;
   error?: string;
 }

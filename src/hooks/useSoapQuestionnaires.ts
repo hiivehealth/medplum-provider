@@ -29,7 +29,7 @@ export interface SoapQuestionnaireState {
 export interface UseSoapQuestionnairesResult {
   questionnaires: Map<string, SoapQuestionnaireState>;
   refresh: () => Promise<void>;
-  saveResponse: (questionnaireUrl: string, response: QuestionnaireResponse) => Promise<void>;
+  saveResponse: (questionnaireUrl: string, response: QuestionnaireResponse) => void;
   removeResponse: (questionnaireUrl: string) => Promise<void>;
   persistAll: () => Promise<{
     observations: Observation[];
@@ -134,7 +134,7 @@ export function useSoapQuestionnaires(
     );
 
     setQuestionnaires(nextMap);
-  }, [encounterRef, patientRef, medplum]);
+  }, [encounterRef, medplum]);
 
   const extractResources = useCallback(
     (responses: Map<string, QuestionnaireResponse | undefined>): void => {
@@ -227,7 +227,7 @@ export function useSoapQuestionnaires(
         identifier: [...(resource.identifier ?? []), identifier],
       };
 
-      const resourceType = resource.resourceType as 'Observation' | 'Condition' | 'CarePlan';
+      const resourceType = resource.resourceType;
       const existing = await medplum.searchOne(resourceType, {
         identifier: `${identifier.system}|${identifier.value}`,
         encounter: encounterRef?.reference ?? '',
@@ -292,7 +292,7 @@ export function useSoapQuestionnaires(
             const endDateExtensionUrl = 'https://hiivehealth.com/fhir/StructureDefinition/disposition-end-date';
             const existingEndDateIndex = existingExtensions.findIndex((e) => e.url === endDateExtensionUrl);
 
-            let updatedExtensions = [...existingExtensions];
+            const updatedExtensions = [...existingExtensions];
             if (dispositionEndDate) {
               const endDateExtension = { url: endDateExtensionUrl, valueDate: dispositionEndDate };
               if (existingEndDateIndex >= 0) {

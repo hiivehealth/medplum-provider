@@ -177,7 +177,8 @@ export function SoapObjectiveCard(props: SoapObjectiveCardProps): JSX.Element {
   );
 
   const unitLabel = (unit: string): string => {
-    return unit === 'Cel' ? 'Cel' : unit === 'kg' ? 'kg' : unit === 'cm' ? 'cm' : unit === '[degF]' ? '[degF]' : unit === '[lb_av]' ? 'lb' : 'in';
+    const labels: Record<string, string> = { Cel: 'Cel', kg: 'kg', cm: 'cm', '[degF]': '[degF]', '[lb_av]': 'lb' };
+    return labels[unit] ?? 'in';
   };
 
   const recordVitals = async (): Promise<void> => {
@@ -276,7 +277,7 @@ export function SoapObjectiveCard(props: SoapObjectiveCardProps): JSX.Element {
               <Select label="Weight unit" data={[{ value: '[lb_av]', label: 'Pounds (lb)' }, { value: 'kg', label: 'Kilograms (kg)' }]} value={values.weightUnit} onChange={(value) => updateValues({ weightUnit: value ?? '[lb_av]', weight: '' })} disabled={disabled} />
             </Group>
             <Group justify="flex-end">
-              <Button onClick={() => void recordVitals()} loading={recordingVitals} disabled={disabled}>Record vitals</Button>
+              <Button onClick={recordVitals} loading={recordingVitals} disabled={disabled}>Record vitals</Button>
             </Group>
             <EncounterVitalsHistory encounter={encounter} disabled={disabled} refreshKey={vitalsRefreshKey} />
             <Textarea label="Physical Examination" value={values.physicalExam} onChange={(event) => updateValues({ physicalExam: event.currentTarget.value })} autosize minRows={4} disabled={disabled} />

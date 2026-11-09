@@ -8,7 +8,6 @@ import { ResourceFormWithRequiredProfile } from '../../components/ResourceFormWi
 import { useCuiPolicy } from '../../features/cui/CuiPolicyProvider';
 import { CUI_CONFIGURATION_PROFILE_URL, CUI_ENABLED_URL, setCuiEnabled } from '../../features/cui/policy';
 
-/** Profile-driven configuration editor. Server permissions remain authoritative for every save. */
 export function CuiPolicyPage(): JSX.Element {
   const { state } = useCuiPolicy();
   const identity =
@@ -40,14 +39,14 @@ function CuiPolicyEditor(): JSX.Element {
     setProject(undefined);
     setError(undefined);
     if (!projectId || !configurationId) {
-      return;
+      return undefined;
     }
     let cancelled = false;
     medplum
       .readResource('Basic', configurationId, { cache: 'no-store' })
       .then((value) => {
         if (!cancelled) {
-          if (value.meta?.project !== projectId) throw new Error('Configuration project mismatch');
+          if (value.meta?.project !== projectId) {throw new Error('Configuration project mismatch');}
           setProject(
             setCuiEnabled(value, value.extension?.find((e) => e.url === CUI_ENABLED_URL)?.valueBoolean === true)
           );
@@ -81,12 +80,12 @@ function CuiPolicyEditor(): JSX.Element {
       const updated = await medplum.updateResource(resource, {
         headers: { 'If-Match': `W/"${project.meta.versionId}"` },
       });
-      if (!active.current) return;
+      if (!active.current) {return;}
       setProject(updated);
       setSaved(true);
       refresh();
     } catch (err) {
-      if (active.current) setOutcome(normalizeOperationOutcome(err));
+      if (active.current) {setOutcome(normalizeOperationOutcome(err));}
     } finally {
       saving.current = false;
     }
@@ -116,9 +115,7 @@ function CuiPolicyEditor(): JSX.Element {
             profileUrl={CUI_CONFIGURATION_PROFILE_URL}
             missingProfileMessage="The CUI configuration profile must be installed by a platform operator."
             outcome={outcome}
-            onSubmit={(resource) => {
-              void save(resource);
-            }}
+            onSubmit={save}
           />
         )}
         {saved && <Alert color="green">Project configuration saved.</Alert>}

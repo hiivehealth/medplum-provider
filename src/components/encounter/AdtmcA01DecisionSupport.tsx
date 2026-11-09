@@ -1,4 +1,4 @@
-import { Alert, Anchor, Button, Group, List, Modal, Stack, Text, Title } from '@mantine/core';
+import { Alert, Anchor, Button, Group, List, Modal, Stack, Text } from '@mantine/core';
 import type { ClinicalImpression, QuestionnaireResponse } from '@medplum/fhirtypes';
 import { useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
@@ -135,8 +135,10 @@ export function appendA01PartialDifferentials(
   response: QuestionnaireResponse | undefined
 ): QuestionnaireResponse {
   const item = response?.item ?? [];
-  const withoutLegacyDraft = {
+  const withoutLegacyDraft: QuestionnaireResponse = {
     ...response,
+    resourceType: 'QuestionnaireResponse',
+    status: 'in-progress',
     item: item.map((candidate) =>
       candidate.linkId === 'differential-diagnoses'
         ? {

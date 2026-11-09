@@ -36,6 +36,10 @@ export function ArmyDemographics({ patient, layout = 'sidebar' }: { patient: Pat
   )?.valueCoding;
   const vip = patient.extension?.find((extension) => extension.url === `${namespace}/StructureDefinition/vip-status`)
     ?.valueBoolean;
+  let vipLabel = 'Not recorded';
+  if (vip !== undefined) {
+    vipLabel = vip ? 'Yes' : 'No';
+  }
   const birthDate = patient.birthDate;
   const fullBirthDate = birthDate && /^\d{4}-\d{2}-\d{2}$/.test(birthDate);
   const birthday = fullBirthDate
@@ -52,7 +56,7 @@ export function ArmyDemographics({ patient, layout = 'sidebar' }: { patient: Pat
     ['Branch', coding('branch') ?? 'Not recorded'],
     ['Grade', coding('grade', true) ?? 'Not recorded'],
     ['Blood Type', bloodType?.code ?? bloodType?.display ?? 'Not recorded'],
-    ['VIP', vip === undefined ? 'Not recorded' : vip ? 'Yes' : 'No'],
+    ['VIP', vipLabel],
   ];
 
   if (layout === 'details') {
