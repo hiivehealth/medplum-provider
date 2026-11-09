@@ -16,6 +16,7 @@ import type {
 } from '@medplum/fhirtypes';
 import { LOINC_CODES, UCUM_SYSTEM, UCUM_UNITS } from './loinc-codes';
 import { createVitalObservation } from './vitals';
+import { hasArmySecurity, withArmySecurity } from './adtmc';
 
 export interface ExtractedResources {
   observations: Observation[];
@@ -505,6 +506,23 @@ export function extractPlan(response: QuestionnaireResponse, context: Extraction
 }
 
 export function extractSoapResponse(
+  questionnaireUrl: string,
+  response: QuestionnaireResponse,
+  context: ExtractionContext
+): ExtractedResources | PlanExtractionResult {
+  const extracted = extractSoapSection(questionnaireUrl, response, context);
+  if (!hasArmySecurity(response)) {
+    return extracted;
+  }
+  return {
+    ...extracted,
+    observations: extracted.observations.map(withArmySecurity),
+    conditions: extracted.conditions.map(withArmySecurity),
+    carePlans: extracted.carePlans.map(withArmySecurity),
+  };
+}
+
+function extractSoapSection(
   questionnaireUrl: string,
   response: QuestionnaireResponse,
   context: ExtractionContext

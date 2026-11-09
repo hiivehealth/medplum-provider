@@ -20,6 +20,7 @@ import {
   SOAP_PLAN_URL,
   SOAP_SUBJECTIVE_URL,
 } from '../data/soap-questionnaires';
+import { hasArmySecurity } from './adtmc';
 
 export interface SoapCompositionResources {
   patient: Patient;
@@ -92,6 +93,10 @@ export function buildSoapComposition(resources: SoapCompositionResources): Compo
 
   return {
     resourceType: 'Composition',
+    ...(adtmcA01ClinicalImpression || adtmcA01QuestionnaireResponse ||
+      [...questionnaireResponses.values(), ...observations, ...conditions, ...carePlans, clinicalImpression].some(hasArmySecurity)
+      ? { meta: { security: [{ system: 'https://ehr.hiivehealth.net/fhir/CodeSystem/workflow-access', code: 'army' }] } }
+      : {}),
     status: 'final',
     type: {
       coding: [{ system: 'http://loinc.org', code: '11506-3', display: 'Provider-unspecified Progress note' }],

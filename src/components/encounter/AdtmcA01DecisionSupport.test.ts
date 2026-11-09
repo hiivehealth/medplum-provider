@@ -1,8 +1,44 @@
 import type { QuestionnaireResponse } from '@medplum/fhirtypes';
 import { describe, expect, test } from 'vitest';
 import { appendA01PartialDifferentials, appendSoapText, appendSoapTexts } from './AdtmcA01DecisionSupport';
+import { SOAP_PLAN_URL } from '../../data/soap-questionnaires';
+import { extractSoapResponse } from '../../utils/soap-extraction';
+import { buildSoapComposition } from '../../utils/soap-composition';
 
 describe('appendSoapText', () => {
+  test('keeps A-01 draft content protected through generic SOAP extraction and composition', () => {
+    const patient = { resourceType: 'Patient' as const, id: 'patient' };
+    const encounter = { resourceType: 'Encounter' as const, id: 'encounter', status: 'in-progress' as const, class: { code: 'AMB' } };
+    const response = appendSoapText(undefined, 'plan-free-text', 'A-01 guidance');
+    const security = [{ system: 'https://ehr.hiivehealth.net/fhir/CodeSystem/workflow-access', code: 'army' }];
+    expect(response.meta?.security).toEqual(security);
+    const extracted = extractSoapResponse(SOAP_PLAN_URL, response, { patient, encounter });
+    expect(extracted.carePlans).toHaveLength(1);
+    expect(extracted.carePlans[0].meta?.security).toEqual(security);
+    const composition = buildSoapComposition({
+      patient, encounter, practitioner: { reference: 'Practitioner/provider' },
+      ...extracted, questionnaireResponses: new Map([[SOAP_PLAN_URL, response]]),
+    });
+    expect(composition.meta?.security).toEqual(security);
+  });
+
+  test('generic SOAP content remains unclassified and Army labels are not duplicated', () => {
+    const patient = { resourceType: 'Patient' as const, id: 'patient' };
+    const encounter = { resourceType: 'Encounter' as const, id: 'encounter', status: 'in-progress' as const, class: { code: 'AMB' } };
+    const response: QuestionnaireResponse = {
+      resourceType: 'QuestionnaireResponse', status: 'completed',
+      item: [{ linkId: 'plan-free-text', answer: [{ valueString: 'Generic follow-up' }] }],
+    };
+    const extracted = extractSoapResponse(SOAP_PLAN_URL, response, { patient, encounter });
+    expect(extracted.carePlans[0].meta?.security).toBeUndefined();
+    expect(buildSoapComposition({
+      patient, encounter, practitioner: { reference: 'Practitioner/provider' },
+      ...extracted, questionnaireResponses: new Map([[SOAP_PLAN_URL, response]]),
+    }).meta?.security).toBeUndefined();
+    const draft = appendSoapText(response, 'plan-free-text', 'A-01 guidance');
+    expect(appendSoapText(draft, 'plan-free-text', 'More A-01 guidance').meta?.security).toHaveLength(1);
+  });
+
   test('adds a clinician-confirmed A-01 differential consideration without creating a diagnosis resource', () => {
     const response = appendSoapText(undefined, 'differential-diagnoses', 'A-01 Provider Now consideration');
 

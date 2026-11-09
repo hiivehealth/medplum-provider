@@ -1,7 +1,8 @@
 import { getReferenceString, normalizeErrorString, type WithId } from '@medplum/core';
 import type { ClinicalImpression, Encounter, QuestionnaireResponse, Reference } from '@medplum/fhirtypes';
-import { useMedplum } from '@medplum/react';
+import { useMedplum, useMedplumProfile } from '@medplum/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { hasArmyAccess } from '../utils/adtmc';
 
 export const ADTMC_ALGORITHM_ID_URL = 'https://ehr.hiivehealth.net/fhir/StructureDefinition/adtmc-algorithm-id';
 export const ADTMC_A01_ALGORITHM_ID = 'A-01';
@@ -16,6 +17,11 @@ export interface AdtmcA01ResultState {
 
 export function useAdtmcA01Result(encounter: Encounter | undefined): AdtmcA01ResultState {
   const medplum = useMedplum();
+  const profile = useMedplumProfile();
+  const canRead = useCallback((): boolean => {
+    const projectId = encounter?.meta?.project;
+    return !!profile && !!projectId && hasArmyAccess(medplum, projectId);
+  }, [encounter, medplum, profile]);
   const [result, setResult] = useState<AdtmcA01ResultState>({
     clinicalImpression: undefined,
     questionnaireResponse: undefined,
@@ -34,7 +40,7 @@ export function useAdtmcA01Result(encounter: Encounter | undefined): AdtmcA01Res
     let cancelled = false;
 
     async function loadResult(): Promise<void> {
-      if (!encounterReference) {
+      if (!encounterReference || !canRead()) {
         setResult({ clinicalImpression: undefined, questionnaireResponse: undefined, loading: false, error: undefined, refresh });
         return;
       }
@@ -47,6 +53,9 @@ export function useAdtmcA01Result(encounter: Encounter | undefined): AdtmcA01Res
           { cache: 'no-cache' }
         );
         const clinicalImpression = getMostRecentAdtmcA01ClinicalImpression(impressions);
+        if (cancelled || !canRead()) {
+          return;
+        }
         if (!clinicalImpression) {
           if (!cancelled) {
             setResult({ clinicalImpression: undefined, questionnaireResponse: undefined, loading: false, error: undefined, refresh });
@@ -56,12 +65,21 @@ export function useAdtmcA01Result(encounter: Encounter | undefined): AdtmcA01Res
         if (!clinicalImpression.id) {
           throw new Error('A-01 ClinicalImpression is missing its id');
         }
+        if (clinicalImpression.meta?.project !== encounter?.meta?.project || clinicalImpression.encounter?.reference !== encounterReference) {
+          throw new Error('A-01 result is not available for this encounter.');
+        }
 
         const sourceResponse = clinicalImpression.supportingInfo?.find(isQuestionnaireResponseReference);
         if (!sourceResponse) {
           throw new Error(`A-01 ClinicalImpression/${clinicalImpression.id} is missing its source QuestionnaireResponse`);
         }
         const questionnaireResponse = await medplum.readReference<QuestionnaireResponse>(sourceResponse);
+        if (cancelled || !canRead()) {
+          return;
+        }
+        if (questionnaireResponse.meta?.project !== encounter?.meta?.project || questionnaireResponse.encounter?.reference !== encounterReference) {
+          throw new Error('A-01 response is not available for this encounter.');
+        }
         if (!questionnaireResponse.id) {
           throw new Error(`A-01 ClinicalImpression/${clinicalImpression.id} source QuestionnaireResponse is missing its id`);
         }
@@ -87,9 +105,11 @@ export function useAdtmcA01Result(encounter: Encounter | undefined): AdtmcA01Res
     return () => {
       cancelled = true;
     };
-  }, [encounterReference, medplum, refresh, refreshCount]);
+  }, [encounterReference, medplum, refresh, refreshCount, canRead, encounter?.meta?.project]);
 
-  return result;
+  return canRead() && result.clinicalImpression?.encounter?.reference === encounterReference ? result : {
+    ...result, clinicalImpression: undefined, questionnaireResponse: undefined,
+  };
 }
 
 export function isAdtmcA01ClinicalImpression(clinicalImpression: ClinicalImpression): boolean {

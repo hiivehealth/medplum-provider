@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { A01CompactQuestionnaire } from '../../tasks/encounter/A01CompactQuestionnaire';
 import { A01_SORE_THROAT_DECISION_FLOW_URL, DECISION_FLOWS } from '../../../data/decision-flows';
 import type { UseDecisionFlowsResult } from '../../../hooks/useDecisionFlows';
+import { showErrorNotification } from '../../../utils/notifications';
 
 export interface DecisionFlowsPanelProps {
   decisionFlows: UseDecisionFlowsResult;
@@ -27,7 +28,10 @@ export function DecisionFlowsPanel(props: DecisionFlowsPanelProps): JSX.Element 
 
   const options = [
     { value: '', label: 'Select a decision flow...' },
-    ...DECISION_FLOWS.map((flow) => ({ value: flow.url, label: flow.title })),
+    ...DECISION_FLOWS.filter((flow) => {
+      const state = flows.get(flow.url);
+      return state?.questionnaire && !state.error;
+    }).map((flow) => ({ value: flow.url, label: flow.title })),
   ];
 
   const selectedState = selectedFlowUrl ? flows.get(selectedFlowUrl) : undefined;
@@ -95,8 +99,12 @@ export function DecisionFlowsPanel(props: DecisionFlowsPanelProps): JSX.Element 
                 questionnaire={selectedState.questionnaire}
                 questionnaireResponse={selectedState.response}
                 onSubmit={async (response) => {
-                  await completeResponse(selectedFlowUrl, response);
-                  refreshA01Result();
+                  try {
+                    await completeResponse(selectedFlowUrl, response);
+                    refreshA01Result();
+                  } catch {
+                    showErrorNotification(new Error('Decision flow could not be completed.'));
+                  }
                 }}
               />
             ) : (

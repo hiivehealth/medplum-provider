@@ -45,6 +45,41 @@ npm run dev
 
 This app should run on `http://localhost:3000/`
 
+### Encounter-template Access (HVCARE-1812)
+
+The `feature/encountertemplates` integration depends on Provider PR #12 (HVCARE-1809)
+and Core PR #8 (HVCARE-1810). It reuses PR #12's `hasArmyAccess` contract: the current
+Project must have the admin-managed `army` feature, and the active ProjectMembership
+and profile must match that project. Ordinary server AccessPolicies still decide which
+interactions are permitted; there is no separate provider-role allowlist.
+
+SOAP Subjective, Objective, Assessment, Plan, ROS, physical-exam templates, and generic
+Chest Pain/Respiratory flows remain general-purpose. ADTMC A-01 templates and results
+are military-only. The decision-flow selector registers A-01 only after its Questionnaire
+is available through the server and its project matches the encounter and patient.
+Unknown, missing, invalid, inactive, or mismatched Army eligibility fails closed without
+disabling generic SOAP workflows. The result reader rejects foreign-project results and
+source responses, and template writes recheck eligibility.
+
+Confirmed A-01 guidance copied into a generic SOAP response retains the Army security
+label through persistence, extraction, and Composition assembly. Generic templates are
+not themselves reclassified. Server authorization from Core PR #8 enforces the label;
+client filtering alone is not authorization. Authenticated document delivery, task
+launch access, and clinical scoring remain owned by the prerequisite work.
+
+Run the focused checks with:
+
+```bash
+npm test -- src/hooks/useDecisionFlows.test.tsx src/hooks/useAdtmcA01Result.test.tsx src/components/encounter/AdtmcA01DecisionSupport.test.ts src/utils/soap-extraction.test.ts
+```
+
+These are application tests, not proof of deployed ACL enforcement. Before merge/release,
+verify on an authorized disposable server containing the prerequisite PRs that Army members
+can use A-01, non-Army/invalid/inactive and cross-tenant contexts cannot discover or access
+it, and ordinary AccessPolicies deny prohibited read/write operations through direct APIs.
+Also verify generic templates remain usable. Record server-backed evidence with the ticket;
+no deployment or live verification is performed by these local changes.
+
 ### About Medplum
 
 [Medplum](https://www.medplum.com/) is an open-source, API-first EHR. Medplum makes it easy to build healthcare apps quickly with less code.

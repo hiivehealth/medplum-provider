@@ -1,10 +1,10 @@
 import type { WithId } from '@medplum/core';
-import type { ClinicalImpression, Encounter, QuestionnaireResponse } from '@medplum/fhirtypes';
+import type { ClinicalImpression, Encounter, Practitioner, Project, ProjectMembership, QuestionnaireResponse } from '@medplum/fhirtypes';
 import { MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { JSX, ReactNode } from 'react';
-import { beforeEach, describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   ADTMC_ALGORITHM_ID_URL,
   getMostRecentAdtmcA01ClinicalImpression,
@@ -14,6 +14,7 @@ import {
 const encounter: WithId<Encounter> = {
   resourceType: 'Encounter',
   id: 'a01-encounter',
+  meta: { project: 'army-project' },
   status: 'in-progress',
   class: { system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode', code: 'AMB' },
 };
@@ -22,6 +23,7 @@ function a01ClinicalImpression(id: string, date: string, sourceResponseId?: stri
   return {
     resourceType: 'ClinicalImpression',
     id,
+    meta: { project: 'army-project' },
     status: 'completed',
     encounter: { reference: 'Encounter/a01-encounter' },
     date,
@@ -35,6 +37,14 @@ describe('useAdtmcA01Result', () => {
 
   beforeEach(() => {
     medplum = new MockClient();
+    vi.spyOn(medplum, 'getProject').mockReturnValue({
+      resourceType: 'Project', id: 'army-project', name: 'Synthetic Army', features: ['army'] as Project['features'],
+    });
+    vi.spyOn(medplum, 'getProjectMembership').mockReturnValue({
+      resourceType: 'ProjectMembership', id: 'membership', active: true,
+      project: { reference: 'Project/army-project' }, profile: { reference: 'Practitioner/provider' },
+    } as WithId<ProjectMembership>);
+    vi.spyOn(medplum, 'getProfile').mockReturnValue({ resourceType: 'Practitioner', id: 'provider' } as WithId<Practitioner>);
   });
 
   const wrapper = ({ children }: { children: ReactNode }): JSX.Element => (
@@ -57,6 +67,7 @@ describe('useAdtmcA01Result', () => {
     const sourceResponse: QuestionnaireResponse = {
       resourceType: 'QuestionnaireResponse',
       id: 'a01-response',
+      meta: { project: 'army-project' },
       status: 'completed',
       questionnaire: 'https://ehr.hiivehealth.net/fhir/Questionnaire/a01-sore-throat|1.0.0',
       encounter: { reference: 'Encounter/a01-encounter' },
@@ -80,8 +91,10 @@ describe('useAdtmcA01Result', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     const sourceResponse = await medplum.createResource<QuestionnaireResponse>({
       resourceType: 'QuestionnaireResponse',
+      meta: { project: 'army-project' },
       status: 'completed',
       questionnaire: 'https://ehr.hiivehealth.net/fhir/Questionnaire/a01-sore-throat|1.0.0',
+      encounter: { reference: 'Encounter/a01-encounter' },
     });
     const createdResult = await medplum.createResource(
       a01ClinicalImpression('created-after-load', '2026-09-21T10:00:00Z', sourceResponse.id)
@@ -113,5 +126,28 @@ describe('useAdtmcA01Result', () => {
     };
 
     expect(getMostRecentAdtmcA01ClinicalImpression([nonA01])).toBeUndefined();
+  });
+
+  test.each(['non-Army', 'inactive member', 'foreign encounter', 'missing tenant'])(
+    'does not query military results for %s', async (context) => {
+      if (context === 'non-Army') vi.mocked(medplum.getProject).mockReturnValue({ resourceType: 'Project', id: 'army-project' });
+      if (context === 'inactive member') vi.mocked(medplum.getProjectMembership).mockReturnValue(undefined);
+      const scopedEncounter = context === 'foreign encounter' ? { ...encounter, meta: { project: 'other-project' } }
+        : context === 'missing tenant' ? { ...encounter, meta: undefined } : encounter;
+      const search = vi.spyOn(medplum, 'searchResources');
+      const { result } = renderHook(() => useAdtmcA01Result(scopedEncounter), { wrapper });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(search).not.toHaveBeenCalled();
+      expect(result.current.clinicalImpression).toBeUndefined();
+    }
+  );
+
+  test('rejects a foreign-project result before following its response reference', async () => {
+    await medplum.createResource({ ...a01ClinicalImpression('foreign', '2026-09-21T10:00:00Z', 'foreign-response'), meta: { project: 'other-project' } });
+    const read = vi.spyOn(medplum, 'readReference');
+    const { result } = renderHook(() => useAdtmcA01Result(encounter), { wrapper });
+    await waitFor(() => expect(result.current.error).toBeDefined());
+    expect(result.current.clinicalImpression).toBeUndefined();
+    expect(read).not.toHaveBeenCalled();
   });
 });

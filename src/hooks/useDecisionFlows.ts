@@ -4,7 +4,8 @@ import { getReferenceString, normalizeErrorString } from '@medplum/core';
 import type { Encounter, Patient, Questionnaire, QuestionnaireResponse } from '@medplum/fhirtypes';
 import { useMedplum, useMedplumProfile } from '@medplum/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { DECISION_FLOW_QUESTIONNAIRE_URLS } from '../data/decision-flows';
+import { A01_SORE_THROAT_DECISION_FLOW_URL, DECISION_FLOW_QUESTIONNAIRE_URLS } from '../data/decision-flows';
+import { hasArmyAccess } from '../utils/adtmc';
 import { showErrorNotification } from '../utils/notifications';
 
 export interface DecisionFlowState {
@@ -34,6 +35,18 @@ export function useDecisionFlows(
   const SAVE_DEBOUNCE_MS = 750;
   const saveTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const pendingSaves = useRef<Map<string, QuestionnaireResponse>>(new Map());
+  const [loadedEncounter, setLoadedEncounter] = useState<string | undefined>(undefined);
+
+  const canAccessFlow = useCallback((url: string): boolean => {
+    if (!DECISION_FLOW_QUESTIONNAIRE_URLS.includes(url)) {
+      return false;
+    }
+    if (url !== A01_SORE_THROAT_DECISION_FLOW_URL) {
+      return true;
+    }
+    const projectId = encounter?.meta?.project;
+    return !!author && !!projectId && patient?.meta?.project === projectId && hasArmyAccess(medplum, projectId);
+  }, [encounter, patient, medplum, author]);
 
   const encounterRef = useMemo(
     () => (encounter ? { reference: getReferenceString(encounter) } : undefined),
@@ -48,8 +61,8 @@ export function useDecisionFlows(
     [author]
   );
 
-  const loadFlows = useCallback(async (): Promise<void> => {
-    if (!encounterRef || !patientRef) {
+  const loadFlows = useCallback(async (signal: AbortSignal): Promise<void> => {
+    if (signal.aborted || !encounterRef || !patientRef) {
       return;
     }
 
@@ -57,6 +70,9 @@ export function useDecisionFlows(
 
     await Promise.all(
       DECISION_FLOW_QUESTIONNAIRE_URLS.map(async (url) => {
+        if (!canAccessFlow(url)) {
+          return;
+        }
         nextMap.set(url, {
           questionnaire: undefined,
           response: undefined,
@@ -66,13 +82,16 @@ export function useDecisionFlows(
 
         try {
           const questionnaire = await medplum.searchOne('Questionnaire', { url });
-          if (!questionnaire) {
+          if (!questionnaire || (url === A01_SORE_THROAT_DECISION_FLOW_URL && questionnaire.meta?.project !== encounter?.meta?.project)) {
             nextMap.set(url, {
               questionnaire: undefined,
               response: undefined,
               loading: false,
-              error: `Decision flow not found: ${url}`,
+              error: 'Decision flow is not available.',
             });
+            return;
+          }
+          if (signal.aborted || !canAccessFlow(url)) {
             return;
           }
 
@@ -81,6 +100,9 @@ export function useDecisionFlows(
             `questionnaire=${encodeURIComponent(url)}&encounter=${encodeURIComponent(encounterRef?.reference ?? '')}&_count=20&_sort=-_lastUpdated`,
             { cache: 'no-cache' }
           );
+          if (url === A01_SORE_THROAT_DECISION_FLOW_URL && responses.some((response) => response.meta?.project !== encounter?.meta?.project)) {
+            throw new Error('Decision flow is not available.');
+          }
 
           nextMap.set(url, {
             questionnaire,
@@ -99,8 +121,11 @@ export function useDecisionFlows(
       })
     );
 
-    setFlows(nextMap);
-  }, [encounterRef, patientRef, medplum]);
+    if (!signal.aborted) {
+      setLoadedEncounter(encounterRef.reference);
+      setFlows(nextMap);
+    }
+  }, [encounterRef, patientRef, medplum, canAccessFlow, encounter]);
 
   const doSaveResponse = useCallback(
     async (questionnaireUrl: string): Promise<void> => {
@@ -111,7 +136,7 @@ export function useDecisionFlows(
       }
 
       const state = flows.get(questionnaireUrl);
-      if (!state || !encounterRef || !patientRef) {
+      if (!state?.questionnaire || state.error || !encounterRef || !patientRef || !canAccessFlow(questionnaireUrl)) {
         return;
       }
 
@@ -142,11 +167,14 @@ export function useDecisionFlows(
         showErrorNotification(err);
       }
     },
-    [flows, encounterRef, patientRef, authorRef, medplum]
+    [flows, encounterRef, patientRef, authorRef, medplum, canAccessFlow]
   );
 
   const saveResponse = useCallback(
     (questionnaireUrl: string, response: QuestionnaireResponse): void => {
+      if (!canAccessFlow(questionnaireUrl)) {
+        return;
+      }
       pendingSaves.current.set(questionnaireUrl, response);
       const existing = saveTimeouts.current.get(questionnaireUrl);
       if (existing) {
@@ -160,7 +188,7 @@ export function useDecisionFlows(
       }, SAVE_DEBOUNCE_MS);
       saveTimeouts.current.set(questionnaireUrl, timeout);
     },
-    [doSaveResponse]
+    [doSaveResponse, canAccessFlow]
   );
 
   const completeResponse = useCallback(
@@ -173,8 +201,8 @@ export function useDecisionFlows(
       pendingSaves.current.delete(questionnaireUrl);
 
       const state = flows.get(questionnaireUrl);
-      if (!state || !encounterRef || !patientRef) {
-        return;
+      if (!state?.questionnaire || state.error || !encounterRef || !patientRef || !canAccessFlow(questionnaireUrl)) {
+        throw new Error('Decision flow is not available.');
       }
 
       const completedResponse: QuestionnaireResponse = {
@@ -189,33 +217,43 @@ export function useDecisionFlows(
         item: response.item,
       };
 
-      try {
-        const saved = completedResponse.id
-          ? await medplum.updateResource(completedResponse)
-          : await medplum.createResource(completedResponse);
-        setFlows((previous) => {
-          const next = new Map(previous);
-          next.set(questionnaireUrl, { ...state, response: saved });
-          return next;
-        });
-      } catch (err) {
-        showErrorNotification(err);
-      }
+      const saved = completedResponse.id
+        ? await medplum.updateResource(completedResponse)
+        : await medplum.createResource(completedResponse);
+      setFlows((previous) => {
+        const next = new Map(previous);
+        next.set(questionnaireUrl, { ...state, response: saved });
+        return next;
+      });
     },
-    [authorRef, encounterRef, flows, medplum, patientRef]
+    [authorRef, encounterRef, flows, medplum, patientRef, canAccessFlow]
   );
 
   useEffect(() => {
-    let cancelled = false;
-    loadFlows().catch((err) => {
-      if (!cancelled) {
+    const controller = new AbortController();
+    const timeouts = saveTimeouts.current;
+    const drafts = pendingSaves.current;
+    Promise.resolve().then(() => loadFlows(controller.signal)).catch((err) => {
+      if (!controller.signal.aborted) {
         showErrorNotification(err);
       }
     });
     return () => {
-      cancelled = true;
+      controller.abort();
+      timeouts.forEach(clearTimeout);
+      timeouts.clear();
+      drafts.clear();
     };
   }, [loadFlows]);
 
-  return { flows, selectedFlowUrl, setSelectedFlowUrl, saveResponse, completeResponse };
+  const visibleFlows = loadedEncounter === encounterRef?.reference
+    ? new Map([...flows].filter(([url]) => canAccessFlow(url)))
+    : new Map<string, DecisionFlowState>();
+  return {
+    flows: visibleFlows,
+    selectedFlowUrl: selectedFlowUrl && visibleFlows.has(selectedFlowUrl) ? selectedFlowUrl : null,
+    setSelectedFlowUrl,
+    saveResponse,
+    completeResponse,
+  };
 }

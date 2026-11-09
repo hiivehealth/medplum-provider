@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SOAP_PLAN_URL, SOAP_QUESTIONNAIRE_URLS } from '../data/soap-questionnaires';
 import { extractSoapResponse } from '../utils/soap-extraction';
 import { showErrorNotification } from '../utils/notifications';
+import { hasArmySecurity, withArmySecurity } from '../utils/adtmc';
 
 export interface SoapQuestionnaireState {
   questionnaire: Questionnaire;
@@ -374,6 +375,9 @@ export function useSoapQuestionnaires(
         source: authorRef,
         item: response.item,
       };
+      if (hasArmySecurity(response)) {
+        updatedResponse.meta = withArmySecurity(updatedResponse).meta;
+      }
 
       try {
         let saved: QuestionnaireResponse;
@@ -385,7 +389,8 @@ export function useSoapQuestionnaires(
               throw err;
             }
             const latestResponse = await medplum.readResource('QuestionnaireResponse', updatedResponse.id);
-            saved = await medplum.updateResource({ ...latestResponse, ...updatedResponse, meta: latestResponse.meta });
+            const retriedResponse = { ...latestResponse, ...updatedResponse, meta: latestResponse.meta };
+            saved = await medplum.updateResource(hasArmySecurity(updatedResponse) ? withArmySecurity(retriedResponse) : retriedResponse);
           }
         } else {
           saved = await medplum.createResource(updatedResponse);

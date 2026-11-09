@@ -1,8 +1,10 @@
 import { Alert, Anchor, Button, Group, List, Modal, Stack, Text, Title } from '@mantine/core';
 import type { ClinicalImpression, QuestionnaireResponse } from '@medplum/fhirtypes';
+import { useMedplum } from '@medplum/react';
 import type { JSX } from 'react';
 import { useState } from 'react';
 import { ADTMC_ALGORITHM_ID_URL } from '../../hooks/useAdtmcA01Result';
+import { hasArmyAccess, withArmySecurity } from '../../utils/adtmc';
 
 const ADTMC_DECISION_RULE_URL = 'https://ehr.hiivehealth.net/fhir/StructureDefinition/adtmc-decision-rule';
 const ADTMC_DISPOSITION_URL = 'https://ehr.hiivehealth.net/fhir/StructureDefinition/adtmc-disposition';
@@ -25,9 +27,13 @@ export interface AdtmcA01DecisionSupportProps {
   onDraft: (response: QuestionnaireResponse) => void;
 }
 
-export function AdtmcA01DecisionSupport(props: AdtmcA01DecisionSupportProps): JSX.Element {
+export function AdtmcA01DecisionSupport(props: AdtmcA01DecisionSupportProps): JSX.Element | null {
   const { section, clinicalImpression, questionnaireResponse, soapResponse, disabled, onDraft } = props;
+  const medplum = useMedplum();
   const [confirming, setConfirming] = useState(false);
+  const canDraft = (): boolean => !!clinicalImpression.meta?.project &&
+    questionnaireResponse.meta?.project === clinicalImpression.meta.project &&
+    hasArmyAccess(medplum, clinicalImpression.meta.project);
   const algorithm = clinicalImpression.extension?.find((extension) => extension.url === ADTMC_ALGORITHM_ID_URL)?.valueString;
   const rule = clinicalImpression.extension?.find((extension) => extension.url === ADTMC_DECISION_RULE_URL)?.valueString;
   const disposition = clinicalImpression.extension?.find((extension) => extension.url === ADTMC_DISPOSITION_URL)?.valueCode;
@@ -39,6 +45,9 @@ export function AdtmcA01DecisionSupport(props: AdtmcA01DecisionSupportProps): JS
     : [`A-01 ${disposition ?? 'decision support'} guidance: ${guidance}`];
 
   const confirmDraft = (): void => {
+    if (!canDraft() || disabled) {
+      return;
+    }
     onDraft(
       isAssessment
         ? appendA01PartialDifferentials(soapResponse)
@@ -46,6 +55,10 @@ export function AdtmcA01DecisionSupport(props: AdtmcA01DecisionSupportProps): JS
     );
     setConfirming(false);
   };
+
+  if (!canDraft()) {
+    return null;
+  }
 
   return (
     <Alert color="blue" title="A-01 Decision Support">
@@ -108,14 +121,14 @@ export function appendSoapTexts(
   const item = response?.item ?? [];
   const existing = item.find((candidate) => candidate.linkId === linkId);
   const answers = texts.map((text) => ({ valueString: text }));
-  return {
+  return withArmySecurity({
     ...response,
     resourceType: 'QuestionnaireResponse',
     status: 'in-progress',
     item: existing
       ? item.map((candidate) => candidate.linkId === linkId ? { ...candidate, answer: [...(candidate.answer ?? []), ...answers] } : candidate)
       : [...item, { linkId, answer: answers }],
-  };
+  });
 }
 
 export function appendA01PartialDifferentials(
