@@ -70,7 +70,6 @@ describe('OrderLabsPage', () => {
       state: {
         performingLab: undefined,
         performingLabAccountNumber: undefined,
-        performingLabPhysicianAccountNumber: undefined,
         selectedTests: [],
         testMetadata: {},
         diagnoses: [],
@@ -98,7 +97,6 @@ describe('OrderLabsPage', () => {
       searchAvailableTests: vi.fn().mockResolvedValue([mockTest]),
       setPerformingLab: vi.fn(),
       setPerformingLabAccountNumber: vi.fn(),
-      setPerformingLabPhysicianAccountNumber: vi.fn(),
       addTest: vi.fn(),
       removeTest: vi.fn(),
       setTests: vi.fn(),
