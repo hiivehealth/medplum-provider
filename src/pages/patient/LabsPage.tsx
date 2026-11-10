@@ -222,7 +222,7 @@ export function LabsPage(props: LabsPageProps): JSX.Element {
           )
         }
         renderDetail={(item, ctx) => (
-          <LabDetailPane item={item} onOrderChange={() => ctx.refresh().catch(showErrorNotification)} />
+          <LabDetailPane item={item} onOrderChange={() => ctx.refresh?.()?.catch(showErrorNotification)} />
         )}
       />
 
