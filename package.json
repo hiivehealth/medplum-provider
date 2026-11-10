@@ -6,7 +6,9 @@
   "scripts": {
     "build": "tsc && vite build",
     "dev": "vite",
+    "deploy:hiive-build": "bash ./scripts/deploy-hiive-build.sh",
     "lint": "eslint .",
+    "lint:ci": "eslint src --ignore-pattern '**/*.test.ts' --ignore-pattern '**/*.test.tsx'",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
     "test": "vitest run",
