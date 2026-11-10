@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Button, Card, Flex, Group, Menu, Skeleton, Stack, Tooltip } from '@mantine/core';
+import { Button, Card, Flex, Group, Menu, Skeleton, Stack, Text, Tooltip } from '@mantine/core';
 import { useDebouncedCallback } from '@mantine/hooks';
 import { notifications, showNotification } from '@mantine/notifications';
 import type { PatchOperation, WithId } from '@medplum/core';
-import { CPT, createReference, getReferenceString } from '@medplum/core';
+import { CPT, createReference, formatDateTime, getReferenceString } from '@medplum/core';
 import type {
   ChargeItem,
   Claim,
@@ -13,13 +13,14 @@ import type {
   Coverage,
   Encounter,
   EncounterDiagnosis,
+  Location,
   Media,
   Organization,
   Patient,
   Practitioner,
   Reference,
 } from '@medplum/fhirtypes';
-import { useMedplum } from '@medplum/react';
+import { ResourceName, useMedplum } from '@medplum/react';
 import { IconCircleOff, IconDownload, IconFileText, IconSend } from '@tabler/icons-react';
 import type { JSX } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -29,6 +30,7 @@ import { refreshCandidClaimResponse } from '../../utils/candid';
 import { getChargeItemsForEncounter } from '../../utils/chargeitems';
 import { buildClaimFromEncounter } from '../../utils/claims';
 import { createSelfPayCoverage, isSelfPayCoverage } from '../../utils/coverage';
+import { isRedRoverImportedEncounter } from '../../utils/encounter';
 import { showErrorNotification } from '../../utils/notifications';
 import { ChargeItemList } from '../ChargeItem/ChargeItemList';
 import { ConditionList } from '../Conditions/ConditionList';
@@ -48,6 +50,112 @@ export interface BillingTabProps {
 }
 
 export const BillingTab = (props: BillingTabProps): JSX.Element => {
+  if (!isRedRoverImportedEncounter(props.encounter)) {
+    return <StandardBillingTab {...props} />;
+  }
+  const { encounter, practitioner } = props;
+  const financialIdentifiers = encounter.identifier?.filter((identifier) =>
+    identifier.system?.startsWith('https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/identifiers/fin/pool/')
+  );
+  return (
+    <Stack gap="md">
+      <Text fw={600} size="lg">
+        Visit Details
+      </Text>
+      <ImportedVisitLocation encounter={encounter} />
+      {financialIdentifiers?.map((identifier) => (
+        <Text key={`${identifier.system}|${identifier.value}`}>Visit Number (FIN): {identifier.value}</Text>
+      ))}
+      <Text>Practitioner: {practitioner ? <ResourceName value={practitioner} /> : 'Not supplied'}</Text>
+      <Text>Check in: {encounter.period?.start ? formatDateTime(encounter.period.start) : 'Not supplied'}</Text>
+      <Text>Check out: {encounter.period?.end ? formatDateTime(encounter.period.end) : 'Not supplied'}</Text>
+      <Text fw={600} size="lg">
+        Diagnoses
+      </Text>
+      {encounter.diagnosis?.length ? (
+        encounter.diagnosis.map((diagnosis, index) => (
+          <ResourceName key={diagnosis.condition?.reference ?? index} value={diagnosis.condition} />
+        ))
+      ) : (
+        <Text c="dimmed">No encounter diagnoses imported.</Text>
+      )}
+      <Text c="dimmed">Billing information not imported.</Text>
+    </Stack>
+  );
+};
+
+function ImportedVisitLocation({ encounter }: { encounter: Encounter }): JSX.Element {
+  const medplum = useMedplum();
+  const locationKey = encounter.location?.map((entry) => entry.location.reference ?? '').join('|') ?? '';
+  const [result, setResult] = useState<{
+    key: string;
+    fields?: { label: string; value: string }[];
+    failed?: boolean;
+  }>();
+  useEffect(() => {
+    let active = true;
+    const load = async (): Promise<void> => {
+      if (!locationKey) return;
+      const levels = ['unit', 'building', 'facility'];
+      const locations: Location[] = [];
+      let reference = locationKey;
+      for (const level of levels) {
+        if (!/^Location\/[A-Za-z0-9.-]{1,64}$/.test(reference)) throw new Error('Invalid imported location reference');
+        const location = await medplum.readResource('Location', reference.split('/')[1]);
+        if (
+          location.meta?.project !== '8588313a-c8c6-4e07-8c1d-e684ed25e522' ||
+          !location.identifier?.some(
+            (identifier) =>
+              identifier.system === `https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/locations/${level}`
+          )
+        ) {
+          throw new Error('Invalid imported location hierarchy');
+        }
+        locations.push(location);
+        reference = location.partOf?.reference ?? '';
+      }
+      if (reference) throw new Error('Unexpected parent on imported facility');
+      const labels = new Set<string>();
+      const fields = locations.reverse().flatMap((location, index) => {
+        const value =
+          location.description && (!location.name || location.description.startsWith(location.name))
+            ? location.description
+            : location.name;
+        if (!value?.trim()) throw new Error('Missing imported location label');
+        const key = value.trim().toLowerCase();
+        if (labels.has(key)) return [];
+        labels.add(key);
+        return [{ label: ['Facility', 'Building', 'Unit'][index], value }];
+      });
+      if (active) setResult({ key: locationKey, fields });
+    };
+    void load().catch(() => {
+      if (active) setResult({ key: locationKey, failed: true });
+    });
+    return () => {
+      active = false;
+    };
+  }, [locationKey, medplum]);
+  if (!locationKey) return <Text>Facility: Not supplied</Text>;
+  if (result?.key !== locationKey) return <Text c="dimmed">Facility: Loading...</Text>;
+  if (result.failed)
+    return (
+      <Text c="dimmed" role="status">
+        Facility information unavailable.
+      </Text>
+    );
+  return (
+    <>
+      {result.fields?.map((field) => (
+        <Text key={field.label} style={{ overflowWrap: 'anywhere' }}>
+          {field.label}: {field.value}
+        </Text>
+      ))}
+    </>
+  );
+}
+
+const StandardBillingTab = (props: BillingTabProps): JSX.Element => {
   const { encounter, setEncounter, onEncounterSaved, patient, practitioner, setPractitioner, chartNoteStatus } = props;
   const medplum = useMedplum();
   const [claim, setClaim] = useState<WithId<Claim> | undefined>();

@@ -1,6 +1,5 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { getReferenceString } from '@medplum/core';
 import { useDoseSpotNotifications } from '@medplum/dosespot-react';
@@ -42,6 +41,11 @@ import { DoseSpotNotificationsPage } from './pages/integrations/DoseSpotNotifica
 import { IntegrationsPage } from './pages/integrations/IntegrationsPage';
 import { ScriptSurePage } from './pages/integrations/ScriptSurePage';
 import { MessagesPage } from './pages/messages/MessagesPage';
+import { OEM_PROJECT_ID } from './pages/oem/ih-review';
+import { IhReviewPage } from './pages/oem/IhReviewPage';
+import { IntakePage } from './pages/oem/IntakePage';
+import { PersonnelPage } from './pages/oem/PersonnelPage';
+import { RuleReviewPage } from './pages/oem/RuleReviewPage';
 import { CommunicationTab } from './pages/patient/CommunicationTab';
 import { CoveragePage } from './pages/patient/CoveragePage';
 import { DocumentsPage } from './pages/patient/DocumentsPage';
@@ -58,7 +62,7 @@ import { TasksTab } from './pages/patient/TasksTab';
 import { TimelineTab } from './pages/patient/TimelineTab';
 import { RegisterPage } from './pages/RegisterPage';
 import { ResourceCreatePage } from './pages/resource/ResourceCreatePage';
-import { ResourceDetailPage } from './pages/resource/ResourceDetailPage';
+import { ResourceDetailPage, ResourceVersionPage } from './pages/resource/ResourceDetailPage';
 import { ResourceEditPage } from './pages/resource/ResourceEditPage';
 import { ResourceHistoryPage } from './pages/resource/ResourceHistoryPage';
 import { ResourcePage } from './pages/resource/ResourcePage';
@@ -158,7 +162,7 @@ function AppContent(): JSX.Element | null {
 
   const appShellContent = (
     <AppShell
-      logo={<Text fw={700} size="lg">HiiveHealth</Text>}
+      logo={<img src="/Hiive%20Icon_Yellow.png" alt="Hiive Health" width={24} height={24} />}
       pathname={location.pathname}
       searchParams={searchParams}
       layoutVersion="v2"
@@ -197,6 +201,14 @@ function AppContent(): JSX.Element | null {
                     },
                   },
                   { icon: <IconPrinter />, label: 'Faxes', href: '/Fax/Communication' },
+                  ...(project?.id === OEM_PROJECT_ID
+                    ? [
+                        { icon: <IconClipboardCheck />, label: 'Noise Intake', href: '/oem/intake' },
+                        { icon: <IconClipboardCheck />, label: 'Personnel Facts', href: '/oem/personnel' },
+                        { icon: <IconClipboardCheck />, label: 'IH Source Review', href: '/oem/ih-review' },
+                        { icon: <IconClipboardCheck />, label: 'Noise Rule Review', href: '/oem/rule-review' },
+                      ]
+                    : []),
                 ],
               },
               {
@@ -259,6 +271,10 @@ function AppContent(): JSX.Element | null {
           {profile ? (
             <>
               <Route path="/getstarted" element={<GetStartedPage />} />
+              <Route path="/oem/ih-review" element={<IhReviewPage />} />
+              <Route path="/oem/intake" element={<IntakePage />} />
+              <Route path="/oem/personnel" element={<PersonnelPage />} />
+              <Route path="/oem/rule-review" element={<RuleReviewPage />} />
               <Route path="/Spaces/Communication" element={<SpacesPage />}>
                 <Route index element={<SpacesPage />} />
                 <Route path=":topicId" element={<SpacesPage />} />
@@ -341,6 +357,7 @@ function AppContent(): JSX.Element | null {
               <Route path="/smart-health-link" element={<SmartHealthLinkImportPage />} />
               <Route path="/:resourceType" element={<SearchPage />} />
               <Route path="/:resourceType/new" element={<ResourceCreatePage />} />
+              <Route path="/:resourceType/:id/_history/:versionId" element={<ResourceVersionPage />} />
               <Route path="/:resourceType/:id" element={<ResourcePage />}>
                 <Route path="" element={<ResourceDetailPage />} />
                 <Route path="details" element={<ResourceDetailPage />} />

@@ -32,3 +32,39 @@
   min-height: 0;
   overflow: auto;
 }
+
+@media (max-width: 48em) {
+  .redRoverReview {
+    display: block;
+    overflow: auto;
+  }
+
+  .redRoverReview .sidebar,
+  .redRoverReview .scrollArea {
+    width: 100%;
+    height: auto;
+  }
+
+  .redRoverReview .content {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    border-inline-start: none;
+  }
+
+  .redRoverReview .contentBody {
+    overflow: visible;
+  }
+
+  .redRoverReview :global(.ListWithDetailPane_container) {
+    flex-direction: column !important;
+    height: auto !important;
+    overflow: visible;
+  }
+
+  .redRoverReview :global(.ListWithDetailPane_container) > * {
+    width: 100% !important;
+    max-width: 100%;
+    min-width: 0;
+  }
+}

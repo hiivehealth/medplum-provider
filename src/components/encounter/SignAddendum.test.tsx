@@ -78,6 +78,63 @@ describe('SignAddendumCard', () => {
     });
   });
 
+  test('shows bounded Red Rover import history without claiming a signature or offering an addendum', async () => {
+    const searchSpy = vi.spyOn(medplum, 'searchResources');
+    await act(async () => {
+      setup({
+        provenances: [
+          {
+            ...mockProvenance,
+            meta: {
+              project: '8588313a-c8c6-4e07-8c1d-e684ed25e522',
+              tag: [
+                {
+                  system: 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/import-operation',
+                  code: 'test-import',
+                },
+              ],
+            },
+            agent: [{ who: { reference: 'Device/5b04041c-b93e-4347-95a3-cb2be9e097d2' } }],
+          },
+        ],
+        chartNoteStatus: ChartNoteStatus.SignedAndLocked,
+      });
+    });
+    expect(screen.getByText('Imported from Red Rover')).toBeInTheDocument();
+    expect(screen.getByText(/Imported on/)).toBeInTheDocument();
+    expect(screen.getByText('Clinical signature not supplied')).toBeInTheDocument();
+    expect(screen.queryByText(/Signed by|Signed and Locked by|Unknown Practitioner/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add Addendum' })).not.toBeInTheDocument();
+    expect(searchSpy).not.toHaveBeenCalled();
+  });
+
+  test('does not request addendums before Red Rover import provenance has loaded', async () => {
+    const search = vi.spyOn(medplum, 'searchResources');
+    await act(async () => {
+      setup({
+        encounter: {
+          ...mockEncounter,
+          meta: { project: '8588313a-c8c6-4e07-8c1d-e684ed25e522' },
+          identifier: [
+            { system: 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/encounter', value: '61221038' },
+          ],
+          subject: { reference: 'Patient/56e610e8-2f17-43d1-b113-9d5f51ec1036' },
+        },
+        provenances: [],
+      });
+    });
+    expect(search).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Add Addendum' })).not.toBeInTheDocument();
+  });
+
+  test('does not classify another project device provenance as the Red Rover import', async () => {
+    await act(async () => {
+      setup({ provenances: [{ ...mockProvenance, agent: [{ who: { reference: 'Device/other-device' } }] }] });
+    });
+    expect(await screen.findByText(/Signed by Unknown Practitioner/)).toBeInTheDocument();
+    expect(screen.queryByText('Imported from Red Rover')).not.toBeInTheDocument();
+  });
+
   test('displays signed and locked status for last provenance', async () => {
     await act(async () => {
       setup({

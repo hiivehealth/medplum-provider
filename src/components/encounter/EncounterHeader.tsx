@@ -8,6 +8,7 @@ import { IconChevronDown, IconLock, IconLockOpen, IconShieldCheck } from '@table
 import type { JSX } from 'react';
 import { useState } from 'react';
 import { ChartNoteStatus } from '../../types/encounter';
+import { isRedRoverImportedEncounter } from '../../utils/encounter';
 import { EncounterCoverageEligibilityModal } from './EncounterCoverageEligibilityModal';
 import { SignLockDialog } from './SignLockDialog';
 
@@ -35,6 +36,7 @@ export const EncounterHeader = (props: EncounterHeaderProps): JSX.Element => {
   const [confirmOpened, { open: openConfirm, close: closeConfirm }] = useDisclosure(false);
   const [signOpened, { open: openSign, close: closeSign }] = useDisclosure(false);
   const [insuranceOpened, { open: openInsurance, close: closeInsurance }] = useDisclosure(false);
+  const importedTestEncounter = isRedRoverImportedEncounter(encounter);
 
   const handleStatusChange = (newStatus: Encounter['status']): void => {
     if (newStatus === 'cancelled') {
@@ -128,16 +130,18 @@ export const EncounterHeader = (props: EncounterHeaderProps): JSX.Element => {
             </Text>
           </Stack>
           <Group wrap="nowrap" flex="0 0 auto">
-            <Button
-              variant="light"
-              color="blue"
-              radius="xl"
-              size="sm"
-              leftSection={<IconShieldCheck size={16} />}
-              onClick={handleCheckEligibility}
-            >
-              Insurance Eligibility
-            </Button>
+            {!importedTestEncounter && (
+              <Button
+                variant="light"
+                color="blue"
+                radius="xl"
+                size="sm"
+                leftSection={<IconShieldCheck size={16} />}
+                onClick={handleCheckEligibility}
+              >
+                Insurance Eligibility
+              </Button>
+            )}
             {status === 'cancelled' || status === 'finished' ? (
               <>
                 {status === 'finished' && chartNoteStatus === ChartNoteStatus.Unsigned && (
@@ -230,7 +234,7 @@ export const EncounterHeader = (props: EncounterHeaderProps): JSX.Element => {
         <SignLockDialog onSign={onConfirmSign} />
       </Modal>
 
-      {patientSubject && (
+      {patientSubject && !importedTestEncounter && (
         <EncounterCoverageEligibilityModal patient={patientSubject} opened={insuranceOpened} onClose={closeInsurance} />
       )}
     </>

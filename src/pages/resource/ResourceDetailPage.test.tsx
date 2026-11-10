@@ -1,14 +1,150 @@
 import { MantineProvider } from '@mantine/core';
-import { calculateAge } from '@medplum/core';
+import type { WithId } from '@medplum/core';
+import { calculateAge, ReadablePromise } from '@medplum/core';
 import type { Patient } from '@medplum/fhirtypes';
 import { MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
-import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
-import { describe, expect, test } from 'vitest';
-import { ResourceDetailPage } from './ResourceDetailPage';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { Link, MemoryRouter, Route, Routes } from 'react-router';
+import { describe, expect, test, vi } from 'vitest';
+import { ResourceDetailPage, ResourceVersionPage } from './ResourceDetailPage';
 
 const namespace = 'https://ehr.hiivehealth.net/fhir';
+
+function renderVersion(medplum: MockClient): void {
+  render(
+    <MedplumProvider medplum={medplum}>
+      <MantineProvider>
+        <MemoryRouter initialEntries={['/Patient/worker/_history/old-version']}>
+          <Link to="/Patient/worker/_history/other-version">Another version</Link>
+          <Routes>
+            <Route path="/:resourceType/:id/_history/:versionId" element={<ResourceVersionPage />} />
+          </Routes>
+        </MemoryRouter>
+      </MantineProvider>
+    </MedplumProvider>
+  );
+}
+
+test('reads and displays only the requested historical version without current-resource reads or edit controls', async () => {
+  const medplum = new MockClient();
+  const read = vi
+    .spyOn(medplum, 'readVersion')
+    .mockResolvedValue({
+      resourceType: 'Patient',
+      id: 'worker',
+      meta: { versionId: 'old-version' },
+      name: [{ text: 'Historical worker' }],
+    });
+  const current = vi.spyOn(medplum, 'readResource');
+  renderVersion(medplum);
+  expect(await screen.findByText('Historical worker')).toBeInTheDocument();
+  expect(read).toHaveBeenCalledWith('Patient', 'worker', 'old-version', { cache: 'no-cache' });
+  expect(current).not.toHaveBeenCalled();
+  expect(screen.getByRole('link', { name: 'View resource history' })).toHaveAttribute(
+    'href',
+    '/Patient/worker/history'
+  );
+  expect(screen.queryByRole('button', { name: /edit|save/i })).not.toBeInTheDocument();
+});
+
+test.each(['denied', 'wrong-version', 'wrong-resource'])(
+  'shows an explicit unavailable state for %s without fallback',
+  async (failure) => {
+    const medplum = new MockClient();
+    const read = vi.spyOn(medplum, 'readVersion');
+    if (failure === 'denied') read.mockRejectedValue(new Error('Forbidden'));
+    else
+      read.mockResolvedValue({
+        resourceType: 'Patient',
+        id: failure === 'wrong-resource' ? 'other' : 'worker',
+        meta: { versionId: failure === 'wrong-version' ? 'latest' : 'old-version' },
+        name: [{ text: 'Must not display' }],
+      });
+    const current = vi.spyOn(medplum, 'readResource');
+    renderVersion(medplum);
+    expect(await screen.findByRole('alert', { name: 'Version unavailable' })).toBeInTheDocument();
+    expect(screen.queryByText('Must not display')).not.toBeInTheDocument();
+    expect(current).not.toHaveBeenCalled();
+  }
+);
+
+test('keeps an explicit loading state until the exact version arrives', async () => {
+  const medplum = new MockClient();
+  let finish!: (value: WithId<Patient>) => void;
+  vi.spyOn(medplum, 'readVersion').mockReturnValue(
+    new ReadablePromise(
+      new Promise<WithId<Patient>>((resolve) => {
+        finish = resolve;
+      })
+    )
+  );
+  renderVersion(medplum);
+  expect(screen.getByLabelText('Loading resource version')).toBeInTheDocument();
+  await act(async () => finish({ resourceType: 'Patient', id: 'worker', meta: { versionId: 'old-version' } }));
+  expect(screen.queryByLabelText('Loading resource version')).not.toBeInTheDocument();
+});
+
+test('retains the verified historical body as read-only FHIR when display metadata is unavailable', async () => {
+  const medplum = new MockClient();
+  vi.spyOn(medplum, 'readVersion').mockResolvedValue({
+    resourceType: 'Patient',
+    id: 'worker',
+    meta: { versionId: 'old-version' },
+    name: [{ text: 'Historical worker' }],
+  });
+  vi.spyOn(medplum, 'requestSchema').mockRejectedValue(new Error('Schema unavailable'));
+  const current = vi.spyOn(medplum, 'readResource');
+  renderVersion(medplum);
+  expect(await screen.findByText('Structured display unavailable')).toBeInTheDocument();
+  const content = screen.getByText(/"resourceType": "Patient"/);
+  expect(content).toHaveTextContent('old-version');
+  expect(content).toHaveTextContent('Historical worker');
+  expect(screen.queryByRole('alert', { name: 'Version unavailable' })).not.toBeInTheDocument();
+  expect(current).not.toHaveBeenCalled();
+});
+
+test('does not display a late response after navigating to another version', async () => {
+  const medplum = new MockClient();
+  let finishOld!: (value: WithId<Patient>) => void;
+  let finishNew!: (value: WithId<Patient>) => void;
+  vi.spyOn(medplum, 'readVersion')
+    .mockReturnValueOnce(
+      new ReadablePromise(
+        new Promise<WithId<Patient>>((resolve) => {
+          finishOld = resolve;
+        })
+      )
+    )
+    .mockReturnValueOnce(
+      new ReadablePromise(
+        new Promise<WithId<Patient>>((resolve) => {
+          finishNew = resolve;
+        })
+      )
+    );
+  renderVersion(medplum);
+  fireEvent.click(screen.getByRole('link', { name: 'Another version' }));
+  await act(async () =>
+    finishOld({
+      resourceType: 'Patient',
+      id: 'worker',
+      meta: { versionId: 'old-version' },
+      name: [{ text: 'Stale response' }],
+    })
+  );
+  expect(screen.queryByText('Stale response')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Loading resource version')).toBeInTheDocument();
+  await act(async () =>
+    finishNew({
+      resourceType: 'Patient',
+      id: 'worker',
+      meta: { versionId: 'other-version' },
+      name: [{ text: 'Requested version' }],
+    })
+  );
+  expect(await screen.findByText('Requested version')).toBeInTheDocument();
+});
 
 describe('Patient resource details', () => {
   test('keeps non-Army Patient details unchanged', async () => {
@@ -52,7 +188,10 @@ describe('Patient resource details', () => {
             { url: 'grade', valueCoding: { code: 'E-5' } },
           ],
         },
-        { url: `${namespace}/StructureDefinition/administrative-blood-type`, valueCoding: { code: 'A-', display: 'A negative' } },
+        {
+          url: `${namespace}/StructureDefinition/administrative-blood-type`,
+          valueCoding: { code: 'A-', display: 'A negative' },
+        },
         { url: `${namespace}/StructureDefinition/vip-status`, valueBoolean: false },
       ],
     });
