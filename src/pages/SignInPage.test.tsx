@@ -30,7 +30,11 @@ describe('SignInPage', () => {
   });
 
   function expectSigninPageRendered(): void {
-    expect(screen.getByRole('heading', { name: 'HiiveHealth' })).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('img', { name: 'Hiive Health' }).find((logo) =>
+        logo.getAttribute('src') === '/Hiive%20Health%20Logo_Blue.png'
+      )
+    ).toBeInTheDocument();
     expect(screen.getByText('Sign in to Provider')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
   }
@@ -92,5 +96,9 @@ describe('SignInPage', () => {
 
     // After successful sign-in, user is redirected to /getstarted
     expect(await screen.findByText('Get Started with HiiveHealth Provider')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Hiive Health' })).toHaveAttribute(
+      'src',
+      '/Hiive%20Icon_Yellow.png'
+    );
   });
 });

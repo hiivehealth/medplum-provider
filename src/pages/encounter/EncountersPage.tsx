@@ -1,24 +1,29 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Box, Text } from '@mantine/core';
+import { Box, Button, Text } from '@mantine/core';
 import type { MedplumClient, SearchRequest, WithId } from '@medplum/core';
 import { DEFAULT_SEARCH_COUNT, formatSearchQuery, Operator, parseSearchRequest } from '@medplum/core';
 import type { Encounter } from '@medplum/fhirtypes';
-import { ResourceBoard } from '@medplum/react';
+import { ResourceBoard, useMedplum } from '@medplum/react';
+import { IconClipboardText } from '@tabler/icons-react';
 import type { JSX } from 'react';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { EncounterChart } from '../../components/encounter/EncounterChart';
+import { RedRoverLocalVisit } from '../../components/encounter/RedRoverLocalVisit';
+import { isRedRoverLocalEncounter } from '../../utils/encounter';
 import { showErrorNotification } from '../../utils/notifications';
 import { EncounterListItem } from './EncounterListItem';
 
 // The fields the list items render. _fields from the URL is deliberately not honored:
 // legacy Visits-tab URLs carry a _fields set that omits type/participant, which would
 // strip the title and practitioner from every row on a real server.
-const ENCOUNTER_LIST_FIELDS = ['_lastUpdated', 'period', 'status', 'type', 'participant'];
+const ENCOUNTER_LIST_FIELDS = ['_lastUpdated', 'period', 'status', 'type', 'participant', 'identifier', 'subject'];
 
 export function EncountersPage(): JSX.Element {
   const navigate = useNavigate();
+  const medplum = useMedplum();
+  const [localVisitId, setLocalVisitId] = useState<string>();
   const location = useLocation();
   const { patientId, encounterId, taskId } = useParams() as {
     patientId: string;
@@ -84,6 +89,13 @@ export function EncountersPage(): JSX.Element {
       selectedId={encounterId}
       resolveSelected={resolveSelected}
       headerText="Visits"
+      headerActions={localVisitId ? <Button size="xs" variant="subtle" leftSection={<IconClipboardText size={16} />} onClick={() => navigate(encounterUri(localVisitId))?.catch(console.error)}>Open local visit</Button> : undefined}
+      onLoad={(items) => {
+        const profile = medplum.getProfile();
+        setLocalVisitId(profile?.resourceType === 'Practitioner' && profile.meta?.project === '8588313a-c8c6-4e07-8c1d-e684ed25e522'
+          ? items.find(isRedRoverLocalEncounter)?.id
+          : undefined);
+      }}
       renderItem={(encounter) => (
         <EncounterListItem
           encounter={encounter}
@@ -100,11 +112,11 @@ export function EncountersPage(): JSX.Element {
       }
       renderDetail={(encounter, ctx) => (
         <Box key={encounter.id} flex={1} miw={0} h="100%" style={{ overflow: 'auto' }}>
-          <EncounterChart
+          {isRedRoverLocalEncounter(encounter) ? <RedRoverLocalVisit encounterId={encounter.id} /> : <EncounterChart
             encounter={{ reference: `Encounter/${encounter.id}` }}
             task={taskId ? { reference: `Task/${taskId}` } : undefined}
             onEncounterChange={() => ctx.refresh().catch(showErrorNotification)}
-          />
+          />}
         </Box>
       )}
       emptyDetail={

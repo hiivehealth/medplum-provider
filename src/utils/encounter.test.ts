@@ -13,7 +13,82 @@ import type {
 } from '@medplum/fhirtypes';
 import { MockClient } from '@medplum/mock';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { addDiagnosesToEncounter, createAppointment, createEncounter, updateEncounterStatus } from './encounter';
+import {
+  addDiagnosesToEncounter,
+  buildRedRoverTestEncounter,
+  createAppointment,
+  createEncounter,
+  isRedRoverLocalEncounter,
+  updateEncounterStatus,
+} from './encounter';
+
+describe('bounded Red Rover local encounter', () => {
+  const project = '8588313a-c8c6-4e07-8c1d-e684ed25e522';
+  const namespace = 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test';
+  const patient: Patient = {
+    resourceType: 'Patient',
+    id: '56e610e8-2f17-43d1-b113-9d5f51ec1036',
+    meta: { project },
+    identifier: [{ system: `${namespace}/patient`, value: '19128435' }],
+  };
+  const practitioner: Practitioner = {
+    resourceType: 'Practitioner',
+    id: 'test-clinician',
+    meta: { project },
+  };
+  const startedAt = '2026-11-06T16:00:00.000Z';
+
+  test('recognizes only the original and separately approved demo visit identifiers', () => {
+    const original = buildRedRoverTestEncounter(patient, practitioner, startedAt);
+    const demo = {
+      ...original,
+      identifier: [{ system: `${namespace}/local-visit`, value: 'testone-soap-adtmc-demo-v1' }],
+    };
+    expect(isRedRoverLocalEncounter(original)).toBe(true);
+    expect(isRedRoverLocalEncounter(demo)).toBe(true);
+    expect(isRedRoverLocalEncounter({ ...demo, subject: { reference: 'Patient/foreign' } })).toBe(false);
+    expect(isRedRoverLocalEncounter({ ...demo, meta: { ...demo.meta, project: 'foreign' } })).toBe(false);
+    expect(isRedRoverLocalEncounter({ ...demo, identifier: [{ ...demo.identifier[0], value: 'unapproved' }] })).toBe(false);
+    expect(isRedRoverLocalEncounter({ ...demo, identifier: [...demo.identifier, { system: `${namespace}/encounter`, value: 'source' }] })).toBe(false);
+  });
+
+  test('builds one unsigned local visit without source crosswalks, billing or mutating inputs', () => {
+    const before = JSON.stringify({ patient, practitioner });
+    const result = buildRedRoverTestEncounter(patient, practitioner, startedAt);
+    expect(result).toMatchObject({
+      resourceType: 'Encounter',
+      status: 'in-progress',
+      subject: { reference: `Patient/${patient.id}` },
+      period: { start: startedAt },
+      participant: [{ individual: { reference: 'Practitioner/test-clinician' } }],
+      identifier: [{ system: `${namespace}/local-visit`, value: 'testone-soap-adtmc-v1' }],
+    });
+    expect(result.identifier).not.toContainEqual(expect.objectContaining({ system: `${namespace}/encounter` }));
+    expect(result.appointment).toBeUndefined();
+    expect(result.basedOn).toBeUndefined();
+    expect(result.diagnosis).toBeUndefined();
+    expect(result.period?.end).toBeUndefined();
+    expect(JSON.stringify({ patient, practitioner })).toBe(before);
+  });
+
+  test.each([
+    { ...patient, id: 'other-patient' },
+    { ...patient, meta: { project: 'other-project' } },
+    { ...patient, identifier: [] },
+    { ...patient, identifier: [{ system: `${namespace}/patient`, value: '19128437' }] },
+  ])('refuses other patients, projects and source identities', (otherPatient) => {
+    expect(() => buildRedRoverTestEncounter(otherPatient, practitioner, startedAt)).toThrow();
+  });
+
+  test('refuses missing or foreign clinician identity', () => {
+    expect(() => buildRedRoverTestEncounter(patient, { ...practitioner, id: undefined }, startedAt)).toThrow();
+    expect(() => buildRedRoverTestEncounter(patient, { ...practitioner, meta: { project: 'other-project' } }, startedAt)).toThrow();
+  });
+
+  test.each(['invalid', '2026-02-31T16:00:00.000Z', '2026-11-06T16:00:00', '2026-11-06'])('refuses invalid or ambiguous visit starts', (date) => {
+    expect(() => buildRedRoverTestEncounter(patient, practitioner, date)).toThrow();
+  });
+});
 
 describe('encounter utils', () => {
   let medplum: MockClient;

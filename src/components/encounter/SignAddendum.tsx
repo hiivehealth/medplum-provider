@@ -8,6 +8,7 @@ import { IconLock, IconPencil, IconSignature } from '@tabler/icons-react';
 import type { JSX } from 'react';
 import { useEffect, useState } from 'react';
 import { ChartNoteStatus } from '../../types/encounter';
+import { isRedRoverImportedEncounter } from '../../utils/encounter';
 import { showErrorNotification } from '../../utils/notifications';
 
 interface SignAddendumProps {
@@ -27,6 +28,17 @@ interface AddendumDisplay {
   text: string;
 }
 
+function isRedRoverImport(provenance: Provenance): boolean {
+  return (
+    provenance.meta?.project === '8588313a-c8c6-4e07-8c1d-e684ed25e522' &&
+    provenance.meta.tag?.some(
+      (tag) => tag.system === 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/import-operation'
+    ) === true &&
+    provenance.agent?.some((agent) => agent.who.reference === 'Device/5b04041c-b93e-4347-95a3-cb2be9e097d2') === true &&
+    !provenance.signature?.length
+  );
+}
+
 export const SignAddendum = ({ provenances, chartNoteStatus, encounter }: SignAddendumProps): JSX.Element | null => {
   const medplum = useMedplum();
   const author = useMedplumProfile();
@@ -35,13 +47,19 @@ export const SignAddendum = ({ provenances, chartNoteStatus, encounter }: SignAd
   const [addendumDisplays, setAddendumDisplays] = useState<AddendumDisplay[]>([]);
   const [addendumText, setAddendumText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const importProvenances = provenances.filter(isRedRoverImport);
+  const importOnly = provenances.length > 0 && importProvenances.length === provenances.length;
+  const canLoadAddendums =
+    !isRedRoverImportedEncounter(encounter) || provenances.some((provenance) => !isRedRoverImport(provenance));
 
   useEffect(() => {
     const loadProvenanceData = async (): Promise<void> => {
-      const displays: ProvenanceDisplay[] = provenances.map((prov) => ({
-        practitionerName: prov.agent?.[0]?.who?.display || 'Unknown Practitioner',
-        timestamp: formatDate(prov.recorded),
-      }));
+      const displays: ProvenanceDisplay[] = provenances
+        .filter((prov) => !isRedRoverImport(prov))
+        .map((prov) => ({
+          practitionerName: prov.agent?.[0]?.who?.display || 'Unknown Practitioner',
+          timestamp: formatDate(prov.recorded),
+        }));
       setProvenanceDisplays(displays);
     };
     loadProvenanceData().catch(showErrorNotification);
@@ -74,10 +92,10 @@ export const SignAddendum = ({ provenances, chartNoteStatus, encounter }: SignAd
       }
     };
 
-    if (encounter.id) {
+    if (encounter.id && !importOnly && canLoadAddendums) {
       loadAddendums().catch(console.error);
     }
-  }, [encounter.id, medplum]);
+  }, [encounter.id, medplum, importOnly, canLoadAddendums]);
 
   const handleAddAddendum = async (): Promise<void> => {
     setIsSubmitting(true);
@@ -136,13 +154,31 @@ export const SignAddendum = ({ provenances, chartNoteStatus, encounter }: SignAd
     }
   };
 
+  const importHistory =
+    importProvenances.length > 0 ? (
+      <Stack gap="xs">
+        {importProvenances.map((provenance) => (
+          <Stack key={provenance.id} gap={4}>
+            <Text fw={500}>Imported from Red Rover</Text>
+            <Text c="dimmed" size="sm">
+              Imported on {formatDate(provenance.recorded)}
+            </Text>
+            <Text c="dimmed" size="sm">
+              Clinical signature not supplied
+            </Text>
+          </Stack>
+        ))}
+      </Stack>
+    ) : null;
+
   if (provenanceDisplays.length === 0) {
-    return null;
+    return importHistory;
   }
 
   return (
     <Card withBorder shadow="sm">
       <Stack gap="md">
+        {importHistory}
         {provenanceDisplays.map((display, index) => (
           <Stack key={`prov-${index}`}>
             <Group gap="sm">

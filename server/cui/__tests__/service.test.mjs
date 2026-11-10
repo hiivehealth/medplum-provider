@@ -1,7 +1,54 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { test } from 'node:test';
+import { buildCuiPlan, provisionRedRoverCui, verifyReaderPolicy } from '../provision-red-rover.mjs';
 import { createCuiHandler } from '../service.mjs';
+
+test('Red Rover provisioning requires explicit authorization and an approved off setting', async () => {
+  await assert.rejects(provisionRedRoverCui({}, { authorizeCuiProvisioning: false, initialEnabled: false }));
+  await assert.rejects(provisionRedRoverCui({}, { authorizeCuiProvisioning: true, initialEnabled: true }));
+});
+
+test('Red Rover reader permits only the exact CUI read plus native read-only schema metadata', () => {
+  const plan = buildCuiPlan('configuration-id', 'reader-policy-id');
+  assert.equal(plan.configuration.extension[0].valueBoolean, false);
+  assert.equal(plan.reader.admin, false);
+  assert.equal(plan.reader.accessPolicy.reference, 'AccessPolicy/reader-policy-id');
+  assert.deepEqual(plan.managerPolicy.resource[0].interaction, ['read', 'update']);
+  const policy = {
+    resource: [
+      ...plan.readerPolicy.resource,
+      { resourceType: 'SearchParameter', readonly: true },
+      { resourceType: 'StructureDefinition', readonly: true },
+    ],
+  };
+  verifyReaderPolicy(policy, plan.readerPolicy.resource[0], plan.configuration);
+  assert.throws(() =>
+    verifyReaderPolicy(
+      { resource: [...policy.resource, { resourceType: 'Patient', readonly: true }] },
+      plan.readerPolicy.resource[0],
+      plan.configuration
+    )
+  );
+  assert.throws(() =>
+    verifyReaderPolicy(
+      { resource: [...plan.readerPolicy.resource, { resourceType: 'StructureDefinition' }] },
+      plan.readerPolicy.resource[0],
+      plan.configuration
+    )
+  );
+  assert.throws(() =>
+    verifyReaderPolicy(
+      { resource: [{ ...plan.readerPolicy.resource[0], interaction: ['read', 'update'] }] },
+      plan.readerPolicy.resource[0],
+      plan.configuration
+    )
+  );
+  assert.throws(() =>
+    verifyReaderPolicy(policy, plan.readerPolicy.resource[0], { ...plan.configuration, id: 'another-id' })
+  );
+});
+
 const profile = 'https://ehr.hiivehealth.net/fhir/StructureDefinition/cui-configuration';
 const enabledUrl = 'https://ehr.hiivehealth.net/fhir/StructureDefinition/cui-banner-enabled';
 const config = {

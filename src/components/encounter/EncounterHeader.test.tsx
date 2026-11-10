@@ -55,6 +55,36 @@ describe('EncounterHeader', () => {
     expect(screen.getByText(/Dr\. Test/)).toBeInTheDocument();
   });
 
+  test('omits unimported insurance eligibility controls and lookups for the exact Red Rover cohort', () => {
+    const search = vi.spyOn(medplum, 'searchResources');
+    setup({
+      encounter: {
+        ...mockEncounter,
+        meta: { project: '8588313a-c8c6-4e07-8c1d-e684ed25e522' },
+        identifier: [
+          { system: 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/encounter', value: '61221038' },
+        ],
+        subject: { reference: 'Patient/56e610e8-2f17-43d1-b113-9d5f51ec1036' },
+      },
+    });
+    expect(screen.queryByRole('button', { name: 'Insurance Eligibility' })).not.toBeInTheDocument();
+    expect(search).not.toHaveBeenCalled();
+    expect(screen.getByText('Details & Billing')).toBeInTheDocument();
+  });
+
+  test('keeps insurance controls outside the five-patient cohort even with the source namespace', () => {
+    setup({
+      encounter: {
+        ...mockEncounter,
+        meta: { project: '8588313a-c8c6-4e07-8c1d-e684ed25e522' },
+        identifier: [
+          { system: 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/encounter', value: 'other' },
+        ],
+      },
+    });
+    expect(screen.getByRole('button', { name: 'Insurance Eligibility' })).toBeInTheDocument();
+  });
+
   test('displays status button', () => {
     setup();
 

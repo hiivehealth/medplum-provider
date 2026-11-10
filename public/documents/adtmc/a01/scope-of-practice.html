@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scope of Practice</title>
+    <link rel="icon" type="image/png" href="/Hiive%20Favicon%20Dark.png" />
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        color: #212529;
+        background: #fff;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 16px;
+        border-bottom: 1px solid #dee2e6;
+        font: 14px sans-serif;
+      }
+      iframe {
+        flex: 1;
+        width: 100%;
+        min-height: 0;
+        border: 0;
+      }
+      [hidden] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong id="document-title">Scope of Practice</strong>
+      <a id="open-pdf" target="_blank" rel="noopener noreferrer" hidden>Open PDF</a>
+    </header>
+    <iframe title="Scope of Practice reference document" hidden></iframe>
+    <script>
+      const documents = {
+        'a01-sore-throat-hoarseness': {
+          title: 'A-1 Sore Throat/Hoarseness',
+          file: 'SORE THROAT HOARSENESS, A-1.pdf',
+        },
+        'policy-guide': { title: 'Policy Guide', file: 'Policy Guide.pdf' },
+        'obtain-a-throat-culture': {
+          title: 'Obtain a Throat Culture',
+          file: 'How to Obtain a Throat Culture.pdf',
+        },
+        'perform-an-heent-exam': {
+          title: 'Perform an HEENT Exam',
+          file: 'How to Perform an HEENT Exam.pdf',
+        },
+        'care-for-common-throat-infections': {
+          title: 'Care for Common Throat Infections',
+          file: 'How to Provide Care for Common Throat Infections.pdf',
+        },
+      };
+      const key = new URLSearchParams(location.search).get('document');
+      const documentConfig = Object.hasOwn(documents, key) ? documents[key] : undefined;
+      const title = window.document.getElementById('document-title');
+
+      if (documentConfig) {
+        const fileUrl = `./files/${encodeURI(documentConfig.file)}#view=FitH&navpanes=0`;
+        window.document.title = documentConfig.title;
+        title.textContent = documentConfig.title;
+        const link = window.document.getElementById('open-pdf');
+        link.href = fileUrl;
+        link.hidden = false;
+        const frame = window.document.querySelector('iframe');
+        frame.src = fileUrl;
+        frame.hidden = false;
+      } else {
+        title.textContent = 'Reference document not found';
+      }
+    </script>
+  </body>
+</html>

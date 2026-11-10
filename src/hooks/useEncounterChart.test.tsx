@@ -106,6 +106,27 @@ describe('useEncounterChart', () => {
     });
   });
 
+  test('does not request an unimported clinical impression for the bounded Red Rover encounter', async () => {
+    const importedEncounter: WithId<Encounter> = {
+      ...mockEncounter,
+      meta: { project: '8588313a-c8c6-4e07-8c1d-e684ed25e522' },
+      identifier: [
+        { system: 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/encounter', value: '61221038' },
+      ],
+      subject: { reference: 'Patient/56e610e8-2f17-43d1-b113-9d5f51ec1036' },
+      participant: undefined,
+      appointment: undefined,
+    };
+    await medplum.createResource(importedEncounter);
+    await medplum.createResource({ ...mockPatient, id: '56e610e8-2f17-43d1-b113-9d5f51ec1036' });
+    const search = vi.spyOn(medplum, 'searchResources');
+    const { result } = renderHook(() => useEncounterChart(importedEncounter), { wrapper });
+    await waitFor(() => expect(search).toHaveBeenCalledWith('Task', expect.any(String), expect.any(Object)));
+    expect(search.mock.calls.some(([type]) => type === 'ClinicalImpression')).toBe(false);
+    expect(result.current.clinicalImpression).toBeUndefined();
+    expect(showErrorNotification).not.toHaveBeenCalled();
+  });
+
   test('fetches tasks for encounter', async () => {
     await medplum.createResource(mockEncounter);
     await medplum.createResource(mockPractitioner);

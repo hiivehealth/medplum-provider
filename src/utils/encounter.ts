@@ -30,6 +30,67 @@ import type {
   Task,
 } from '@medplum/fhirtypes';
 
+export function isRedRoverImportedEncounter(encounter: Encounter | undefined): boolean {
+  return (
+    encounter?.meta?.project === '8588313a-c8c6-4e07-8c1d-e684ed25e522' &&
+    encounter.identifier?.some(
+      (identifier) => identifier.system === 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/encounter'
+    ) === true &&
+    [
+      'Patient/56e610e8-2f17-43d1-b113-9d5f51ec1036',
+      'Patient/517deac0-6fc6-4076-a919-5a45ac8572cb',
+      'Patient/db7b44ef-4dd9-4639-add0-5a6a371eec43',
+      'Patient/b5fdb391-a37c-4c87-8bfc-78c34c21f12c',
+      'Patient/f2bae7af-53cc-4897-97ac-e9c08dd43b72',
+    ].includes(encounter.subject?.reference ?? '')
+  );
+}
+
+export function buildRedRoverTestEncounter(
+  patient: Patient,
+  practitioner: Practitioner,
+  startedAt: string
+): Encounter {
+  const projectId = '8588313a-c8c6-4e07-8c1d-e684ed25e522';
+  const namespace = 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test';
+  if (
+    patient.id !== '56e610e8-2f17-43d1-b113-9d5f51ec1036' ||
+    patient.meta?.project !== projectId ||
+    !patient.identifier?.some((identifier) => identifier.system === `${namespace}/patient` && identifier.value === '19128435') ||
+    !practitioner.id ||
+    practitioner.meta?.project !== projectId ||
+    !Number.isFinite(Date.parse(startedAt)) ||
+    new Date(startedAt).toISOString() !== startedAt
+  ) {
+    throw new Error('The local test visit requires TESTONE, a clinician in the test project and a valid UTC start time');
+  }
+  return {
+    resourceType: 'Encounter',
+    meta: { project: projectId, tag: [{ system: `${namespace}/workflow`, code: 'local-authoring-v1' }] },
+    identifier: [{ system: `${namespace}/local-visit`, value: 'testone-soap-adtmc-v1' }],
+    status: 'in-progress',
+    class: { system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode', code: 'AMB', display: 'Ambulatory' },
+    type: [{ text: 'Local test visit' }],
+    subject: createReference(patient),
+    period: { start: startedAt },
+    participant: [{ individual: createReference(practitioner) }],
+  };
+}
+
+export function isRedRoverLocalEncounter(encounter: Encounter): boolean {
+  const namespace = 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test';
+  return (
+    encounter.meta?.project === '8588313a-c8c6-4e07-8c1d-e684ed25e522' &&
+    encounter.subject?.reference === 'Patient/56e610e8-2f17-43d1-b113-9d5f51ec1036' &&
+    encounter.identifier?.some((identifier) =>
+      identifier.system === `${namespace}/local-visit` &&
+      ['testone-soap-adtmc-v1', 'testone-soap-adtmc-demo-v1'].includes(identifier.value ?? '')
+    ) === true &&
+    !isRedRoverImportedEncounter(encounter) &&
+    encounter.meta.tag?.some((tag) => tag.system === `${namespace}/workflow` && tag.code === 'local-authoring-v1') === true
+  );
+}
+
 export async function createAppointment(
   medplum: MedplumClient,
   start: Date,

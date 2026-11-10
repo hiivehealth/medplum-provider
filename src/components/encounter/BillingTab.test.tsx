@@ -136,6 +136,145 @@ describe('BillingTab', () => {
     });
   };
 
+  test('bounded imported visit details do not mount billing searches or automatic coverage creation', async () => {
+    const searchOne = vi.spyOn(medplum, 'searchOne');
+    const searchResources = vi.spyOn(medplum, 'searchResources');
+    const create = vi.spyOn(medplum, 'createResource');
+    const patch = vi.spyOn(medplum, 'patchResource');
+    const setEncounter = vi.fn();
+    await setup({
+      encounter: {
+        ...mockEncounter,
+        meta: { project: '8588313a-c8c6-4e07-8c1d-e684ed25e522' },
+        identifier: [
+          { system: 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/encounter', value: '61221038' },
+          {
+            system: 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/identifiers/fin/pool/257688817',
+            value: '000123',
+          },
+        ],
+        subject: { reference: 'Patient/56e610e8-2f17-43d1-b113-9d5f51ec1036' },
+        participant: undefined,
+      },
+      practitioner: undefined,
+      setEncounter,
+    });
+    expect(screen.getByText('No encounter diagnoses imported.')).toBeInTheDocument();
+    expect(screen.getByText('Billing information not imported.')).toBeInTheDocument();
+    expect(screen.getByText('Visit Number (FIN): 000123')).toBeInTheDocument();
+    expect(searchOne).not.toHaveBeenCalled();
+    expect(searchResources).not.toHaveBeenCalled();
+    expect(chargeItemsUtils.getChargeItemsForEncounter).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+    expect(patch).not.toHaveBeenCalled();
+    expect(setEncounter).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /submit claim|export claim|add diagnosis/i })).not.toBeInTheDocument();
+  });
+
+  test('bounded imported visit details retain linked diagnosis display without billing workflows', async () => {
+    const condition = await medplum.createResource({
+      resourceType: 'Condition',
+      subject: { reference: 'Patient/56e610e8-2f17-43d1-b113-9d5f51ec1036' },
+      code: { text: 'Imported diagnosis' },
+    });
+    const search = vi.spyOn(medplum, 'searchResources');
+    const create = vi.spyOn(medplum, 'createResource');
+    await setup({
+      encounter: {
+        ...mockEncounter,
+        meta: { project: '8588313a-c8c6-4e07-8c1d-e684ed25e522' },
+        identifier: [
+          { system: 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/encounter', value: '61221038' },
+        ],
+        subject: { reference: 'Patient/56e610e8-2f17-43d1-b113-9d5f51ec1036' },
+        diagnosis: [{ condition: { reference: `Condition/${condition.id}` } }],
+        participant: undefined,
+      },
+      practitioner: undefined,
+    });
+    expect(await screen.findByText('Imported diagnosis')).toBeInTheDocument();
+    expect(search).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  test.each([true, false])(
+    'renders verified location hierarchy and deduplicates repeated labels (shared=%s)',
+    async (shared) => {
+      const namespace = 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test';
+      let parent: string | undefined;
+      for (const [index, level] of ['facility', 'building', 'unit'].entries()) {
+        const location = await medplum.createResource({
+          resourceType: 'Location',
+          meta: { project: '8588313a-c8c6-4e07-8c1d-e684ed25e522' },
+          identifier: [{ system: `${namespace}/locations/${level}`, value: String(index + 1) }],
+          name: shared ? 'Shared clinic' : `Imported ${level}`,
+          ...(parent ? { partOf: { reference: parent } } : {}),
+        });
+        parent = `Location/${location.id}`;
+      }
+      const create = vi.spyOn(medplum, 'createResource');
+      const search = vi.spyOn(medplum, 'searchResources');
+      await setup({
+        encounter: {
+          ...mockEncounter,
+          meta: { project: '8588313a-c8c6-4e07-8c1d-e684ed25e522' },
+          identifier: [{ system: `${namespace}/encounter`, value: '61221038' }],
+          subject: { reference: 'Patient/56e610e8-2f17-43d1-b113-9d5f51ec1036' },
+          location: [{ location: { reference: parent } }],
+        },
+      });
+      expect(
+        await screen.findByText(`Facility: ${shared ? 'Shared clinic' : 'Imported facility'}`)
+      ).toBeInTheDocument();
+      if (shared) {
+        expect(screen.queryByText(/^Building:|^Unit:/)).not.toBeInTheDocument();
+      } else {
+        expect(screen.getByText('Building: Imported building')).toBeInTheDocument();
+        expect(screen.getByText('Unit: Imported unit')).toBeInTheDocument();
+      }
+      expect(screen.getByText('Billing information not imported.')).toBeInTheDocument();
+      expect(search).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+    }
+  );
+
+  test('reports unavailable facility information rather than inferring a facility from the unit display', async () => {
+    vi.spyOn(medplum, 'readResource').mockRejectedValue(new Error('Forbidden'));
+    await setup({
+      encounter: {
+        ...mockEncounter,
+        meta: { project: '8588313a-c8c6-4e07-8c1d-e684ed25e522' },
+        identifier: [
+          { system: 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/encounter', value: '61221038' },
+        ],
+        subject: { reference: 'Patient/56e610e8-2f17-43d1-b113-9d5f51ec1036' },
+        location: [{ location: { reference: 'Location/unavailable', display: 'Unit is not a facility' } }],
+      },
+    });
+    expect(await screen.findByText('Facility information unavailable.')).toBeInTheDocument();
+    expect(screen.queryByText('Facility: Unit is not a facility')).not.toBeInTheDocument();
+  });
+
+  test('same-project encounter outside the assigned patient cohort retains standard billing', async () => {
+    const searchOne = vi.spyOn(medplum, 'searchOne');
+    await setup({
+      encounter: {
+        ...mockEncounter,
+        meta: { project: '8588313a-c8c6-4e07-8c1d-e684ed25e522' },
+        identifier: [
+          {
+            system: 'https://hiivehealth.com/fhir/red-rover/uat/five-patient-test/encounter',
+            value: 'other-encounter',
+          },
+        ],
+        subject: { reference: 'Patient/outside-cohort' },
+      },
+    });
+    expect(searchOne).toHaveBeenCalledWith('Claim', expect.anything(), expect.anything());
+    expect(chargeItemsUtils.getChargeItemsForEncounter).toHaveBeenCalled();
+    expect(screen.queryByText('Billing information not imported.')).not.toBeInTheDocument();
+  });
+
   // Override the charge items BillingTab loads for the encounter.
   const mockChargeItems = (items: WithId<ChargeItem>[]): void => {
     vi.spyOn(chargeItemsUtils, 'getChargeItemsForEncounter').mockResolvedValue(items);

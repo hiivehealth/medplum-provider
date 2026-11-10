@@ -11,6 +11,8 @@ interface A01CompactQuestionnaireProps {
   questionnaire: Questionnaire;
   questionnaireResponse?: QuestionnaireResponse;
   onSubmit: (response: QuestionnaireResponse) => void;
+  draftOnly?: boolean;
+  onDraftChange?: (response: QuestionnaireResponse) => void;
 }
 
 const BOOLEAN_SYSTEM = 'urn:hiivehealth:adtmc-boolean';
@@ -23,6 +25,8 @@ export function A01CompactQuestionnaire({
   questionnaire,
   questionnaireResponse,
   onSubmit,
+  draftOnly,
+  onDraftChange,
 }: A01CompactQuestionnaireProps): JSX.Element {
   const [answers, setAnswers] = useState<Readonly<Record<string, string>>>(() => getAnswers(questionnaireResponse));
   const [showValidation, setShowValidation] = useState(false);
@@ -61,19 +65,15 @@ export function A01CompactQuestionnaire({
   const unanswered = questions.filter((question) => question.required && !answers[question.linkId]);
 
   const setAnswer = (linkId: string, value: string): void => {
-    setAnswers((currentAnswers) => {
-      const updatedAnswers = { ...currentAnswers, [linkId]: value };
-      if (shouldOpenProviderNowModal(linkId, updatedAnswers)) {
-        setProviderNowModalOpen(true);
-      }
-      if (shouldOpenAemNowModal(linkId, updatedAnswers)) {
-        setAemNowModalOpen(true);
-      }
-      return updatedAnswers;
-    });
+    const updatedAnswers = { ...answers, [linkId]: value };
+    setAnswers(updatedAnswers);
+    if (shouldOpenProviderNowModal(linkId, updatedAnswers)) setProviderNowModalOpen(true);
+    if (shouldOpenAemNowModal(linkId, updatedAnswers)) setAemNowModalOpen(true);
+    onDraftChange?.({ ...buildCompletedResponse(questionnaire, groups, updatedAnswers), status: 'in-progress' });
   };
 
   const submit = (): void => {
+    if (draftOnly) return;
     if (unanswered.length > 0) {
       setShowValidation(true);
       return;
@@ -83,6 +83,7 @@ export function A01CompactQuestionnaire({
   };
 
   const routeProviderNow = (): void => {
+    if (draftOnly) return;
     setProviderNowModalOpen(false);
     const redFlagGroup = groups[0];
     onSubmit({
@@ -96,6 +97,7 @@ export function A01CompactQuestionnaire({
   };
 
   const routeAemNow = (): void => {
+    if (draftOnly) return;
     setAemNowModalOpen(false);
     onSubmit(buildCompletedResponse(questionnaire, groups, answers));
   };
@@ -110,7 +112,7 @@ export function A01CompactQuestionnaire({
           <Accordion.Panel>
             <Stack gap="xs">
               {A01_DOCUMENTS.map((document) => (
-                <Anchor key={document.key} href={`/adtmc/a01/documents/${document.key}`} target="_blank" rel="noreferrer" underline="hover">
+                <Anchor key={document.key} href={draftOnly ? `/documents/adtmc/a01/scope-of-practice.html?document=${document.key}` : `/adtmc/a01/documents/${document.key}`} target="_blank" rel="noreferrer" underline="hover">
                   <Group justify="space-between" wrap="nowrap">
                     <Text size="sm">{document.title}</Text>
                     <IconExternalLink size={16} aria-hidden />
@@ -144,7 +146,7 @@ export function A01CompactQuestionnaire({
         );
       })}
       {showValidation && unanswered.length > 0 && <Text c="red" size="sm">Answer each required question before completing A-01.</Text>}
-      {(!hasRedFlag || !redFlagsAnswered) && (
+      {!draftOnly && (!hasRedFlag || !redFlagsAnswered) && (
         <Group justify="flex-end">
           <Button onClick={submit} disabled={!redFlagsAnswered}>Complete A-01</Button>
         </Group>
@@ -163,10 +165,10 @@ export function A01CompactQuestionnaire({
             screening process at this time.
           </Alert>
           <Text size="sm">
-            Routing records the ADTMC response and assigns a ready handoff task to the Provider Now Queue.
+            {draftOnly ? 'Unsigned screening draft. Clinical routing is disabled.' : 'Routing records the ADTMC response and assigns a ready handoff task to the Provider Now Queue.'}
           </Text>
           <Group justify="flex-end">
-            <Button color="red" onClick={routeProviderNow}>Route to Provider Now</Button>
+            {draftOnly ? <Button onClick={() => setProviderNowModalOpen(false)}>Acknowledge warning</Button> : <Button color="red" onClick={routeProviderNow}>Route to Provider Now</Button>}
           </Group>
         </Stack>
       </Modal>
@@ -184,10 +186,10 @@ export function A01CompactQuestionnaire({
             screening process at this time.
           </Alert>
           <Text size="sm">
-            Routing records the ADTMC response and assigns a ready handoff task to the AEM Now Queue.
+            {draftOnly ? 'Unsigned screening draft. Clinical routing is disabled.' : 'Routing records the ADTMC response and assigns a ready handoff task to the AEM Now Queue.'}
           </Text>
           <Group justify="flex-end">
-            <Button color="red" onClick={routeAemNow}>Route to AEM Now</Button>
+            {draftOnly ? <Button onClick={() => setAemNowModalOpen(false)}>Acknowledge warning</Button> : <Button color="red" onClick={routeAemNow}>Route to AEM Now</Button>}
           </Group>
         </Stack>
       </Modal>

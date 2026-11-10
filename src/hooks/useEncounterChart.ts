@@ -14,6 +14,7 @@ import type {
 import { useMedplum, useResource } from '@medplum/react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useEffect, useState } from 'react';
+import { isRedRoverImportedEncounter } from '../utils/encounter';
 import { showErrorNotification } from '../utils/notifications';
 
 export interface EncounterChartHook {
@@ -81,7 +82,11 @@ export function useEncounterChart(encounter: WithId<Encounter> | Reference<Encou
     }
 
     fetchTasks().catch((err) => showErrorNotification(err));
-    fetchClinicalImpressions().catch((err) => showErrorNotification(err));
+    if (isRedRoverImportedEncounter(enc)) {
+      setClinicalImpression(undefined);
+    } else {
+      fetchClinicalImpressions().catch((err) => showErrorNotification(err));
+    }
   }, [encounterResource, medplum]);
 
   // Fetch practitioner related to the encounter

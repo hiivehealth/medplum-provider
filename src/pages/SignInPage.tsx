@@ -23,7 +23,13 @@ export function SignInPage(): JSX.Element {
       projectId={searchParams.get('project') || undefined}
       login={searchParams.get('login') || undefined}
     >
-      <Title order={2}>HiiveHealth</Title>
+      <img
+        src="/Hiive%20Health%20Logo_Blue.png"
+        alt="Hiive Health"
+        width={240}
+        height={78}
+        style={{ maxWidth: '100%', height: 'auto' }}
+      />
       <Title order={3} py="lg">
         Sign in to Provider
       </Title>
