@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
+// SPDX-License-Identifier: Apache-2.0
 import { getReferenceString, normalizeErrorString  } from '@medplum/core';
 import type {WithId} from '@medplum/core';
 import type { ClinicalImpression, Encounter, QuestionnaireResponse, Reference } from '@medplum/fhirtypes';

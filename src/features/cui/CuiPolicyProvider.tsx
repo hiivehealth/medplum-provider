@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
+// SPDX-License-Identifier: Apache-2.0
 import { useMedplum, useMedplumProfile } from '@medplum/react';
 import type { JSX, ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';

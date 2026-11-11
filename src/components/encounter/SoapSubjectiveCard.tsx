@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
+// SPDX-License-Identifier: Apache-2.0
 import { ActionIcon, Alert, Button, Card, Divider, Group, LoadingOverlay, Radio, Stack, TextInput, Textarea, Title, Tooltip } from '@mantine/core';
 import type { QuestionnaireResponse, QuestionnaireResponseItem } from '@medplum/fhirtypes';
 import { IconTrash } from '@tabler/icons-react';

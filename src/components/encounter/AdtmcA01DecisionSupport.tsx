@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
+// SPDX-License-Identifier: Apache-2.0
 import { Alert, Anchor, Button, Group, List, Modal, Stack, Text } from '@mantine/core';
 import type { ClinicalImpression, QuestionnaireResponse } from '@medplum/fhirtypes';
 import { useMedplum } from '@medplum/react';
