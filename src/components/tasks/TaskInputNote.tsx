@@ -18,8 +18,9 @@ import { useDebouncedCallback } from '@mantine/hooks';
 import { createReference, formatDate, getDisplayString } from '@medplum/core';
 import type { Annotation, QuestionnaireResponse, Reference, Task } from '@medplum/fhirtypes';
 import { Loading, useMedplum, useMedplumProfile, useResource } from '@medplum/react';
-import { IconCheck, IconTrash } from '@tabler/icons-react';
+import { IconCheck, IconNotes, IconTrash } from '@tabler/icons-react';
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { SAVE_TIMEOUT_MS } from '../../config/constants';
 import { useDebouncedUpdateResource } from '../../hooks/useDebouncedUpdateResource';
 import { showErrorNotification } from '../../utils/notifications';
@@ -38,6 +39,7 @@ export function TaskInputNote(props: TaskInputNoteProps): React.JSX.Element {
   const medplum = useMedplum();
   const debouncedUpdateResource = useDebouncedUpdateResource(medplum);
   const author = useMedplumProfile();
+  const navigate = useNavigate();
   const task = useResource(initialTask);
   const [note, setNote] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -125,6 +127,31 @@ export function TaskInputNote(props: TaskInputNoteProps): React.JSX.Element {
     return <Loading />;
   }
 
+  const patientId = task.for?.reference?.match(/^Patient\/([^/]+)$/)?.[1];
+  const encounterId = task.encounter?.reference?.match(/^Encounter\/([^/]+)$/)?.[1];
+
+  const handleOpenEncounter = (): void => {
+    if (!patientId || !encounterId || author?.resourceType !== 'Practitioner') {
+      return;
+    }
+
+    const openEncounter = async (): Promise<void> => {
+      try {
+        const updatedTask = await medplum.updateResource<Task>({
+          ...task,
+          owner: createReference(author),
+          status: 'in-progress',
+        });
+        onTaskChange?.(updatedTask);
+        navigate(`/Patient/${patientId}/Encounter/${encounterId}`)?.catch(console.error);
+      } catch (error) {
+        showErrorNotification(error);
+      }
+    };
+
+    openEncounter().catch(showErrorNotification);
+  };
+
   return (
     <Flex direction="column" h="100%">
       <Paper h="100%">
@@ -138,6 +165,19 @@ export function TaskInputNote(props: TaskInputNoteProps): React.JSX.Element {
 
           {allowEdit && (
             <Flex align="center" gap="xs">
+              {patientId && encounterId && (
+                <Tooltip label="Claim this handoff and open the encounter" position="bottom" openDelay={500}>
+                  <Button
+                    variant="subtle"
+                    color="blue"
+                    size="compact-sm"
+                    leftSection={<IconNotes size={16} />}
+                    onClick={handleOpenEncounter}
+                  >
+                    Claim & Open Encounter
+                  </Button>
+                </Tooltip>
+              )}
               {onDeleteTask && (
                 <Tooltip label="Delete Task" position="bottom" openDelay={500}>
                   <ActionIcon

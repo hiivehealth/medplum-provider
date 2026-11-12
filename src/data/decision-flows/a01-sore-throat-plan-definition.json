@@ -1,0 +1,13 @@
+{
+  "resourceType": "PlanDefinition",
+  "url": "https://ehr.hiivehealth.net/fhir/PlanDefinition/a01-sore-throat",
+  "version": "1.0.0",
+  "identifier": [{ "system": "urn:hiivehealth:adtmc-algorithm", "value": "A-01" }],
+  "status": "active",
+  "title": "Sore Throat/Hoarseness, A-01",
+  "action": [
+    { "id": "provider-now", "title": "Provider Now" },
+    { "id": "aem-now", "title": "AEM Now" },
+    { "id": "minor-care-protocols", "title": "Minor Care Protocols" }
+  ]
+}

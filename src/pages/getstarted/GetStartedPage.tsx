@@ -16,7 +16,7 @@ import {
 } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
 import { convertToTransactionBundle } from '@medplum/core';
-import type { Bundle, BundleEntry } from '@medplum/fhirtypes';
+import type { Bundle, BundleEntry, PlanDefinition, Questionnaire } from '@medplum/fhirtypes';
 import { MedplumLink, useMedplum } from '@medplum/react';
 import { useSyncOrderSet } from '@medplum/react-hooks';
 import {
@@ -39,6 +39,19 @@ import { useCallback, useState } from 'react';
 import orderSetBundleData from '../../data/order-set-example-bundle.json';
 import patientBundleData from '../../data/patient-david-james-williams.json';
 import visitBundleData from '../../data/simple-initial-visit-bundle.json';
+import a01SoreThroatPlanDefinitionData from '../../data/decision-flows/a01-sore-throat-plan-definition.json';
+import a01SoreThroatData from '../../data/decision-flows/a01-sore-throat.json';
+import rosBriefNormalData from '../../data/soap-questionnaires/ros-brief-normal.json';
+import rosExtendedNormalData from '../../data/soap-questionnaires/ros-extended-normal.json';
+import rosUnableToObtainData from '../../data/soap-questionnaires/ros-unable-to-obtain.json';
+import physicalExamAdultBriefData from '../../data/soap-questionnaires/physical-exam-adult-brief.json';
+import { physicalExamAdultExtended, physicalExamPediatricExtended } from '../../data/soap-questionnaires/physical-exam-extended';
+import physicalExamPediatricBriefData from '../../data/soap-questionnaires/physical-exam-pediatric-brief.json';
+import soapAssessmentData from '../../data/soap-questionnaires/soap-assessment.json';
+import soapObjectiveData from '../../data/soap-questionnaires/soap-objective.json';
+import soapPlanData from '../../data/soap-questionnaires/soap-plan.json';
+import soapSubjectiveData from '../../data/soap-questionnaires/soap-subjective.json';
+import soapNotePlanDefinitionData from '../../data/soap-template/soap-note-plan-definition.json';
 import { showErrorNotification } from '../../utils/notifications';
 import classes from './GetStartedPage.module.css';
 import { buildOrderSetImportNotification } from './orderSetImportNotification';
@@ -49,6 +62,7 @@ export function GetStartedPage(): JSX.Element {
   const [importingPatient, setImportingPatient] = useState(false);
   const [importingVisit, setImportingVisit] = useState(false);
   const [importingIcd10, setImportingIcd10] = useState(false);
+  const [importingSoapTemplate, setImportingSoapTemplate] = useState(false);
   const [importingOrderSet, setImportingOrderSet] = useState(false);
 
   const handleImportPatient = useCallback(async () => {
@@ -91,6 +105,41 @@ export function GetStartedPage(): JSX.Element {
       showErrorNotification(error);
     } finally {
       setImportingVisit(false);
+    }
+  }, [medplum]);
+
+  const handleImportSoapTemplate = useCallback(async () => {
+    setImportingSoapTemplate(true);
+    try {
+      const questionnaires = [
+        a01SoreThroatData,
+        soapSubjectiveData,
+        rosBriefNormalData,
+        rosExtendedNormalData,
+        rosUnableToObtainData,
+        physicalExamAdultBriefData,
+        physicalExamAdultExtended,
+        physicalExamPediatricBriefData,
+        physicalExamPediatricExtended,
+        soapObjectiveData,
+        soapAssessmentData,
+        soapPlanData,
+      ] as Questionnaire[];
+      for (const questionnaire of questionnaires) {
+        await medplum.upsertResource(questionnaire, { url: questionnaire.url });
+      }
+      await medplum.upsertResource(a01SoreThroatPlanDefinitionData as PlanDefinition, {
+        url: a01SoreThroatPlanDefinitionData.url,
+      });
+      await medplum.upsertResource(soapNotePlanDefinitionData as PlanDefinition, {
+        url: soapNotePlanDefinitionData.url,
+      });
+
+      showNotification({ color: 'green', title: 'Success', message: 'SOAP Note Visit template is ready to use.' });
+    } catch (error) {
+      showErrorNotification(error);
+    } finally {
+      setImportingSoapTemplate(false);
     }
   }, [medplum]);
 
@@ -231,6 +280,37 @@ export function GetStartedPage(): JSX.Element {
                   mt="sm"
                 >
                   {importingPatient ? 'Importing...' : 'Import Patient'}
+                </Button>
+              </Paper>
+              <Paper radius="md" withBorder p="lg" shadow="sm" className={classes.card}>
+                <Stack gap="md" className={classes.flexOne}>
+                  <Group gap="sm" align="center">
+                    <IconFileText size={24} color="var(--icon-secondary)" />
+                    <Stack gap={0}>
+                      <Text size="11px" fw={500} className={classes.textLabel}>
+                        Sample Care Template
+                      </Text>
+                      <Text fw={600} size="lg">
+                        SOAP Note Visit
+                      </Text>
+                    </Stack>
+                  </Group>
+                  <Divider />
+                  <Text size="md" className={classes.textSecondary} style={{ flex: 1 }}>
+                    A HiiveHealth-style SOAP workflow with Subjective, Review of Systems, Objective, Assessment, and Plan sections.
+                  </Text>
+                </Stack>
+                <Button
+                  variant="filled"
+                  size="sm"
+                  fullWidth
+                  onClick={handleImportSoapTemplate}
+                  loading={importingSoapTemplate}
+                  disabled={importingSoapTemplate}
+                  leftSection={<IconDownload size={14} />}
+                  mt="sm"
+                >
+                  {importingSoapTemplate ? 'Importing...' : 'Import SOAP Note Template'}
                 </Button>
               </Paper>
               <Paper radius="md" withBorder p="lg" shadow="sm" className={classes.card}>

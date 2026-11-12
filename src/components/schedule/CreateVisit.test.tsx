@@ -72,6 +72,7 @@ describe('CreateVisit', () => {
         expect(screen.getByLabelText(/End Time/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/Class/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/Care template/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Search care templates/i)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Create Visit/i })).toBeInTheDocument();
       });
     });
@@ -212,6 +213,30 @@ describe('CreateVisit', () => {
 
       const patientInput = await screen.findByLabelText(/Patient/i);
       expect(patientInput).toBeInTheDocument();
+    });
+
+    test('searches patients with enough results to disambiguate duplicate names', async () => {
+      const user = userEvent.setup();
+      const searchResourcesSpy = vi.spyOn(medplum, 'searchResources');
+
+      await act(async () => {
+        setup(range);
+      });
+
+      const patientInput = await screen.findByLabelText(/Patient/i);
+      await user.type(patientInput, 'Avery Rivera 1971');
+
+      await waitFor(() => {
+        const patientSearchCall = searchResourcesSpy.mock.calls.find(([resourceType, searchParams]) => {
+          return (
+            resourceType === 'Patient' &&
+            searchParams instanceof URLSearchParams &&
+            searchParams.get('name') === 'Avery Rivera'
+          );
+        });
+        expect(patientSearchCall).toBeDefined();
+        expect((patientSearchCall?.[1] as URLSearchParams).get('_count')).toBe('50');
+      });
     });
 
     test('updates start time when changed', async () => {

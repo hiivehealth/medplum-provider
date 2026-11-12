@@ -152,6 +152,7 @@ describe('PatientPage.utils', () => {
     test('finds all defined tabs', () => {
       const tabIds = [
         'timeline',
+        'occupational',
         'edit',
         'encounter',
         'tasks',
@@ -183,6 +184,7 @@ describe('PatientPage.utils', () => {
     test('contains expected tabs', () => {
       const tabIds = PatientPageTabs.map((tab) => tab.id);
       expect(tabIds).toContain('timeline');
+      expect(tabIds).toContain('occupational');
       expect(tabIds).toContain('edit');
       expect(tabIds).toContain('encounter');
       expect(tabIds).toContain('tasks');

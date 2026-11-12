@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { EditTab } from './EditTab';
+import { OccupationalSummaryTab } from './OccupationalSummaryTab';
 import { PatientPage } from './PatientPage';
 import { TimelineTab } from './TimelineTab';
 
@@ -31,6 +32,7 @@ describe('PatientPage', () => {
             <Routes>
               <Route path="/Patient/:patientId/*" element={<PatientPage />}>
                 <Route path="edit" element={<EditTab />} />
+                <Route path="occupational" element={<OccupationalSummaryTab />} />
                 <Route path="" element={<TimelineTab />} />
                 <Route path="*" element={<TimelineTab />} />
               </Route>
@@ -67,6 +69,7 @@ describe('PatientPage', () => {
     });
 
     // Check for some key tabs
+    expect(screen.getByText('Occupational')).toBeInTheDocument();
     expect(screen.getByText('Edit')).toBeInTheDocument();
     expect(screen.getByText('Visits')).toBeInTheDocument();
     expect(screen.getByText('Tasks')).toBeInTheDocument();

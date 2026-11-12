@@ -97,6 +97,12 @@ export async function createEncounter(
     subject: patientRef,
     appointment: [createReference(appointment)],
     participant: [{ individual: practitionerRef }],
+    extension: planDefinition
+      ? [{
+          url: 'https://hiivehealth.com/fhir/StructureDefinition/encounter-care-template',
+          valueCanonical: planDefinition.url ?? getReferenceString(planDefinition),
+        }]
+      : undefined,
   });
 
   const clinicalImpressionData: ClinicalImpression = {

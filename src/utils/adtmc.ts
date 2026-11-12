@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
 import type { MedplumClient } from '@medplum/core';
-import type { Task } from '@medplum/fhirtypes';
+import type { Resource, Task } from '@medplum/fhirtypes';
 
 export const A01_QUESTIONNAIRE_URL = 'https://ehr.hiivehealth.net/fhir/Questionnaire/a01-sore-throat';
 export const A01_DOCUMENT_IDENTIFIER_SYSTEM = 'https://ehr.hiivehealth.net/fhir/NamingSystem/adtmc-a01-document';
@@ -12,6 +12,19 @@ export const A01_DOCUMENTS = [
   { key: 'perform-an-heent-exam', title: 'Perform an HEENT Exam' },
   { key: 'care-for-common-throat-infections', title: 'Care for Common Throat Infections' },
 ] as const;
+
+const ARMY_SECURITY = { system: 'https://ehr.hiivehealth.net/fhir/CodeSystem/workflow-access', code: 'army' };
+
+export function hasArmySecurity(resource: Resource | undefined): boolean {
+  return resource?.meta?.security?.some((coding) => coding.system === ARMY_SECURITY.system && coding.code === ARMY_SECURITY.code) === true;
+}
+
+export function withArmySecurity<T extends Resource>(resource: T): T {
+  return hasArmySecurity(resource) ? resource : {
+    ...resource,
+    meta: { ...resource.meta, security: [...(resource.meta?.security ?? []), ARMY_SECURITY] },
+  };
+}
 
 export function hasArmyAccess(medplum: MedplumClient, expectedProjectId?: string): boolean {
   try {

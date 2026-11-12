@@ -1,6 +1,5 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { getReferenceString } from '@medplum/core';
 import { useDoseSpotNotifications } from '@medplum/dosespot-react';
@@ -19,7 +18,7 @@ import {
   IconUserPlus,
   IconUsers,
 } from '@tabler/icons-react';
-import type { JSX } from 'react';
+import type { ComponentProps, JSX } from 'react';
 import { Suspense, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router';
 import { CuiBanner } from './components/CuiBanner/CuiBanner';
@@ -34,6 +33,7 @@ import { ScriptSurePracticeProvider } from './scriptsure/ScriptSurePractice';
 const SETUP_DISMISSED_KEY = 'medplum-provider-setup-completed';
 const PROVIDER_HIDE_GET_STARTED_SETTING = 'hideGetStarted';
 
+import HiiveHealthLogo from '../hiive-website-assets/Hiive Health Logo_Blue.svg';
 import { EncountersPage } from './pages/encounter/EncountersPage';
 import { FaxPage } from './pages/fax/FaxPage';
 import { GetStartedPage } from './pages/getstarted/GetStartedPage';
@@ -42,6 +42,10 @@ import { DoseSpotNotificationsPage } from './pages/integrations/DoseSpotNotifica
 import { IntegrationsPage } from './pages/integrations/IntegrationsPage';
 import { ScriptSurePage } from './pages/integrations/ScriptSurePage';
 import { MessagesPage } from './pages/messages/MessagesPage';
+import { A01ScopeOfPracticePage } from './pages/documents/A01ScopeOfPracticePage';
+import { ExposureDashboardPage } from './pages/occupational/ExposureDashboardPage';
+import { ExposureIncidentIntakePage } from './pages/occupational/ExposureIncidentIntakePage';
+import { SupervisorSummaryPage } from './pages/occupational/SupervisorSummaryPage';
 import { CommunicationTab } from './pages/patient/CommunicationTab';
 import { CoveragePage } from './pages/patient/CoveragePage';
 import { DocumentsPage } from './pages/patient/DocumentsPage';
@@ -51,6 +55,7 @@ import { ExportTab } from './pages/patient/ExportTab';
 import { IntakeFormPage } from './pages/patient/IntakeFormPage';
 import { LabsPage } from './pages/patient/LabsPage';
 import { MedicationsPage } from './pages/patient/MedicationsPage';
+import { OccupationalSummaryTab } from './pages/patient/OccupationalSummaryTab';
 import { PatientPage } from './pages/patient/PatientPage';
 import { PatientSearchPage } from './pages/patient/PatientSearchPage';
 import { ScriptSureTab } from './pages/patient/ScriptSureTab';
@@ -100,6 +105,8 @@ function AppContent(): JSX.Element | null {
   const { hasAccess: hasDoseSpot } = useDoseSpotAccess();
   const membership = medplum.getProjectMembership();
   const hasScriptSure = hasScriptSureIdentifier(membership);
+  const isSupervisorReviewer = profile?.resourceType === 'RelatedPerson';
+  const patientSearchPath = '/Patient?_count=20&_fields=name,email,gender&_sort=-_lastUpdated';
   const hasBilling = project?.features?.includes('billing') ?? false;
   let cuiEnabled = false;
   if (cuiPolicy.status === 'ready') {
@@ -156,95 +163,121 @@ function AppContent(): JSX.Element | null {
     return null;
   }
 
+  const getMenus = (): ComponentProps<typeof AppShell>['menus'] => {
+    if (!profile) {
+      return undefined;
+    }
+
+    if (isSupervisorReviewer) {
+      return [
+        {
+          links: [
+            {
+              icon: <IconClipboardCheck />,
+              label: 'Supervisor Summary',
+              href: '/Occupational/Supervisor',
+            },
+          ],
+        },
+      ];
+    }
+
+    return [
+      {
+        links: [
+          { icon: <IconBook2 />, label: 'Spaces', href: '/Spaces/Communication' },
+          {
+            icon: <IconUsers />,
+            label: 'Patients',
+            href: patientSearchPath,
+          },
+          { icon: <IconCalendarEvent />, label: 'Schedule', href: '/Calendar/Schedule' },
+          {
+            icon: <IconMail />,
+            label: 'Messages',
+            href: '/Communication?status=in-progress',
+            notificationCount: {
+              resourceType: 'Communication',
+              countCriteria:
+                'status=in-progress&_has:Communication:part-of:_id:not=null&identifier:not=ai-message-topic&_summary=count',
+              subscriptionCriteria:
+                'Communication?status=in-progress&_has:Communication:part-of:_id:not=null&identifier:not=ai-message-topic',
+            },
+          },
+          {
+            icon: <IconClipboardCheck />,
+            label: 'Tasks',
+            href: `/Task?owner=${getReferenceString(profile)}&_sort=-_lastUpdated&status=requested,ready,received,accepted,in-progress,draft`,
+            notificationCount: {
+              resourceType: 'Task',
+              countCriteria: `owner=${getReferenceString(profile)}&status=requested,ready,received,accepted,in-progress,draft&_summary=count`,
+              subscriptionCriteria: `Task?owner=${getReferenceString(profile)}&status=requested,ready,received,accepted,in-progress,draft`,
+            },
+          },
+          { icon: <IconPrinter />, label: 'Faxes', href: '/Fax/Communication' },
+          { icon: <IconClipboardCheck />, label: 'Occupational', href: '/Occupational/Exposure' },
+        ],
+      },
+      {
+        title: 'Quick Links',
+        links: [
+          ...(!setupDismissed
+            ? [
+                {
+                  icon: <IconSettingsAutomation />,
+                  label: 'Get Started',
+                  href: '/getstarted',
+                  onDismiss: handleDismissSetup,
+                },
+              ]
+            : []),
+          { icon: <IconUserPlus />, label: 'New Patient', href: '/onboarding' },
+          { icon: <IconApps />, label: 'Integrations', href: '/integrations' },
+          ...(cuiPolicy.status === 'ready' && cuiPolicy.policy.canManage
+            ? [{ icon: <IconSettingsAutomation />, label: 'Project Security', href: '/Settings/Security' }]
+            : []),
+          ...(hasBilling
+            ? [{ icon: <IconReceipt2 />, label: 'Candid Billing Setup', href: '/Settings/Billing' }]
+            : []),
+          ...(hasDoseSpot
+            ? [
+                {
+                  icon: <IconPill />,
+                  label: 'DoseSpot',
+                  href: '/dosespot',
+                  alert: true,
+                  count: doseSpotCount ?? 0,
+                },
+              ]
+            : []),
+          ...(hasScriptSure
+            ? [
+                {
+                  icon: <IconPill />,
+                  label: 'ScriptSure',
+                  href: '/scriptsure',
+                },
+              ]
+            : []),
+        ],
+      },
+    ];
+  };
+
   const appShellContent = (
     <AppShell
-      logo={<Text fw={700} size="lg">HiiveHealth</Text>}
+      logo={
+        <img
+          src={HiiveHealthLogo}
+          alt="Hiive Health"
+          style={{ display: 'block', width: '100%', maxWidth: 172, height: 'auto' }}
+        />
+      }
       pathname={location.pathname}
       searchParams={searchParams}
       layoutVersion="v2"
       showLayoutVersionToggle={false}
-      menus={
-        profile
-          ? [
-              {
-                links: [
-                  { icon: <IconBook2 />, label: 'Spaces', href: '/Spaces/Communication' },
-                  {
-                    icon: <IconUsers />,
-                    label: 'Patients',
-                    href: '/Patient?_count=20&_fields=name,email,gender&_sort=-_lastUpdated',
-                  },
-                  { icon: <IconCalendarEvent />, label: 'Schedule', href: `/Calendar/Schedule` },
-                  {
-                    icon: <IconMail />,
-                    label: 'Messages',
-                    href: `/Communication?status=in-progress`,
-                    notificationCount: {
-                      resourceType: 'Communication',
-                      countCriteria:
-                        'status=in-progress&_has:Communication:part-of:_id:not=null&identifier:not=ai-message-topic&_summary=count',
-                      subscriptionCriteria: `Communication?status=in-progress&_has:Communication:part-of:_id:not=null&identifier:not=ai-message-topic`,
-                    },
-                  },
-                  {
-                    icon: <IconClipboardCheck />,
-                    label: 'Tasks',
-                    href: `/Task?owner=${getReferenceString(profile)}&_sort=-_lastUpdated&status=requested,ready,received,accepted,in-progress,draft`,
-                    notificationCount: {
-                      resourceType: 'Task',
-                      countCriteria: `owner=${getReferenceString(profile)}&status=requested,ready,received,accepted,in-progress,draft&_summary=count`,
-                      subscriptionCriteria: `Task?owner=${getReferenceString(profile)}&status=requested,ready,received,accepted,in-progress,draft`,
-                    },
-                  },
-                  { icon: <IconPrinter />, label: 'Faxes', href: '/Fax/Communication' },
-                ],
-              },
-              {
-                title: 'Quick Links',
-                links: [
-                  ...(!setupDismissed
-                    ? [
-                        {
-                          icon: <IconSettingsAutomation />,
-                          label: 'Get Started',
-                          href: '/getstarted',
-                          onDismiss: handleDismissSetup,
-                        },
-                      ]
-                    : []),
-                  { icon: <IconUserPlus />, label: 'New Patient', href: '/onboarding' },
-                  { icon: <IconApps />, label: 'Integrations', href: '/integrations' },
-                  ...(cuiPolicy.status === 'ready' && cuiPolicy.policy.canManage
-                    ? [{ icon: <IconSettingsAutomation />, label: 'Project Security', href: '/Settings/Security' }]
-                    : []),
-                  ...(hasBilling
-                    ? [{ icon: <IconReceipt2 />, label: 'Candid Billing Setup', href: '/Settings/Billing' }]
-                    : []),
-                  ...(hasDoseSpot
-                    ? [
-                        {
-                          icon: <IconPill />,
-                          label: 'DoseSpot',
-                          href: '/dosespot',
-                          alert: true,
-                          count: doseSpotCount ?? 0,
-                        },
-                      ]
-                    : []),
-                  ...(hasScriptSure
-                    ? [
-                        {
-                          icon: <IconPill />,
-                          label: 'ScriptSure',
-                          href: '/scriptsure',
-                        },
-                      ]
-                    : []),
-                ],
-              },
-            ]
-          : undefined
-      }
+      menus={getMenus()}
       resourceTypeSearchDisabled={true}
       spotlightPatientsOnly={true}
       spotlightActions={spotlightActions}
@@ -256,7 +289,15 @@ function AppContent(): JSX.Element | null {
       )}
       <Suspense fallback={<Loading />}>
         <Routes>
-          {profile ? (
+          {profile && isSupervisorReviewer && (
+              <>
+                <Route path="/" element={<Navigate to="/Occupational/Supervisor" replace />} />
+                <Route path="/Occupational/Supervisor" element={<SupervisorSummaryPage />} />
+                <Route path="/signin" element={<SignInPage />} />
+                <Route path="*" element={<Navigate to="/Occupational/Supervisor" replace />} />
+              </>
+          )}
+          {profile && !isSupervisorReviewer && (
             <>
               <Route path="/getstarted" element={<GetStartedPage />} />
               <Route path="/Spaces/Communication" element={<SpacesPage />}>
@@ -281,6 +322,8 @@ function AppContent(): JSX.Element | null {
                 <Route path="Encounter" element={<EncountersPage />} />
                 <Route path="Encounter/:encounterId/Task?/:taskId?" element={<EncountersPage />} />
                 <Route path="edit" element={<EditTab />} />
+                <Route path="occupational/incident/new" element={<ExposureIncidentIntakePage />} />
+                <Route path="occupational" element={<OccupationalSummaryTab />} />
                 <Route path="Communication" element={<CommunicationTab />} />
                 <Route path="Communication/:messageId" element={<CommunicationTab />} />
                 <Route path="Task" element={<TasksTab />} />
@@ -326,6 +369,8 @@ function AppContent(): JSX.Element | null {
               <Route path="/Fax/Communication/:faxId" element={<FaxPage />} />
               <Route path="/Fax/Communication/:faxId/new" element={<FaxPage />} />
               <Route path="/onboarding" element={<IntakeFormPage />} />
+              <Route path="/Occupational/Exposure" element={<ExposureDashboardPage />} />
+              <Route path="/Occupational/Supervisor" element={<SupervisorSummaryPage />} />
               <Route path="/Calendar/Schedule" element={<SchedulePage />} />
               <Route path="/Calendar/Schedule/:id" element={<SchedulePage />} />
               <Route path="/Calendar/Schedule/:id/settings" element={<ScheduleSettingsPage />} />
@@ -334,6 +379,7 @@ function AppContent(): JSX.Element | null {
               {hasDoseSpot && <Route path="/dosespot" element={<DoseSpotNotificationsPage />} />}
               {hasScriptSure && <Route path="/scriptsure" element={<ScriptSurePage />} />}
               <Route path="/integrations" element={<IntegrationsPage />} />
+              <Route path="/documents/adtmc/a01/scope-of-practice.html" element={<A01ScopeOfPracticePage />} />
               {/* Must precede the /:resourceType catch-alls below */}
               <Route path="/adtmc/a01/documents/:documentKey" element={<AdtmcDocumentPage />} />
               <Route path="/Settings/Security" element={<CuiPolicyPage />} />
@@ -350,7 +396,8 @@ function AppContent(): JSX.Element | null {
               </Route>
               {hasDoseSpot && <Route path="/integrations/dosespot" element={<DoseSpotFavoritesPage />} />}
             </>
-          ) : (
+          )}
+          {!profile && (
             <>
               <Route path="/signin" element={<SignInPage />} />
               <Route path="/register" element={<RegisterPage />} />

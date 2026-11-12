@@ -305,6 +305,7 @@ describe('encounter utils', () => {
 
       const encounterCall = createResourceSpy.mock.calls.find(([r]) => r.resourceType === 'Encounter');
       expect((encounterCall?.[0] as Encounter | undefined)?.type).toBeUndefined();
+      expect((encounterCall?.[0] as Encounter | undefined)?.extension).toBeUndefined();
     });
   });
 

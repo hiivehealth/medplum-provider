@@ -3,6 +3,18 @@
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { HomerSimpson, MockClient } from '@medplum/mock';
+const { patientExportFormSpy } = vi.hoisted(() => ({
+  patientExportFormSpy: vi.fn(() => null),
+}));
+
+vi.mock('@medplum/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@medplum/react')>();
+  return {
+    ...actual,
+    PatientExportForm: patientExportFormSpy,
+  };
+});
+
 import * as medplumReact from '@medplum/react';
 import { render, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -11,12 +23,10 @@ import { ExportTab } from './ExportTab';
 
 describe('ExportTab', () => {
   let medplum: MockClient;
-  let patientExportFormSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
     medplum = new MockClient();
     vi.clearAllMocks();
-    patientExportFormSpy = vi.spyOn(medplumReact, 'PatientExportForm');
   });
 
   const setup = (url: string): ReturnType<typeof render> => {

@@ -1,0 +1,162 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:task-chief-complaint",
+      "resource": {
+        "resourceType": "ActivityDefinition",
+        "url": "https://hiivehealth.com/activitydefinition/sick-call/chief-complaint-task",
+        "name": "SickCallChiefComplaintTask",
+        "title": "Annotate chief complaint",
+        "status": "active",
+        "kind": "Task",
+        "intent": "order",
+        "code": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/task-code",
+              "code": "fulfill",
+              "display": "Fulfill the focal request"
+            }
+          ]
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "ActivityDefinition",
+        "ifNoneExist": "url=https://hiivehealth.com/activitydefinition/sick-call/chief-complaint-task"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:task-vitals",
+      "resource": {
+        "resourceType": "ActivityDefinition",
+        "url": "https://hiivehealth.com/activitydefinition/sick-call/vitals-task",
+        "name": "SickCallVitalsTask",
+        "title": "Record and document vitals, height, weight",
+        "status": "active",
+        "kind": "Task",
+        "intent": "order",
+        "code": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/task-code",
+              "code": "fulfill",
+              "display": "Fulfill the focal request"
+            }
+          ]
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "ActivityDefinition",
+        "ifNoneExist": "url=https://hiivehealth.com/activitydefinition/sick-call/vitals-task"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:task-hpi-ros",
+      "resource": {
+        "resourceType": "ActivityDefinition",
+        "url": "https://hiivehealth.com/activitydefinition/sick-call/hpi-ros-task",
+        "name": "SickCallHPIROSTask",
+        "title": "Complete HPI and ROS",
+        "status": "active",
+        "kind": "Task",
+        "intent": "order",
+        "code": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/task-code",
+              "code": "fulfill",
+              "display": "Fulfill the focal request"
+            }
+          ]
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "ActivityDefinition",
+        "ifNoneExist": "url=https://hiivehealth.com/activitydefinition/sick-call/hpi-ros-task"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:task-physical-exam",
+      "resource": {
+        "resourceType": "ActivityDefinition",
+        "url": "https://hiivehealth.com/activitydefinition/sick-call/physical-exam-task",
+        "name": "SickCallPhysicalExamTask",
+        "title": "Conduct PE, assessment/diagnosis and treatment plan",
+        "status": "active",
+        "kind": "Task",
+        "intent": "order",
+        "code": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/task-code",
+              "code": "fulfill",
+              "display": "Fulfill the focal request"
+            }
+          ]
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "ActivityDefinition",
+        "ifNoneExist": "url=https://hiivehealth.com/activitydefinition/sick-call/physical-exam-task"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:task-disposition",
+      "resource": {
+        "resourceType": "ActivityDefinition",
+        "url": "https://hiivehealth.com/activitydefinition/sick-call/disposition-task",
+        "name": "SickCallDispositionTask",
+        "title": "Duty restrictions or activity modifications placed in system/SF 600",
+        "status": "active",
+        "kind": "Task",
+        "intent": "order",
+        "code": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/task-code",
+              "code": "fulfill",
+              "display": "Fulfill the focal request"
+            }
+          ]
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "ActivityDefinition",
+        "ifNoneExist": "url=https://hiivehealth.com/activitydefinition/sick-call/disposition-task"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:task-follow-up",
+      "resource": {
+        "resourceType": "ActivityDefinition",
+        "url": "https://hiivehealth.com/activitydefinition/sick-call/follow-up-task",
+        "name": "SickCallFollowUpTask",
+        "title": "Follow up instructions and appointment scheduled",
+        "status": "active",
+        "kind": "Task",
+        "intent": "order",
+        "code": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/task-code",
+              "code": "fulfill",
+              "display": "Fulfill the focal request"
+            }
+          ]
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "ActivityDefinition",
+        "ifNoneExist": "url=https://hiivehealth.com/activitydefinition/sick-call/follow-up-task"
+      }
+    }
+  ]
+}

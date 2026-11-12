@@ -129,6 +129,67 @@ Run `npm test`, `npm run lint`, and `npm run build` on this candidate, together
 with the paired server ACL checks. Final review and merge remain pending explicit
 authorization; local implementation does not by itself close HVCARE-1809.
 
+### Encounter-template Access (HVCARE-1812)
+
+The `feature/encountertemplates` integration depends on Provider PR #12 (HVCARE-1809)
+and Core PR #8 (HVCARE-1810). It reuses PR #12's `hasArmyAccess` contract: the current
+Project must have the admin-managed `army` feature, and the active ProjectMembership
+and profile must match that project. Ordinary server AccessPolicies still decide which
+interactions are permitted; there is no separate provider-role allowlist.
+
+SOAP Subjective, Objective, Assessment, Plan, ROS, physical-exam templates, and generic
+Chest Pain/Respiratory flows remain general-purpose. ADTMC A-01 templates and results
+are military-only. The decision-flow selector registers A-01 only after its Questionnaire
+is available through the server and its project matches the encounter and patient.
+Unknown, missing, invalid, inactive, or mismatched Army eligibility fails closed without
+disabling generic SOAP workflows. The result reader rejects foreign-project results and
+source responses, and template writes recheck eligibility.
+
+Confirmed A-01 guidance copied into a generic SOAP response retains the Army security
+label through persistence, extraction, and Composition assembly. Generic templates are
+not themselves reclassified. Server authorization from Core PR #8 enforces the label;
+client filtering alone is not authorization. Authenticated document delivery, task
+launch access, and clinical scoring remain owned by the prerequisite work.
+
+Run the focused checks with:
+
+```bash
+npm test -- src/hooks/useDecisionFlows.test.tsx src/hooks/useAdtmcA01Result.test.tsx src/components/encounter/AdtmcA01DecisionSupport.test.ts src/utils/soap-extraction.test.ts
+```
+
+These are application tests, not proof of deployed ACL enforcement. Before merge/release,
+verify on an authorized disposable server containing the prerequisite PRs that Army members
+can use A-01, non-Army/invalid/inactive and cross-tenant contexts cannot discover or access
+it, and ordinary AccessPolicies deny prohibited read/write operations through direct APIs.
+Also verify generic templates remain usable. Record server-backed evidence with the ticket;
+no deployment or live verification is performed by these local changes.
+
+#### Local acceptance evidence (2026-11-10)
+
+The authorized disposable stack `medplum-encounter-acceptance-20261109` was tested
+with Provider base `634189e` and Core base `7d5d51af8`, plus uncommitted blocker
+repairs. The full Provider suite passed: 163 files, 1,844 tests; production build
+passed. Core session/project/Bot suites passed 86 tests, A-01 suites passed 23,
+and template-scope checks passed 13. Patient `main` passed all 25 tests and its
+build; a synthetic Patient signed in without the notice-availability blocker.
+
+Army and General browser sessions retained generic SOAP and decision flows, with
+A-01 visible only to Army. A real A-01 Bot execution created labelled results and
+an idempotent handoff Task. Browser-confirmed Assessment/Plan copies persisted
+Army-labelled responses and extracted resources. The existing Composition builder
+was exercised with those saved responses and its labelled output persisted through
+the API; the signing UI was not part of this check.
+
+The final direct API matrix passed 57 checks across nine restricted resources:
+Army reads allowed, ordinary read-only writes denied, cross-project reads/searches/
+writes denied, generic reads/writes allowed, and non-Army labelled writes denied.
+Core's existing SOAP work-slices document records fixture IDs and eligibility evidence.
+This is local acceptance evidence, not hosted deployment or clinical approval.
+
+Provider lint remains a deferred gate: 11 `header/header` attribution errors and
+65 warnings. The user explicitly requested separate attribution review; no headers
+were invented and no enforcement rule was disabled. Other lint errors were resolved.
+
 ### About Medplum
 
 [Medplum](https://www.medplum.com/) is an open-source, API-first EHR. Medplum makes it easy to build healthcare apps quickly with less code.

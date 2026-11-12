@@ -28,19 +28,41 @@ const alias: NonNullable<UserConfig['resolve']>['alias'] = Object.fromEntries(
   }).filter(([, relPath]) => existsSync(relPath))
 );
 
+const medplumProxy = {
+  target: 'https://api.ehr.hiivehealth.net',
+  changeOrigin: true,
+  secure: true,
+  ws: true,
+};
+
 // https://vitejs.dev/config/
 export default defineConfig({
   envPrefix: ['MEDPLUM_', 'GOOGLE_', 'RECAPTCHA_'],
   plugins: [react(), privateAdtmcDocuments()],
   server: {
-    host: 'localhost',
-    port: 3001,
-    proxy: { '/api/cui-banner': 'http://127.0.0.1:8105' },
+    host: '127.0.0.1',
+    port: 5172,
+    strictPort: true,
+    proxy: {
+      '/api/cui-banner': 'http://127.0.0.1:8105',
+      '/.well-known': medplumProxy,
+      '/admin': medplumProxy,
+      '/auth': medplumProxy,
+      '/cds-services': medplumProxy,
+      '/email': medplumProxy,
+      '/fhir': medplumProxy,
+      '/fhircast': medplumProxy,
+      '/keyvalue': medplumProxy,
+      '/oauth2': medplumProxy,
+      '/storage': medplumProxy,
+      '/ws': medplumProxy,
+    },
     fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/*.local', '**/*.local/**'] },
   },
   preview: {
-    host: 'localhost',
-    port: 3001,
+    host: '127.0.0.1',
+    port: 5172,
+    strictPort: true,
     proxy: { '/api/cui-banner': 'http://127.0.0.1:8105' },
   },
   resolve: {
@@ -56,7 +78,7 @@ export default defineConfig({
         // react-router v8 is ESM-only, so Vitest externalizes it and its export
         // namespace is frozen. Inlining routes it through Vite's transform,
         // which restores `vi.spyOn(reactRouter, ...)` in tests.
-        inline: ['react-router'],
+        inline: ['react-router', /@medplum\//],
       },
     },
   },

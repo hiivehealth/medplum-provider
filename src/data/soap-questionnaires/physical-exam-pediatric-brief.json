@@ -1,0 +1,59 @@
+{
+  "resourceType": "Questionnaire",
+  "url": "https://hiivehealth.com/questionnaire/physical-exam-pediatric-brief",
+  "version": "1.0.0",
+  "name": "HiivePhysicalExamPediatricBrief",
+  "title": "Physical Exam - Pediatric Brief",
+  "status": "active",
+  "description": "Pediatric brief physical examination template transcribed from Physical Exam Templates.xlsx. Clinical labels and choices require owner approval.",
+  "item": [
+    {
+      "linkId": "pe-pediatric-brief-general",
+      "type": "group",
+      "text": "General",
+      "item": [
+        { "linkId": "pe-pediatric-brief-alertness", "type": "choice", "text": "Alertness", "answerOption": [{ "valueString": "alert" }, { "valueString": "not alert" }] },
+        { "linkId": "pe-pediatric-brief-distress", "type": "choice", "text": "Distress", "answerOption": [{ "valueString": "no acute distress" }, { "valueString": "mild distress" }, { "valueString": "moderate distress" }, { "valueString": "severe distress" }] },
+        { "linkId": "pe-pediatric-brief-behavior", "type": "choice", "text": "Behavior", "answerOption": [{ "valueString": "playful" }, { "valueString": "withdrawn" }, { "valueString": "fussy" }, { "valueString": "consolable" }] },
+        { "linkId": "pe-pediatric-brief-hydration", "type": "choice", "text": "Hydration", "answerOption": [{ "valueString": "normal" }, { "valueString": "decreased" }, { "valueString": "markedly decreased" }] },
+        { "linkId": "pe-pediatric-brief-ill-appearing", "type": "choice", "text": "Ill appearing", "answerOption": [{ "valueString": "non" }, { "valueString": "mildly" }, { "valueString": "moderately" }, { "valueString": "severely" }] }
+      ]
+    },
+    {
+      "linkId": "pe-pediatric-brief-cardiovascular",
+      "type": "group",
+      "text": "Cardiovascular",
+      "item": [
+        { "linkId": "pe-pediatric-brief-rate-rhythm", "type": "choice", "text": "Rate and rhythm", "answerOption": [{ "valueString": "regular" }, { "valueString": "irregular" }, { "valueString": "irregularly-irregular" }] },
+        { "linkId": "pe-pediatric-brief-peripheral-perfusion", "type": "choice", "text": "Peripheral perfusion", "answerOption": [{ "valueString": "normal" }, { "valueString": "decreased" }] }
+      ]
+    },
+    {
+      "linkId": "pe-pediatric-brief-respiratory",
+      "type": "group",
+      "text": "Respiratory",
+      "item": [
+        { "linkId": "pe-pediatric-brief-lungs", "type": "choice", "text": "Lung sounds", "answerOption": [{ "valueString": "CTA" }, { "valueString": "basilar rales" }, { "valueString": "rhonchi" }, { "valueString": "expiratory wheezes" }] },
+        { "linkId": "pe-pediatric-brief-respirations", "type": "choice", "text": "Respirations", "answerOption": [{ "valueString": "non labored" }, { "valueString": "labored" }] }
+      ]
+    },
+    {
+      "linkId": "pe-pediatric-brief-extremities",
+      "type": "group",
+      "text": "Extremities",
+      "item": [
+        { "linkId": "pe-pediatric-brief-deformity", "type": "choice", "text": "Deformity", "answerOption": [{ "valueString": "no" }, { "valueString": "mild" }, { "valueString": "moderate" }, { "valueString": "severe" }] },
+        { "linkId": "pe-pediatric-brief-trauma", "type": "choice", "text": "Trauma", "answerOption": [{ "valueString": "no" }, { "valueString": "mild" }, { "valueString": "moderate" }, { "valueString": "severe" }] }
+      ]
+    },
+    {
+      "linkId": "pe-pediatric-brief-neurologic",
+      "type": "group",
+      "text": "Neurologic",
+      "item": [
+        { "linkId": "pe-pediatric-brief-orientation", "type": "choice", "text": "Orientation", "answerOption": [{ "valueString": "x 4" }, { "valueString": "x 3" }, { "valueString": "x 2" }, { "valueString": "x 1" }] },
+        { "linkId": "pe-pediatric-brief-level-of-consciousness", "type": "choice", "text": "Level of consciousness", "answerOption": [{ "valueString": "appropriate for age" }, { "valueString": "slow" }, { "valueString": "confused" }, { "valueString": "arousable" }, { "valueString": "stuperous" }, { "valueString": "unresponsive" }, { "valueString": "uncooperative" }] }
+      ]
+    }
+  ]
+}

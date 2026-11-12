@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
+// SPDX-License-Identifier: Apache-2.0
 import type { MedplumClient } from '@medplum/core';
 import type { Basic } from '@medplum/fhirtypes';
 
@@ -12,19 +14,18 @@ export interface CuiPolicy {
   readonly configurationId: string;
 }
 
-/** All applications consume this server-derived decision, never the protected extension directly. */
 export async function resolveCuiPolicy(medplum: MedplumClient, projectId: string): Promise<CuiPolicy> {
-  if (!medplum.getAccessToken()) throw new Error('Authentication required');
+  if (!medplum.getAccessToken()) {throw new Error('Authentication required');}
   await medplum.refreshIfExpired();
   const token = medplum.getAccessToken();
-  if (!token) throw new Error('Authentication required');
+  if (!token) {throw new Error('Authentication required');}
   const response = await fetch('/api/cui-banner', {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
     credentials: 'omit',
     redirect: 'error',
   });
-  if (!response.ok) throw new Error('Unable to resolve CUI project policy');
+  if (!response.ok) {throw new Error('Unable to resolve CUI project policy');}
   const result = (await response.json()) as Partial<CuiPolicy>;
   if (
     result?.projectId !== projectId ||

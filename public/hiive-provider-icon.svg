@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Hiive Provider</title>
+  <path
+    fill="#f6a800"
+    d="M168 30h176c35 0 67 19 85 50l62 108c18 31 18 105 0 136l-62 108c-18 31-50 50-85 50H168c-35 0-67-19-85-50L21 324c-18-31-18-105 0-136L83 80c18-31 50-50 85-50Z"
+  />
+</svg>

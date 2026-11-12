@@ -5,6 +5,7 @@ import type { Task } from '@medplum/fhirtypes';
 import { MockClient } from '@medplum/mock';
 import { MedplumProvider } from '@medplum/react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { TaskInputNote } from './TaskInputNote';
 
@@ -23,7 +24,9 @@ describe('TaskInputNote', () => {
     return render(
       <MedplumProvider medplum={medplum}>
         <MantineProvider>
-          <TaskInputNote task={task} {...props} />
+          <MemoryRouter>
+            <TaskInputNote task={task} {...props} />
+          </MemoryRouter>
         </MantineProvider>
       </MedplumProvider>
     );
@@ -130,5 +133,17 @@ describe('TaskInputNote', () => {
     });
 
     expect(onTaskChange).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' }));
+  });
+
+  test('shows Claim & Open Encounter for a task linked to a patient encounter', async () => {
+    const taskWithEncounter: Task = {
+      ...mockTask,
+      for: { reference: 'Patient/patient-123' },
+      encounter: { reference: 'Encounter/encounter-123' },
+    };
+    await medplum.createResource(taskWithEncounter);
+    setup(taskWithEncounter);
+
+    expect(await screen.findByRole('button', { name: 'Claim & Open Encounter' })).toBeInTheDocument();
   });
 });

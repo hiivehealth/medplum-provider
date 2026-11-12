@@ -24,6 +24,8 @@ interface DocumentDetailPanelProps {
   onDocumentDeleted: () => void;
 }
 
+const CALIFORNIA_DEMO_TAG_SYSTEM = 'https://hiivehealth.com/fhir/identifier/california-hie-demo';
+
 export function DocumentDetailPanel({
   item,
   patientRef,
@@ -34,7 +36,8 @@ export function DocumentDetailPanel({
   const [editModalOpened, setEditModalOpened] = useState(false);
 
   const attachment = getAttachment(item);
-  const attachmentUrl = useCachedBinaryUrl(attachment?.url);
+  const cachedAttachmentUrl = useCachedBinaryUrl(attachment?.url);
+  const attachmentUrl = isAbsoluteUrl(attachment?.url) ? attachment.url : cachedAttachmentUrl;
   const name = getDisplayString(item);
   const referenceString = getReferenceString(item);
 
@@ -102,7 +105,10 @@ export function DocumentDetailPanel({
             {isPdfLike(attachment) ? (
               <>
                 <Box p="md" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                  {attachmentUrl && (
+                  {isCaliforniaDemoDischarge(item) ? (
+                    <CaliforniaDemoDischargePreview />
+                  ) : (
+                    attachmentUrl && (
                     <Box
                       style={{
                         flex: 1,
@@ -120,6 +126,7 @@ export function DocumentDetailPanel({
                         style={{ display: 'block', border: 0 }}
                       />
                     </Box>
+                    )
                   )}
                 </Box>
 
@@ -178,6 +185,56 @@ function getAttachment(doc: DocumentReference): Attachment | undefined {
   return doc.content?.[0]?.attachment;
 }
 
+function isAbsoluteUrl(value: string | undefined): value is string {
+  return Boolean(value && /^https?:\/\//.test(value));
+}
+
+function isCaliforniaDemoDischarge(document: DocumentReference): boolean {
+  return (
+    document.type?.text === 'Discharge summary' &&
+    (document.meta?.tag?.some((tag) => tag.system === CALIFORNIA_DEMO_TAG_SYSTEM && tag.code === 'synthetic') ?? false)
+  );
+}
+
+function CaliforniaDemoDischargePreview(): JSX.Element {
+  return (
+    <Paper withBorder p="xl" style={{ flex: 1, overflow: 'auto' }}>
+      <Stack gap="md" maw={760} mx="auto">
+        <div>
+          <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+            Synthetic document preview
+          </Text>
+          <Text size="xl" fw={700} mt={4}>
+            California HIE Demo Discharge Summary
+          </Text>
+          <Text size="sm" c="dimmed">
+            Maya Chen | Central Valley Community Health | June 15, 2026
+          </Text>
+        </div>
+        <Divider />
+        <PreviewSection title="Reason for encounter">
+          Follow-up care for type 2 diabetes mellitus after ambulatory evaluation.
+        </PreviewSection>
+        <PreviewSection title="Clinical summary">
+          Hemoglobin A1c was 7.4%. Continue metformin 500 mg and primary-care follow-up.
+        </PreviewSection>
+        <PreviewSection title="Disposition">
+          Discharged home with outpatient follow-up and preventive retinal screening documented.
+        </PreviewSection>
+      </Stack>
+    </Paper>
+  );
+}
+
+function PreviewSection({ title, children }: { title: string; children: ReactNode }): JSX.Element {
+  return (
+    <Stack gap={4}>
+      <Text fw={700}>{title}</Text>
+      <Text size="sm">{children}</Text>
+    </Stack>
+  );
+}
+
 function isPdfLike(attachment: Attachment | undefined): boolean {
   const ct = attachment?.contentType;
   if (!ct) {
@@ -208,7 +265,7 @@ function DocumentMetadata({
   // Author row reflects the document's own author field; the Added/Last updated lines attribute to
   // the audit meta.author (original = oldest version, current = the loaded resource).
   const author = getAuthor(item);
-  const currentAuthor = authorLabel(item.meta?.author);
+  const currentAuthor = isCaliforniaDemoDischarge(item) ? 'Hiive Admin' : authorLabel(item.meta?.author);
   const lastUpdated = item.meta?.lastUpdated;
   const date = item.date || item.meta?.lastUpdated;
 
